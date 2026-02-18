@@ -29,7 +29,7 @@
     "check:fix": "biome check --write ./src",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build && bun run typecheck",
-    "release": "changeset publish",
+    "release": "changeset publish --access public",
     "version": "changeset version",
     "prepare": "husky"
   },
