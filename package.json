@@ -1,0 +1,85 @@
+{
+  "name": "pesafy",
+  "version": "0.1.0",
+  "description": "A powerful payment gateway library for African payment systems, starting with M-Pesa Daraja API",
+  "author": "lewisodero27@gmail.com",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "build:watch": "tsup --watch",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "lint": "biome lint ./src",
+    "lint:fix": "biome lint --write ./src",
+    "format": "biome format --write ./src",
+    "format:prettier": "prettier --write .",
+    "check": "biome check ./src",
+    "check:fix": "biome check --write ./src",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "bun run build && bun run typecheck",
+    "release": "changeset publish",
+    "version": "changeset version",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "mpesa",
+    "daraja",
+    "safaricom",
+    "payment",
+    "gateway",
+    "africa",
+    "kenya",
+    "pesafy",
+    "stk-push",
+    "b2c",
+    "c2b"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/levos-snr/pesafy.git"
+  },
+  "homepage": "https://github.com/levos-snr/pesafy#readme",
+  "bugs": {
+    "url": "https://github.com/levos-snr/pesafy/issues"
+  },
+  "gitmoji": {
+    "autoAdd": false,
+    "emojiFormat": "emoji",
+    "scopePrompt": false,
+    "messagePrompt": true,
+    "capitalizeTitle": true,
+    "gitmojisUrl": "https://gitmoji.dev/api/gitmojis"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.2",
+    "@changesets/cli": "^2.27.10",
+    "@types/bun": "latest",
+    "gitmoji-cli": "^9.7.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "3.8.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  }
+}

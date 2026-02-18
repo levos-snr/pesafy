@@ -1,0 +1,17 @@
+# Biome handles these — Prettier must not touch them
+*.ts
+*.tsx
+*.js
+*.jsx
+*.mjs
+*.cjs
+
+# Special files with non-standard syntax
+CLAUDE.md
+
+# Never format these
+dist/
+node_modules/
+bun.lockb
+*.lock
+
