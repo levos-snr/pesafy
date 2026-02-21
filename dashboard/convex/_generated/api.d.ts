@@ -12,6 +12,8 @@ import type * as auth from "../auth.js";
 import type * as businesses from "../businesses.js";
 import type * as credentials from "../credentials.js";
 import type * as http from "../http.js";
+import type * as mpesaActions from "../mpesaActions.js";
+import type * as mpesaTransactions from "../mpesaTransactions.js";
 import type * as transactions from "../transactions.js";
 import type * as webhooks from "../webhooks.js";
 
@@ -26,6 +28,8 @@ declare const fullApi: ApiFromModules<{
   businesses: typeof businesses;
   credentials: typeof credentials;
   http: typeof http;
+  mpesaActions: typeof mpesaActions;
+  mpesaTransactions: typeof mpesaTransactions;
   transactions: typeof transactions;
   webhooks: typeof webhooks;
 }>;

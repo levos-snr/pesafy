@@ -31,14 +31,15 @@ async function getMpesaClient(
   ctx: ActionCtx,
   businessId: Id<"businesses">
 ): Promise<Mpesa> {
-  const business = await ctx.runQuery(internal.businesses.getBusiness, {
+  const business = await ctx.runQuery(internal.businesses.getBusinessInternal, {
     businessId,
   });
   if (!business) throw new Error("Business not found");
 
-  const creds = await ctx.runQuery(internal.credentials.getCredentials, {
-    businessId,
-  });
+  const creds = await ctx.runQuery(
+    internal.credentials.getCredentialsInternal,
+    { businessId }
+  );
 
   if (!creds) {
     throw new Error(
@@ -108,9 +109,12 @@ export const stkPush = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);
@@ -133,7 +137,7 @@ export const stkPush = action({
         phoneNumber: args.phoneNumber,
         accountReference: args.accountReference,
         transactionDesc: args.transactionDesc,
-        metadata: result as Record<string, unknown>,
+        metadata: result as unknown as Record<string, unknown>,
       });
 
       return result;
@@ -160,9 +164,12 @@ export const stkQuery = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);
@@ -187,9 +194,12 @@ export const b2c = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);
@@ -213,7 +223,7 @@ export const b2c = action({
         status: "pending",
         phoneNumber: args.phoneNumber,
         transactionDesc: args.remarks ?? "B2C Payment",
-        metadata: result as Record<string, unknown>,
+        metadata: result as unknown as Record<string, unknown>,
       });
 
       return result;
@@ -245,9 +255,12 @@ export const b2b = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);
@@ -271,7 +284,7 @@ export const b2b = action({
         status: "pending",
         transactionDesc: args.remarks ?? "B2B Payment",
         accountReference: args.accountReference,
-        metadata: result as Record<string, unknown>,
+        metadata: result as unknown as Record<string, unknown>,
       });
 
       return result;
@@ -303,9 +316,12 @@ export const reversal = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);
@@ -327,7 +343,7 @@ export const reversal = action({
       amount: args.amount,
       status: "pending",
       transactionDesc: args.remarks ?? "Reversal",
-      metadata: result as Record<string, unknown>,
+      metadata: result as unknown as Record<string, unknown>,
     });
 
     return result;
@@ -348,9 +364,12 @@ export const transactionStatus = action({
     const user = await requireUser(ctx);
     if (!user) throw new Error("Not authenticated");
 
-    const business = await ctx.runQuery(internal.businesses.getBusiness, {
-      businessId: args.businessId,
-    });
+    const business = await ctx.runQuery(
+      internal.businesses.getBusinessInternal,
+      {
+        businessId: args.businessId,
+      }
+    );
     if (!business) throw new Error("Business not found or access denied");
 
     const mpesa = await getMpesaClient(ctx, args.businessId);

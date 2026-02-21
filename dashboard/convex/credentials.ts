@@ -1,5 +1,11 @@
 import { v } from "convex/values";
-import { MutationCtx, mutation, QueryCtx, query } from "./_generated/server";
+import {
+  internalQuery,
+  MutationCtx,
+  mutation,
+  QueryCtx,
+  query,
+} from "./_generated/server";
 import { authComponent } from "./auth";
 
 async function requireUser(ctx: QueryCtx | MutationCtx) {
@@ -28,6 +34,20 @@ export const getCredentials = query({
       .first();
 
     return creds;
+  },
+});
+
+/**
+ * Internal-only version used by mpesaActions (Node.js runtime).
+ * Auth is already verified in the action before this is called.
+ */
+export const getCredentialsInternal = internalQuery({
+  args: { businessId: v.id("businesses") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("credentials")
+      .withIndex("by_business", (q) => q.eq("businessId", args.businessId))
+      .first();
   },
 });
 

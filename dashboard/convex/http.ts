@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { internal } from "./_generated/api";
+import { httpAction } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
 
 const http = httpRouter();
@@ -26,7 +27,7 @@ const SAFARICOM_IPS = new Set([
 function isSafaricomIP(request: Request): boolean {
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : null;
-  if (!ip) return true; // Can't determine — allow but log
+  if (!ip) return true;
   return (
     SAFARICOM_IPS.has(ip) ||
     process.env.SITE_URL?.includes("localhost") === true
@@ -89,7 +90,7 @@ interface C2BWebhookBody {
 http.route({
   path: "/webhook/mpesa/stk",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     if (!isSafaricomIP(request)) {
       console.warn("[webhook/stk] Blocked non-Safaricom IP");
       return jsonResponse({ error: "Forbidden" }, 403);
@@ -148,14 +149,14 @@ http.route({
       console.error("[webhook/stk] Error processing callback:", err);
       return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
     }
-  },
+  }),
 });
 
 // ─── B2B result callback (/webhook/mpesa/b2b/result) ─────────────────────────
 http.route({
   path: "/webhook/mpesa/b2b/result",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     if (!isSafaricomIP(request)) {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
@@ -197,14 +198,14 @@ http.route({
       console.error("[webhook/b2b] Error:", err);
       return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
     }
-  },
+  }),
 });
 
 // ─── B2C result callback (/webhook/mpesa/b2c/result) ─────────────────────────
 http.route({
   path: "/webhook/mpesa/b2c/result",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     if (!isSafaricomIP(request)) {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
@@ -261,14 +262,14 @@ http.route({
       console.error("[webhook/b2c] Error:", err);
       return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
     }
-  },
+  }),
 });
 
 // ─── B2C timeout callback (/webhook/mpesa/b2c/timeout) ───────────────────────
 http.route({
   path: "/webhook/mpesa/b2c/timeout",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     let body: ResultWebhookBody | undefined;
     try {
       body = (await request.json()) as ResultWebhookBody;
@@ -290,14 +291,14 @@ http.route({
       }
     }
     return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
-  },
+  }),
 });
 
 // ─── C2B confirmation (/webhook/mpesa/c2b/confirmation) ──────────────────────
 http.route({
   path: "/webhook/mpesa/c2b/confirmation",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     if (!isSafaricomIP(request)) {
       return jsonResponse({ ResultCode: 1, ResultDesc: "Forbidden" }, 403);
     }
@@ -324,7 +325,7 @@ http.route({
         await ctx.runMutation(internal.mpesaTransactions.updateTransaction, {
           transactionId: transactions[0]._id,
           status: "success",
-          metadata: body as Record<string, unknown>,
+          metadata: body as unknown as Record<string, unknown>,
         });
       } else {
         console.log(
@@ -341,14 +342,14 @@ http.route({
       console.error("[webhook/c2b] Error:", err);
       return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
     }
-  },
+  }),
 });
 
 // ─── C2B validation (/webhook/mpesa/c2b/validation) ──────────────────────────
 http.route({
   path: "/webhook/mpesa/c2b/validation",
   method: "POST",
-  handler: async (_ctx, request) => {
+  handler: httpAction(async (_ctx, request) => {
     let body: C2BWebhookBody | undefined;
     try {
       body = (await request.json()) as C2BWebhookBody;
@@ -357,14 +358,14 @@ http.route({
     }
     console.log("[webhook/c2b/validation] Validating:", body?.BillRefNumber);
     return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
-  },
+  }),
 });
 
 // ─── Reversal result (/webhook/mpesa/reversal/result) ────────────────────────
 http.route({
   path: "/webhook/mpesa/reversal/result",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     if (!isSafaricomIP(request)) {
       return jsonResponse({ error: "Forbidden" }, 403);
     }
@@ -392,14 +393,14 @@ http.route({
     }
 
     return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
-  },
+  }),
 });
 
 // ─── B2B timeout (/webhook/mpesa/b2b/timeout) ────────────────────────────────
 http.route({
   path: "/webhook/mpesa/b2b/timeout",
   method: "POST",
-  handler: async (ctx, request) => {
+  handler: httpAction(async (ctx, request) => {
     let body: ResultWebhookBody | undefined;
     try {
       body = (await request.json()) as ResultWebhookBody;
@@ -421,7 +422,7 @@ http.route({
       }
     }
     return jsonResponse({ ResultCode: 0, ResultDesc: "Accepted" });
-  },
+  }),
 });
 
 export default http;
