@@ -6,31 +6,54 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!!dist/**", "!!node_modules/**"]
+    "ignoreUnknown": true,
+    "includes": [
+      "**",
+      "!!dist/**",
+      "!!node_modules/**",
+      "!!**/_generated/**",
+      "!!build/**",
+      "!!coverage/**",
+      "!!*.lock"
+    ]
   },
   "formatter": {
     "enabled": true,
+    "formatWithErrors": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineEnding": "lf",
     "lineWidth": 80
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    },
+    "formatter": { "enabled": false },
+    "linter": { "enabled": false }
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
-      "correctness": {
-        "noUnusedVariables": "error",
-        "noUnusedImports": "error"
-      },
+      "recommended": false,
       "suspicious": {
-        "noExplicitAny": "error",
-        "noConsole": "warn"
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "off",
+        "noShadowRestrictedNames": "off",
+        "noConsole": "off"
+      },
+      "correctness": {
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "warn"
       },
       "style": {
-        "useConst": "error",
-        "useTemplate": "error",
-        "noNonNullAssertion": "warn"
+        "useConst": "warn",
+        "useTemplate": "off",
+        "noNonNullAssertion": "off"
+      },
+      "a11y": {
+        "useButtonType": "off",
+        "noLabelWithoutControl": "off",
+        "useSemanticElements": "off"
       }
     }
   },

@@ -1,0 +1,12 @@
+{
+  "name": "pesafy-convex",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "convex": "^1.25.0",
+    "@convex-dev/better-auth": "^1.0.0",
+    "better-auth": "1.4.9",
+    "pesafy": "workspace:*"
+  }
+}
