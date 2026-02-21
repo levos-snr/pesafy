@@ -61,14 +61,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from "vue";
-
-export interface PaymentFormData {
-  amount: number;
-  phoneNumber: string;
-  accountReference: string;
-  transactionDesc: string;
-}
+import { reactive } from "vue";
+import type { PaymentFormData } from "./types";
 
 interface Props {
   defaultAmount?: number;

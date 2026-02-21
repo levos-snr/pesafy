@@ -75,6 +75,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
     "@changesets/cli": "2.29.8",
+    "@storybook/react": "^10.2.10",
     "@types/bun": "latest",
     "@types/react": "^19.2.14",
     "gitmoji-cli": "^9.7.0",

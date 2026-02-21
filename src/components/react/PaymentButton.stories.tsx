@@ -18,7 +18,7 @@ type Story = StoryObj<typeof PaymentButton>;
 export const Default: Story = {
   args: {
     amount: 100,
-    onPay: async ({ amount }) => {
+    onPay: async ({ amount }: { amount: number }) => {
       console.log("Pay:", amount);
     },
   },
@@ -43,7 +43,7 @@ export const Disabled: Story = {
 export const CustomText: Story = {
   args: {
     amount: 250,
-    onPay: async ({ amount }) => {
+    onPay: async ({ amount }: { amount: number }) => {
       console.log("Pay:", amount);
     },
     children: "Pay Now",

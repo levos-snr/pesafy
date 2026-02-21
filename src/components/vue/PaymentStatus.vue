@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-export type PaymentStatusState = "idle" | "pending" | "success" | "error";
+import type { PaymentStatusState } from "./types";
 
 interface Props {
   status: PaymentStatusState;
