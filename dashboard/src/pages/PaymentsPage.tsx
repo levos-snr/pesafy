@@ -1,31 +1,44 @@
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CreditCard, Plus, Search, Smartphone, X } from "lucide-react";
 import { useState } from "react";
 import { cn, formatDate, formatKES } from "@/lib/utils";
+import {
+  fadeUp,
+  stagger,
+  staggerItem,
+  tapSpring,
+  viewport,
+} from "@/lib/variants";
 
 function StatusBadge({ status }: { status: string }) {
   const m: Record<string, string> = {
-    success: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    pending: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-    failed: "bg-red-500/10 text-red-400 border-red-500/20",
-    cancelled: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+    success:
+      "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400",
+    pending:
+      "bg-amber-500/10 text-amber-700 border-amber-500/20 dark:text-amber-400",
+    failed: "bg-red-500/10 text-red-700 border-red-500/20 dark:text-red-400",
+    cancelled:
+      "bg-zinc-500/10 text-zinc-600 border-zinc-500/20 dark:text-zinc-400",
   };
   return (
-    <span
+    <motion.span
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 500, damping: 28 }}
       className={cn(
         "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize",
         m[status] ?? m.cancelled
       )}
     >
       {status}
-    </span>
+    </motion.span>
   );
 }
 
 const inp =
-  "w-full rounded-xl border border-border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:outline-none focus:border-primary/55 focus:ring-2 focus:ring-primary/10";
-
+  "w-full rounded-xl border border-border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:outline-none";
 const SKELETON_ROWS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"];
 
 export default function PaymentsPage() {
@@ -45,6 +58,7 @@ export default function PaymentsPage() {
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
   const [search, setSearch] = useState("");
+  const shouldReduceMotion = useReducedMotion();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +71,7 @@ export default function PaymentsPage() {
         "mpesaActions not yet configured — add your STK Push action"
       );
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to initiate payment";
-      setErr(msg);
+      setErr(e instanceof Error ? e.message : "Failed to initiate payment");
     } finally {
       setLoading(false);
     }
@@ -75,177 +88,222 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 animate-fade-up">
+      <motion.div
+        variants={shouldReduceMotion ? undefined : fadeUp}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
+          <h1 className="font-display text-fluid-xl font-bold tracking-tight text-foreground">
             Payments
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Initiate and monitor M-Pesa transactions
           </p>
         </div>
-        <button
+        <motion.button
           type="button"
           onClick={() => {
             setShowForm(!showForm);
             setErr("");
             setSuccess("");
           }}
+          {...tapSpring}
           className={cn(
-            "inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all active:scale-[0.97]",
+            "inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors",
             showForm
               ? "border border-border text-muted-foreground hover:bg-muted"
-              : "bg-primary text-white hover:bg-primary/88 shadow-lg shadow-primary/20"
+              : "bg-primary text-white hover:bg-primary/85 shadow-lg shadow-primary/20"
           )}
         >
-          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={showForm ? "x" : "plus"}
+              initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
+              animate={{ rotate: 0, scale: 1, opacity: 1 }}
+              exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {showForm ? (
+                <X className="h-4 w-4" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
+            </motion.span>
+          </AnimatePresence>
           {showForm ? "Cancel" : "STK Push"}
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
-      {/* STK Push form */}
-      {showForm && (
-        <div className="rounded-2xl border border-border bg-card p-6 animate-fade-up">
-          <div className="flex items-center gap-2.5 mb-6">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              <Smartphone className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-display font-semibold text-foreground">
-                STK Push
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Send a payment request to a phone number
-              </p>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="amount"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Amount (KES)
-              </label>
-              <input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="100"
-                required
-                min="1"
-                className={inp}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="phone"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="254712345678"
-                required
-                className={inp}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="ref"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Account Reference
-              </label>
-              <input
-                id="ref"
-                type="text"
-                value={ref}
-                onChange={(e) => setRef(e.target.value)}
-                placeholder="INV-001"
-                required
-                className={inp}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="desc"
-                className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
-              >
-                Description
-              </label>
-              <input
-                id="desc"
-                type="text"
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                placeholder="Payment for services"
-                required
-                className={inp}
-              />
-            </div>
-
-            {!businessId && (
-              <div className="sm:col-span-2 rounded-xl border border-amber-500/20 bg-amber-500/8 px-4 py-3 text-sm text-amber-400">
-                ⚠ No business configured. Complete onboarding first.
+      {/* STK Push form — height-animated expand/collapse */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, scale: 0.98 }}
+            animate={{ opacity: 1, height: "auto", scale: 1 }}
+            exit={{ opacity: 0, height: 0, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="flex items-center gap-2.5 mb-6">
+                <motion.div
+                  animate={{ rotate: [0, -10, 10, 0] }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10"
+                >
+                  <Smartphone className="h-4 w-4 text-primary" />
+                </motion.div>
+                <div>
+                  <h3 className="font-display font-semibold text-foreground">
+                    STK Push
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Send a payment request to a phone number
+                  </p>
+                </div>
               </div>
-            )}
-            {err && (
-              <div className="sm:col-span-2 rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-red-400">
-                {err}
-              </div>
-            )}
-            {success && (
-              <div className="sm:col-span-2 rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-400">
-                {success}
-              </div>
-            )}
 
-            <div className="sm:col-span-2 flex gap-3">
-              <button
-                type="submit"
-                disabled={loading || !businessId}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-primary/88 active:scale-[0.97] disabled:opacity-45 disabled:cursor-not-allowed shadow-md shadow-primary/15"
+              <form
+                onSubmit={handleSubmit}
+                className="grid gap-4 sm:grid-cols-2"
               >
-                {loading ? (
-                  <span className="spinner" />
-                ) : (
-                  <>
-                    <Smartphone className="h-4 w-4" /> Send STK Push
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-              >
-                Cancel
-              </button>
+                {[
+                  {
+                    id: "amount",
+                    label: "Amount (KES)",
+                    type: "number",
+                    val: amount,
+                    set: setAmount,
+                    ph: "100",
+                    min: 1,
+                  },
+                  {
+                    id: "phone",
+                    label: "Phone Number",
+                    type: "tel",
+                    val: phone,
+                    set: setPhone,
+                    ph: "254712345678",
+                  },
+                  {
+                    id: "ref",
+                    label: "Account Ref",
+                    type: "text",
+                    val: ref,
+                    set: setRef,
+                    ph: "INV-001",
+                  },
+                  {
+                    id: "desc",
+                    label: "Description",
+                    type: "text",
+                    val: desc,
+                    set: setDesc,
+                    ph: "Payment for services",
+                  },
+                ].map(({ id, label, type, val, set, ph, min }: any) => (
+                  <div key={id}>
+                    <label
+                      htmlFor={id}
+                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
+                    >
+                      {label}
+                    </label>
+                    <input
+                      id={id}
+                      type={type}
+                      value={val}
+                      onChange={(e) => set(e.target.value)}
+                      placeholder={ph}
+                      required
+                      min={min}
+                      className={inp}
+                    />
+                  </div>
+                ))}
+
+                <AnimatePresence>
+                  {err && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="sm:col-span-2 rounded-xl border border-destructive/25 bg-destructive/8 px-4 py-3 text-sm text-destructive"
+                    >
+                      {err}
+                    </motion.div>
+                  )}
+                  {success && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="sm:col-span-2 rounded-xl border border-emerald-500/25 bg-emerald-500/8 px-4 py-3 text-sm text-emerald-600 dark:text-emerald-400"
+                    >
+                      {success}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <div className="sm:col-span-2 flex flex-wrap gap-3">
+                  <motion.button
+                    type="submit"
+                    disabled={loading || !businessId}
+                    {...tapSpring}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/85 disabled:opacity-45 disabled:cursor-not-allowed shadow-md shadow-primary/15"
+                  >
+                    {loading ? (
+                      <motion.span
+                        animate={{ rotate: 360 }}
+                        transition={{
+                          duration: 0.7,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                        className="block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
+                      />
+                    ) : (
+                      <>
+                        <Smartphone className="h-4 w-4" /> Send STK Push
+                      </>
+                    )}
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={() => setShowForm(false)}
+                    {...tapSpring}
+                    className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </motion.button>
+                </div>
+              </form>
             </div>
-          </form>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Transactions table */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden animate-fade-up delay-150">
-        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border">
+      {/* Transactions */}
+      <motion.div
+        variants={shouldReduceMotion ? undefined : fadeUp}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewport}
+        className="rounded-2xl border border-border bg-card overflow-hidden"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3.5 border-b border-border">
           <div className="relative flex-1 max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search phone, reference…"
-              className="w-full rounded-lg border border-border bg-input pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/55"
+              className="w-full rounded-lg border border-border bg-input pl-8 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
             />
           </div>
-          <p className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
+          <p className="text-xs text-muted-foreground whitespace-nowrap sm:ml-auto">
             {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -264,8 +322,18 @@ export default function PaymentsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-2.5">
-            <CreditCard className="h-8 w-8 text-muted-foreground/20" />
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col items-center justify-center py-16 gap-2.5"
+          >
+            <motion.div
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <CreditCard className="h-8 w-8 text-muted-foreground/20" />
+            </motion.div>
             <p className="text-sm text-muted-foreground">
               No transactions found
             </p>
@@ -278,10 +346,10 @@ export default function PaymentsPage() {
                 Clear search
               </button>
             )}
-          </div>
+          </motion.div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-muted/15">
                   {[
@@ -294,46 +362,54 @@ export default function PaymentsPage() {
                   ].map((h) => (
                     <th
                       key={h}
-                      className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                      className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <motion.tbody
+                variants={shouldReduceMotion ? undefined : stagger}
+                initial="hidden"
+                animate="visible"
+                className="divide-y divide-border"
+              >
                 {filtered.map((tx) => (
-                  <tr
+                  <motion.tr
                     key={tx._id}
-                    className="hover:bg-muted/15 transition-colors"
+                    variants={shouldReduceMotion ? undefined : staggerItem}
+                    whileHover={{ backgroundColor: "rgba(var(--muted), 0.15)" }}
+                    transition={{ duration: 0.15 }}
+                    className="transition-colors"
                   >
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold uppercase text-muted-foreground">
                         {tx.type.replace(/_/g, " ")}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 font-bold text-foreground tabular-nums">
+                    <td className="px-4 py-3.5 font-bold text-foreground tabular-nums">
                       {formatKES(tx.amount)}
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
+                    <td className="px-4 py-3.5 text-muted-foreground">
                       {tx.phoneNumber ?? "—"}
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground">
+                    <td className="px-4 py-3.5 text-muted-foreground">
                       {tx.accountReference ?? "—"}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-4 py-3.5">
                       <StatusBadge status={tx.status} />
                     </td>
-                    <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap text-xs">
+                    <td className="px-4 py-3.5 text-muted-foreground whitespace-nowrap text-xs">
                       {formatDate(tx.createdAt)}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
-              </tbody>
+              </motion.tbody>
             </table>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
