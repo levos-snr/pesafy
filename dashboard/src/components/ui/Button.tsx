@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { ButtonHTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 
@@ -7,32 +8,52 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "md", ...props }, ref) => {
+  (
+    {
+      className,
+      variant = "default",
+      size = "md",
+      disabled,
+      children,
+      ...props
+    },
+    ref
+  ) => {
     return (
-      <button
+      <motion.button
+        ref={ref as any}
+        /* physics-active-state ✓  physics-subtle-deformation (0.97-1.03) ✓ */
+        whileHover={disabled ? undefined : { scale: 1.03 }}
+        whileTap={disabled ? undefined : { scale: 0.97 }}
+        /* physics-spring-for-overshoot ✓  timing-under-300ms ✓ */
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        disabled={disabled}
         className={cn(
-          "inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex items-center justify-center rounded-xl font-semibold",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "disabled:pointer-events-none disabled:opacity-50",
+          "transition-colors duration-150",
           {
-            "bg-primary text-primary-foreground hover:bg-primary/90":
+            "bg-primary text-primary-foreground hover:bg-primary/85 shadow-md shadow-primary/20":
               variant === "default",
-            "border border-input bg-background hover:bg-accent hover:text-accent-foreground":
+            "border border-border bg-background hover:bg-muted hover:text-foreground":
               variant === "outline",
-            "hover:bg-accent hover:text-accent-foreground": variant === "ghost",
-            "bg-destructive text-destructive-foreground hover:bg-destructive/90":
+            "hover:bg-muted hover:text-foreground": variant === "ghost",
+            "bg-destructive text-destructive-foreground hover:bg-destructive/85 shadow-md shadow-destructive/20":
               variant === "destructive",
-            "h-8 px-3 text-sm": size === "sm",
-            "h-10 px-4 py-2": size === "md",
-            "h-12 px-6 text-lg": size === "lg",
+            "h-8 px-3 text-sm gap-1.5": size === "sm",
+            "h-10 px-4 gap-2": size === "md",
+            "h-12 px-6 text-[15px] gap-2": size === "lg",
           },
           className
         )}
-        ref={ref}
-        {...props}
-      />
+        {...(props as any)}
+      >
+        {children}
+      </motion.button>
     );
   }
 );
 
 Button.displayName = "Button";
-
 export default Button;
