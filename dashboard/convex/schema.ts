@@ -2,12 +2,10 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Businesses/Organizations - users can have multiple businesses
+  // ── Businesses ───────────────────────────────────────────────────────────
   businesses: defineTable({
     name: v.string(),
     slug: v.string(),
-    // Better Auth user IDs are plain strings, not Convex document IDs.
-    // They live in the component's "user" table which is outside your schema.
     userId: v.string(),
     mpesaEnvironment: v.union(v.literal("sandbox"), v.literal("production")),
     lipaNaMpesaShortCode: v.optional(v.string()),
@@ -17,7 +15,7 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_slug", ["slug"]),
 
-  // API Credentials - encrypted storage per business
+  // ── M-Pesa Credentials ──────────────────────────────────────────────────
   credentials: defineTable({
     businessId: v.id("businesses"),
     consumerKey: v.string(),
@@ -30,7 +28,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_business", ["businessId"]),
 
-  // Webhooks configuration
+  // ── Webhooks ─────────────────────────────────────────────────────────────
   webhooks: defineTable({
     businessId: v.id("businesses"),
     url: v.string(),
@@ -52,7 +50,7 @@ export default defineSchema({
     .index("by_business", ["businessId"])
     .index("by_business_and_active", ["businessId", "isActive"]),
 
-  // Transactions - monitoring and history
+  // ── Transactions ─────────────────────────────────────────────────────────
   transactions: defineTable({
     businessId: v.id("businesses"),
     transactionId: v.string(),
@@ -85,7 +83,7 @@ export default defineSchema({
     .index("by_business_and_created", ["businessId", "createdAt"])
     .index("by_transaction_id", ["transactionId"]),
 
-  // Webhook deliveries - for retry and logging
+  // ── Webhook deliveries ───────────────────────────────────────────────────
   webhookDeliveries: defineTable({
     webhookId: v.id("webhooks"),
     transactionId: v.optional(v.id("transactions")),
@@ -101,4 +99,29 @@ export default defineSchema({
     .index("by_webhook", ["webhookId"])
     .index("by_transaction", ["transactionId"])
     .index("by_event_id", ["eventId"]),
+
+  // ── Extended User Profiles ───────────────────────────────────────────────
+  // Better Auth manages the base user (email, name, image) via its component.
+  // This table stores additional profile data and preferences per user.
+  userProfiles: defineTable({
+    userId: v.string(), // Better Auth user._id (string)
+    phoneNumber: v.optional(v.string()),
+    phoneCountryCode: v.optional(v.string()),
+    avatarColor: v.optional(v.string()), // hex color for initials avatar
+    timezone: v.optional(v.string()),
+    // Preferences
+    theme: v.optional(
+      v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
+    ),
+    emailNotifications: v.optional(v.boolean()),
+    smsNotifications: v.optional(v.boolean()),
+    weeklyDigest: v.optional(v.boolean()),
+    language: v.optional(v.string()),
+    currency: v.optional(v.string()),
+    // Onboarding
+    onboardingStep: v.optional(v.number()),
+    onboardingCompleted: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

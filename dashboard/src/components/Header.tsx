@@ -12,12 +12,37 @@ interface HeaderProps {
   className?: string;
 }
 
+const ROUTE_LABELS: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/payments": "Payments",
+  // Products
+  "/products/catalogue": "Catalogue",
+  "/products/checkout-links": "Checkout Links",
+  "/products/discounts": "Discounts",
+  "/products/benefits": "Benefits",
+  "/products/meters": "Meters",
+  // Customers
+  "/customers": "Customers",
+  // Sales
+  "/sales/orders": "Orders",
+  "/sales/subscriptions": "Subscriptions",
+  "/sales/checkouts": "Checkouts",
+  // Finance
+  "/finance/income": "Income",
+  "/finance/payouts": "Payouts",
+  "/finance/account": "Payout Account",
+  // System
+  "/webhooks": "Webhooks",
+  "/settings": "Settings",
+  "/account": "Account",
+};
+
 function usePageLabel(override?: string): string {
   const loc = useLocation();
   if (override) return override;
-  if (loc.pathname === "/") return "Dashboard";
-  return loc.pathname
-    .slice(1)
+  if (ROUTE_LABELS[loc.pathname]) return ROUTE_LABELS[loc.pathname];
+  const last = loc.pathname.split("/").filter(Boolean).pop() ?? "";
+  return last
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
@@ -44,7 +69,7 @@ export default function Header({
         className
       )}
     >
-      {/* Mobile menu button */}
+      {/* Mobile menu trigger */}
       {onMenuOpen && (
         <motion.button
           type="button"
@@ -81,9 +106,8 @@ export default function Header({
         </motion.span>
       </nav>
 
-      {/* Right slot */}
+      {/* Right */}
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
-        {/* Status pill */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -97,7 +121,6 @@ export default function Header({
           />
           <span>Connected</span>
         </motion.div>
-
         {rightSlot}
         <ModeToggle />
       </div>
