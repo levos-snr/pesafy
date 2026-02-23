@@ -9,6 +9,10 @@ export default defineSchema({
     userId: v.string(),
     mpesaEnvironment: v.union(v.literal("sandbox"), v.literal("production")),
     lipaNaMpesaShortCode: v.optional(v.string()),
+    // Organization profile fields (used in GeneralSettings)
+    supportEmail: v.optional(v.string()),
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -101,15 +105,12 @@ export default defineSchema({
     .index("by_event_id", ["eventId"]),
 
   // ── Extended User Profiles ───────────────────────────────────────────────
-  // Better Auth manages the base user (email, name, image) via its component.
-  // This table stores additional profile data and preferences per user.
   userProfiles: defineTable({
-    userId: v.string(), // Better Auth user._id (string)
+    userId: v.string(),
     phoneNumber: v.optional(v.string()),
     phoneCountryCode: v.optional(v.string()),
-    avatarColor: v.optional(v.string()), // hex color for initials avatar
+    avatarColor: v.optional(v.string()),
     timezone: v.optional(v.string()),
-    // Preferences
     theme: v.optional(
       v.union(v.literal("light"), v.literal("dark"), v.literal("system"))
     ),
@@ -118,7 +119,6 @@ export default defineSchema({
     weeklyDigest: v.optional(v.boolean()),
     language: v.optional(v.string()),
     currency: v.optional(v.string()),
-    // Onboarding
     onboardingStep: v.optional(v.number()),
     onboardingCompleted: v.optional(v.boolean()),
     createdAt: v.number(),

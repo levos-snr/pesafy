@@ -5,6 +5,21 @@
  *  1 — M-Pesa Environment (sandbox / production)
  *  2 — Contact (phone)
  *  3 — Done
+ *
+ * WHAT CHANGED (step-by-step):
+ *  1. Removed COUNTRY_CODES import from @/lib/countryCodes — not needed.
+ *  2. Removed ChevronDown import (only used by old country dropdown).
+ *  3. Step 2 state simplified:
+ *       Before: selectedCountry (object) + phoneNumber (string) + countrySearch
+ *               + showCountryList + filteredCountries computed value
+ *       After:  phoneValue (E.164 string) — PhoneInput manages everything.
+ *  4. handleNext step 2 save simplified:
+ *       Before: manually built `${selectedCountry.dial}${phoneNumber}`
+ *       After:  phoneValue is already E.164, saved directly.
+ *  5. Step 2 UI: custom two-part picker → single PhoneInput (same as AccountPage).
+ *  6. Added forwardRef PhoneNumberInput for the custom input slot.
+ *
+ * INSTALL: npm install react-phone-number-input
  */
 import { api } from "@convex/_generated/api";
 import { useMutation } from "convex/react";
@@ -15,7 +30,6 @@ import {
   ArrowRight,
   Check,
   CheckCircle,
-  ChevronDown,
   Globe,
   Phone,
   Shield,
@@ -26,36 +40,9 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { PhoneField } from "@/components/PhoneField";
 import { cn } from "@/lib/utils";
 
-// ── Country list ──────────────────────────────────────────────
-const COUNTRIES = [
-  { code: "KE", dial: "+254", name: "Kenya", flag: "🇰🇪" },
-  { code: "UG", dial: "+256", name: "Uganda", flag: "🇺🇬" },
-  { code: "TZ", dial: "+255", name: "Tanzania", flag: "🇹🇿" },
-  { code: "RW", dial: "+250", name: "Rwanda", flag: "🇷🇼" },
-  { code: "ET", dial: "+251", name: "Ethiopia", flag: "🇪🇹" },
-  { code: "NG", dial: "+234", name: "Nigeria", flag: "🇳🇬" },
-  { code: "GH", dial: "+233", name: "Ghana", flag: "🇬🇭" },
-  { code: "ZA", dial: "+27", name: "South Africa", flag: "🇿🇦" },
-  { code: "US", dial: "+1", name: "United States", flag: "🇺🇸" },
-  { code: "GB", dial: "+44", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "IN", dial: "+91", name: "India", flag: "🇮🇳" },
-  { code: "AE", dial: "+971", name: "UAE", flag: "🇦🇪" },
-  { code: "SG", dial: "+65", name: "Singapore", flag: "🇸🇬" },
-  { code: "LS", dial: "+266", name: "Lesotho", flag: "🇱🇸" },
-  { code: "MW", dial: "+265", name: "Malawi", flag: "🇲🇼" },
-  { code: "ZM", dial: "+260", name: "Zambia", flag: "🇿🇲" },
-  { code: "ZW", dial: "+263", name: "Zimbabwe", flag: "🇿🇼" },
-  { code: "MZ", dial: "+258", name: "Mozambique", flag: "🇲🇿" },
-  { code: "SO", dial: "+252", name: "Somalia", flag: "🇸🇴" },
-  { code: "SS", dial: "+211", name: "South Sudan", flag: "🇸🇸" },
-  { code: "CD", dial: "+243", name: "DR Congo", flag: "🇨🇩" },
-  { code: "CM", dial: "+237", name: "Cameroon", flag: "🇨🇲" },
-  { code: "SN", dial: "+221", name: "Senegal", flag: "🇸🇳" },
-];
-
-// ── Supported / prohibited use-cases specific to Pesafy ──────
 const SUPPORTED_USECASES = [
   "STK Push payments (Lipa na M-Pesa)",
   "B2C disbursements & payouts",
@@ -64,7 +51,6 @@ const SUPPORTED_USECASES = [
   "Automated payment reconciliation",
   "Real-time webhook notifications",
 ];
-
 const PROHIBITED_USECASES = [
   "Gambling or lottery platforms",
   "Pyramid or MLM schemes",
@@ -73,7 +59,6 @@ const PROHIBITED_USECASES = [
   "Counterfeit goods or fraud",
 ];
 
-// ── Step config ───────────────────────────────────────────────
 const STEPS = [
   { id: "business", label: "Business", icon: Sparkles },
   { id: "environment", label: "Environment", icon: Globe },
@@ -81,7 +66,6 @@ const STEPS = [
   { id: "done", label: "Done", icon: Check },
 ];
 
-// ── Motion variants ───────────────────────────────────────────
 const pageVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 48 : -48, opacity: 0, scale: 0.97 }),
   center: {
@@ -98,11 +82,9 @@ const pageVariants = {
   }),
 };
 
-// ── Input style ───────────────────────────────────────────────
 const inp =
   "w-full rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all";
 
-// ── Slug generator ────────────────────────────────────────────
 function toSlug(s: string) {
   return s
     .toLowerCase()
@@ -121,28 +103,18 @@ export default function OnboardingPage() {
   const [loading, setLoad] = useState(false);
   const [error, setError] = useState("");
 
-  // Step 0 — Business
+  // Step 0
   const [bizName, setBizName] = useState("");
   const [bizSlug, setBizSlug] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedPolicy, setAgreedPolicy] = useState(false);
   const [agreedKyc, setAgreedKyc] = useState(false);
 
-  // Step 1 — Environment
+  // Step 1
   const [environment, setEnv] = useState<"sandbox" | "production">("sandbox");
 
-  // Step 2 — Contact
-  const [selectedCountry, setCountry] = useState(COUNTRIES[0]);
-  const [phoneNumber, setPhone] = useState("");
-  const [countrySearch, setSearch] = useState("");
-  const [showCountryList, setShowList] = useState(false);
-
-  const filteredCountries = COUNTRIES.filter(
-    (c) =>
-      c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
-      c.dial.includes(countrySearch) ||
-      c.code.toLowerCase().includes(countrySearch.toLowerCase())
-  );
+  // Step 2 — single E.164 value replaces selectedCountry + phoneNumber + search state
+  const [phoneValue, setPhoneValue] = useState<string | undefined>(undefined);
 
   const goTo = (next: number) => {
     setDir(next > step ? 1 : -1);
@@ -151,7 +123,6 @@ export default function OnboardingPage() {
   };
 
   const handleNext = async () => {
-    // Validate step 0
     if (step === 0) {
       if (!bizName.trim()) {
         setError("Business name is required");
@@ -174,8 +145,6 @@ export default function OnboardingPage() {
         return;
       }
     }
-
-    // Final save on step 2 (contact)
     if (step === 2) {
       setLoad(true);
       setError("");
@@ -185,12 +154,8 @@ export default function OnboardingPage() {
           slug: bizSlug.trim(),
           mpesaEnvironment: environment,
         });
-        if (phoneNumber.trim()) {
-          await updateProfile({
-            phoneNumber: `${selectedCountry.dial}${phoneNumber.replace(/^0+/, "")}`,
-            phoneCountryCode: selectedCountry.dial,
-          });
-        }
+        // phoneValue is already E.164 — no stitching needed
+        if (phoneValue) await updateProfile({ phoneNumber: phoneValue });
         goTo(3);
       } catch (e: any) {
         setError(e?.message ?? "Something went wrong");
@@ -199,7 +164,6 @@ export default function OnboardingPage() {
       }
       return;
     }
-
     if (step < STEPS.length - 1) goTo(step + 1);
   };
 
@@ -207,7 +171,6 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 transition-colors duration-300">
-      {/* Ambient glow */}
       <motion.div
         animate={{ scale: [1, 1.12, 1], opacity: [0.04, 0.09, 0.04] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
@@ -215,7 +178,6 @@ export default function OnboardingPage() {
       />
 
       <div className="relative z-10 w-full max-w-[520px]">
-        {/* Logo */}
         <motion.div
           initial={{ opacity: 0, y: -14 }}
           animate={{ opacity: 1, y: 0 }}
@@ -230,16 +192,14 @@ export default function OnboardingPage() {
           </span>
         </motion.div>
 
-        {/* Card */}
         <motion.div
           initial={{ opacity: 0, y: 24, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-          className="rounded-2xl border border-border bg-card shadow-2xl shadow-black/10 overflow-hidden"
+          className="rounded-2xl border border-border bg-card shadow-2xl shadow-black/10"
         >
-          {/* Header */}
+          {/* Progress header */}
           <div className="px-8 pt-7 pb-5 border-b border-border">
-            {/* Step pills */}
             <div className="flex items-center justify-between mb-5">
               {STEPS.map(({ label, icon: Icon }, i) => {
                 const done = i < step;
@@ -248,17 +208,14 @@ export default function OnboardingPage() {
                   <div key={label} className="flex items-center gap-1.5">
                     <motion.div
                       animate={{
-                        backgroundColor: done
-                          ? "var(--primary)"
-                          : active
-                            ? "var(--primary)"
-                            : "transparent",
+                        backgroundColor:
+                          done || active ? "var(--primary)" : "transparent",
                         borderColor:
                           done || active ? "var(--primary)" : "var(--border)",
                         scale: active ? 1.1 : 1,
                       }}
                       transition={{ duration: 0.25 }}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 text-[11px] font-bold"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border-2"
                     >
                       {done ? (
                         <Check
@@ -293,7 +250,6 @@ export default function OnboardingPage() {
                 );
               })}
             </div>
-            {/* Progress bar */}
             <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
               <motion.div
                 className="h-full rounded-full bg-primary"
@@ -303,8 +259,8 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          {/* Step content */}
-          <div className="relative overflow-hidden" style={{ minHeight: 340 }}>
+          {/* Steps */}
+          <div className="relative" style={{ minHeight: 340 }}>
             <AnimatePresence custom={dir} mode="wait" initial={false}>
               <motion.div
                 key={step}
@@ -315,7 +271,7 @@ export default function OnboardingPage() {
                 exit="exit"
                 className="px-8 py-6"
               >
-                {/* ── STEP 0: Business Setup ─────────────────────── */}
+                {/* STEP 0 */}
                 {step === 0 && (
                   <div className="space-y-5">
                     <div>
@@ -326,8 +282,6 @@ export default function OnboardingPage() {
                         Set up your business to start accepting M-Pesa payments.
                       </p>
                     </div>
-
-                    {/* Business Name */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Business Name
@@ -338,14 +292,11 @@ export default function OnboardingPage() {
                         value={bizName}
                         onChange={(e) => {
                           setBizName(e.target.value);
-                          if (!bizSlug || bizSlug === toSlug(bizName)) {
+                          if (!bizSlug || bizSlug === toSlug(bizName))
                             setBizSlug(toSlug(e.target.value));
-                          }
                         }}
                       />
                     </div>
-
-                    {/* Slug */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Business Slug
@@ -366,8 +317,6 @@ export default function OnboardingPage() {
                         hyphens only.
                       </p>
                     </div>
-
-                    {/* Supported Use Cases */}
                     <div className="rounded-xl border border-border bg-muted/20 p-4">
                       <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
                         <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
@@ -385,8 +334,6 @@ export default function OnboardingPage() {
                         ))}
                       </ul>
                     </div>
-
-                    {/* Prohibited Use Cases */}
                     <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4">
                       <p className="text-xs font-semibold text-destructive mb-2 flex items-center gap-1.5">
                         <AlertTriangle className="h-3.5 w-3.5" />
@@ -408,8 +355,6 @@ export default function OnboardingPage() {
                         and reversed.
                       </p>
                     </div>
-
-                    {/* Agreements */}
                     <div className="space-y-3">
                       {[
                         {
@@ -455,7 +400,7 @@ export default function OnboardingPage() {
                       ].map(({ key, checked, set, label }) => (
                         <label
                           key={key}
-                          className="flex items-start gap-3 cursor-pointer group"
+                          className="flex items-start gap-3 cursor-pointer"
                         >
                           <motion.div
                             onClick={() => set(!checked)}
@@ -499,7 +444,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* ── STEP 1: M-Pesa Environment ─────────────────── */}
+                {/* STEP 1 */}
                 {step === 1 && (
                   <div className="space-y-5">
                     <div>
@@ -510,8 +455,6 @@ export default function OnboardingPage() {
                         Select your Safaricom Daraja API environment.
                       </p>
                     </div>
-
-                    {/* Environment Cards */}
                     <div className="grid gap-3">
                       {(
                         [
@@ -606,8 +549,6 @@ export default function OnboardingPage() {
                         )
                       )}
                     </div>
-
-                    {/* Info box */}
                     <div className="flex gap-3 rounded-xl border border-border bg-muted/20 p-4">
                       <Shield className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                       <p className="text-xs text-muted-foreground leading-relaxed">
@@ -620,7 +561,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* ── STEP 2: Contact ────────────────────────────── */}
+                {/* STEP 2 — Contact */}
                 {step === 2 && (
                   <div className="space-y-5">
                     <div>
@@ -633,111 +574,20 @@ export default function OnboardingPage() {
                       </p>
                     </div>
 
-                    {/* Country selector */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Country
-                      </label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setShowList(!showCountryList)}
-                          className={cn(
-                            "w-full flex items-center gap-3 rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground text-left",
-                            "hover:border-primary/30 transition-colors"
-                          )}
-                        >
-                          <span className="text-base">
-                            {selectedCountry.flag}
-                          </span>
-                          <span className="flex-1">{selectedCountry.name}</span>
-                          <span className="text-muted-foreground font-mono text-xs">
-                            {selectedCountry.dial}
-                          </span>
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 text-muted-foreground transition-transform",
-                              showCountryList && "rotate-180"
-                            )}
-                          />
-                        </button>
-
-                        <AnimatePresence>
-                          {showCountryList && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -6, scale: 0.97 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -6, scale: 0.97 }}
-                              transition={{
-                                duration: 0.15,
-                                ease: [0.16, 1, 0.3, 1],
-                              }}
-                              className="absolute top-full left-0 right-0 z-50 mt-1.5 rounded-xl border border-border bg-card shadow-xl overflow-hidden"
-                            >
-                              <div className="p-2 border-b border-border">
-                                <input
-                                  className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none"
-                                  placeholder="Search country..."
-                                  value={countrySearch}
-                                  onChange={(e) => setSearch(e.target.value)}
-                                  autoFocus
-                                />
-                              </div>
-                              <div className="max-h-48 overflow-y-auto">
-                                {filteredCountries.map((c) => (
-                                  <button
-                                    key={c.code}
-                                    type="button"
-                                    onClick={() => {
-                                      setCountry(c);
-                                      setShowList(false);
-                                      setSearch("");
-                                    }}
-                                    className={cn(
-                                      "w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-muted/60 transition-colors",
-                                      selectedCountry.code === c.code &&
-                                        "bg-primary/5 text-primary"
-                                    )}
-                                  >
-                                    <span>{c.flag}</span>
-                                    <span className="flex-1">{c.name}</span>
-                                    <span className="text-xs font-mono text-muted-foreground">
-                                      {c.dial}
-                                    </span>
-                                  </button>
-                                ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-
-                    {/* Phone number */}
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Phone Number
                       </label>
-                      <div className="flex gap-2">
-                        <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-3 text-sm font-mono text-muted-foreground shrink-0">
-                          <span className="text-base">
-                            {selectedCountry.flag}
-                          </span>
-                          {selectedCountry.dial}
-                        </div>
-                        <input
-                          className={cn(inp, "flex-1")}
-                          placeholder="712 345 678"
-                          value={phoneNumber}
-                          onChange={(e) =>
-                            setPhone(e.target.value.replace(/\D/g, ""))
-                          }
-                          type="tel"
-                          inputMode="numeric"
-                        />
-                      </div>
+                      <PhoneField
+                        value={phoneValue}
+                        onChange={setPhoneValue}
+                        placeholder="712 345 678"
+                        defaultCountry="KE"
+                        size="lg"
+                      />
                       <p className="text-[11px] text-muted-foreground/60">
-                        Enter without the leading zero. E.g. 712345678
+                        Click the flag to change country. Enter digits without
+                        the leading zero.
                       </p>
                     </div>
 
@@ -752,7 +602,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
 
-                {/* ── STEP 3: Done ───────────────────────────────── */}
+                {/* STEP 3 */}
                 {step === 3 && (
                   <div className="text-center py-4">
                     <div className="relative flex h-20 w-20 items-center justify-center mx-auto mb-6">
@@ -793,7 +643,6 @@ export default function OnboardingPage() {
                         </motion.svg>
                       </div>
                     </div>
-
                     <motion.h2
                       initial={{ opacity: 0, y: 12 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -814,7 +663,6 @@ export default function OnboardingPage() {
                         ? " in Sandbox mode."
                         : " in Production mode."}
                     </motion.p>
-
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -876,9 +724,7 @@ export default function OnboardingPage() {
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </motion.button>
-
               <div className="flex items-center gap-3">
-                {/* Skip contact step */}
                 {step === 2 && (
                   <button
                     type="button"
@@ -893,7 +739,6 @@ export default function OnboardingPage() {
                     {error}
                   </p>
                 )}
-
                 <motion.button
                   type="button"
                   onClick={handleNext}
@@ -926,8 +771,6 @@ export default function OnboardingPage() {
               </div>
             </div>
           )}
-
-          {/* Done footer */}
           {step === 3 && (
             <div className="border-t border-border px-8 py-4 bg-muted/10">
               <motion.button
@@ -944,7 +787,6 @@ export default function OnboardingPage() {
           )}
         </motion.div>
 
-        {/* Already have account */}
         {step === 0 && (
           <motion.p
             initial={{ opacity: 0 }}

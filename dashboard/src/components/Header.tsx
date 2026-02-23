@@ -23,6 +23,9 @@ const ROUTE_LABELS: Record<string, string> = {
   "/products/meters": "Meters",
   // Customers
   "/customers": "Customers",
+  // Analytics
+  "/analytics/metrics": "Metrics",
+  "/analytics/events": "Events",
   // Sales
   "/sales/orders": "Orders",
   "/sales/subscriptions": "Subscriptions",
@@ -31,9 +34,17 @@ const ROUTE_LABELS: Record<string, string> = {
   "/finance/income": "Income",
   "/finance/payouts": "Payouts",
   "/finance/account": "Payout Account",
+  // Settings sub-routes
+  "/settings/general": "General",
+  "/settings/billing": "Billing",
+  "/settings/members": "Members",
+  "/settings/webhooks": "Webhooks",
+  "/settings/custom-fields": "Custom Fields",
+  "/settings/mpesa": "M-Pesa",
+  "/settings/appearance": "Appearance",
+  "/settings/notifications": "Notifications",
   // System
   "/webhooks": "Webhooks",
-  "/settings": "Settings",
   "/account": "Account",
 };
 
@@ -69,7 +80,6 @@ export default function Header({
         className
       )}
     >
-      {/* Mobile menu trigger */}
       {onMenuOpen && (
         <motion.button
           type="button"
@@ -86,7 +96,6 @@ export default function Header({
         </motion.button>
       )}
 
-      {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1 text-sm"
@@ -106,7 +115,6 @@ export default function Header({
         </motion.span>
       </nav>
 
-      {/* Right */}
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}

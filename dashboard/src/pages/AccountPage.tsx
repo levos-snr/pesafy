@@ -1,6 +1,11 @@
 /**
  * AccountPage — Full profile CRUD
  * Name · Phone with country code · Avatar color · Password change · Delete account
+ *
+ * Changes:
+ *  - Layout now centered (max-w-2xl mx-auto) so it fills the content area
+ *  - Country codes sourced from @/lib/countryCodes (world-wide, ~200 countries)
+ *  - Country selector upgraded to a searchable dropdown (consistent with OnboardingPage)
  */
 import { api } from "@convex/_generated/api";
 import { useMutation, useQuery } from "convex/react";
@@ -20,32 +25,11 @@ import {
   Trash2,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { isPossiblePhoneNumber, PhoneField } from "@/components/PhoneField";
 import { Avatar } from "@/components/UserAvatarDropdown";
 import { cn } from "@/lib/utils";
 import { fadeUp, viewport } from "@/lib/variants";
-
-const COUNTRY_CODES = [
-  { code: "KE", dial: "+254", name: "Kenya" },
-  { code: "UG", dial: "+256", name: "Uganda" },
-  { code: "TZ", dial: "+255", name: "Tanzania" },
-  { code: "RW", dial: "+250", name: "Rwanda" },
-  { code: "NG", dial: "+234", name: "Nigeria" },
-  { code: "GH", dial: "+233", name: "Ghana" },
-  { code: "ZA", dial: "+27", name: "South Africa" },
-  { code: "ET", dial: "+251", name: "Ethiopia" },
-  { code: "US", dial: "+1", name: "United States" },
-  { code: "GB", dial: "+44", name: "United Kingdom" },
-  { code: "IN", dial: "+91", name: "India" },
-  { code: "CA", dial: "+1", name: "Canada" },
-  { code: "AU", dial: "+61", name: "Australia" },
-  { code: "DE", dial: "+49", name: "Germany" },
-  { code: "FR", dial: "+33", name: "France" },
-  { code: "AE", dial: "+971", name: "UAE" },
-  { code: "SG", dial: "+65", name: "Singapore" },
-  { code: "BR", dial: "+55", name: "Brazil" },
-  { code: "MX", dial: "+52", name: "Mexico" },
-];
 
 const AVATAR_COLORS = [
   "#d81b0d",
@@ -89,7 +73,7 @@ function Section({
       whileInView="visible"
       viewport={viewport}
       className={cn(
-        "rounded-2xl border overflow-hidden",
+        "rounded-2xl border",
         danger
           ? "border-destructive/20 bg-destructive/5"
           : "border-border bg-card"
@@ -97,7 +81,7 @@ function Section({
     >
       <div
         className={cn(
-          "flex items-start gap-3 px-5 py-4 border-b",
+          "flex items-start gap-3 px-5 py-4 border-b rounded-t-2xl overflow-hidden",
           danger ? "border-destructive/15" : "border-border"
         )}
       >
@@ -175,6 +159,9 @@ function SaveButton({
   );
 }
 
+// CountryPicker replaced by react-phone-number-input's built-in PhoneInput
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function AccountPage() {
   const profile = useQuery(api.userProfile.getProfile);
   const updateName = useMutation(api.userProfile.updateName);
@@ -188,12 +175,13 @@ export default function AccountPage() {
   const [nameSaved, setNameSaved] = useState(false);
   const [nameErr, setNameErr] = useState("");
 
-  const [phone, setPhone] = useState("");
-  const [countryDial, setCountryDial] = useState("+254");
+  const [phoneValue, setPhoneValue] = useState<string | undefined>(undefined);
   const [phoneSaving, setPhoneSaving] = useState(false);
   const [phoneSaved, setPhoneSaved] = useState(false);
 
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [colorSaving, setColorSaving] = useState(false);
+  const [colorSaved, setColorSaved] = useState(false);
 
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -209,14 +197,26 @@ export default function AccountPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteErr, setDeleteErr] = useState("");
 
-  if (!profile)
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.name ?? "");
+    if (profile.avatarColor) setSelectedColor(profile.avatarColor);
+    if (profile.phoneNumber) {
+      // phoneNumber is stored in E.164 format (e.g. "+254712345678")
+      setPhoneValue(profile.phoneNumber);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id]);
+
+  if (!profile) {
     return (
-      <div className="max-w-xl space-y-4">
+      <div className="max-w-2xl mx-auto space-y-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-36 rounded-2xl skeleton" />
         ))}
       </div>
     );
+  }
 
   const avatarColor = selectedColor ?? profile?.avatarColor ?? undefined;
 
@@ -243,7 +243,6 @@ export default function AccountPage() {
     save(
       async () => {
         await updateName({ name: name.trim() || profile.name || "" });
-        setName("");
       },
       setNameSaving,
       setNameSaved,
@@ -253,17 +252,23 @@ export default function AccountPage() {
   const handleSavePhone = () =>
     save(
       async () => {
-        const full = phone
-          ? `${countryDial}${phone.replace(/^0/, "")}`
-          : undefined;
         await updateProfile({
-          phoneNumber: full,
-          phoneCountryCode: countryDial,
+          phoneNumber: phoneValue || undefined,
+          phoneCountryCode: undefined,
         });
-        setPhone("");
       },
       setPhoneSaving,
       setPhoneSaved
+    );
+
+  const handleSaveColor = () =>
+    save(
+      async () => {
+        if (!selectedColor) return;
+        await updateProfile({ avatarColor: selectedColor });
+      },
+      setColorSaving,
+      setColorSaved
     );
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -290,7 +295,8 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="max-w-xl space-y-5">
+    // ── CENTERED: max-w-2xl mx-auto fills the available content area ──
+    <div className="max-w-2xl mx-auto space-y-5">
       <motion.div
         variants={shouldReduceMotion ? undefined : fadeUp}
         initial="hidden"
@@ -310,7 +316,7 @@ export default function AccountPage() {
         initial="hidden"
         animate="visible"
         transition={{ delay: 0.06 }}
-        className="relative rounded-2xl border border-border bg-card overflow-hidden"
+        className="relative rounded-2xl border border-border bg-card"
       >
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
         <div className="flex items-center gap-4 px-5 py-5">
@@ -351,7 +357,7 @@ export default function AccountPage() {
         </div>
       </motion.div>
 
-      {/* Name */}
+      {/* Display Name */}
       <Section
         icon={<User className="h-4 w-4" />}
         title="Display Name"
@@ -378,7 +384,7 @@ export default function AccountPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-1.5 text-xs text-destructive"
+              className="text-xs text-destructive mt-2"
             >
               {nameErr}
             </motion.p>
@@ -386,19 +392,17 @@ export default function AccountPage() {
         </AnimatePresence>
       </Section>
 
-      {/* Email */}
+      {/* Email (read-only) */}
       <Section
         icon={<Mail className="h-4 w-4" />}
         title="Email Address"
-        subtitle="Your sign-in email — contact support to change"
+        subtitle="Managed by Better Auth — contact support to change"
       >
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/20 px-4 py-2.5">
           <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="text-sm text-muted-foreground flex-1">
-            {profile.email}
-          </span>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/40">
-            Read-only
+          <span className="text-sm text-foreground">{profile.email}</span>
+          <span className="ml-auto text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 border border-border rounded-full px-2 py-0.5">
+            Verified
           </span>
         </div>
       </Section>
@@ -407,121 +411,100 @@ export default function AccountPage() {
       <Section
         icon={<Phone className="h-4 w-4" />}
         title="Phone Number"
-        subtitle="Used for SMS notifications and 2FA"
+        subtitle="Used for SMS notifications and M-Pesa verification"
       >
-        <div className="flex gap-2">
-          <select
-            value={countryDial}
-            onChange={(e) => setCountryDial(e.target.value)}
-            className="rounded-xl border border-border bg-input px-3 py-2.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 shrink-0"
-          >
-            {COUNTRY_CODES.map(({ code, dial, name: n }) => (
-              <option key={`${code}-${dial}`} value={dial}>
-                {code} {dial}
-              </option>
-            ))}
-          </select>
-          <input
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder={
-              profile.phoneNumber?.replace(/^\+\d+/, "") || "712 345 678"
-            }
-            className={cn(inp, "flex-1")}
+        <div className="flex gap-2 items-start">
+          <PhoneField
+            value={phoneValue}
+            onChange={setPhoneValue}
+            placeholder="712 345 678"
+            defaultCountry="KE"
+            size="md"
+            className="flex-1"
           />
           <SaveButton
             saving={phoneSaving}
             saved={phoneSaved}
+            disabled={!!phoneValue && !isPossiblePhoneNumber(phoneValue)}
             onClick={handleSavePhone}
           />
         </div>
-        {profile.phoneNumber && (
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Current: <span className="font-mono">{profile.phoneNumber}</span>
-          </p>
-        )}
       </Section>
 
-      {/* Avatar color */}
+      {/* Avatar Color */}
       <Section
         icon={<Palette className="h-4 w-4" />}
         title="Avatar Color"
-        subtitle="Customize your initials avatar"
+        subtitle="Shown when you don't have a profile photo"
       >
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 mb-4">
           {AVATAR_COLORS.map((color) => (
             <motion.button
               key={color}
               type="button"
-              onClick={async () => {
-                setSelectedColor(color);
-                await updateProfile({ avatarColor: color });
-              }}
-              whileHover={{ scale: 1.18 }}
-              whileTap={{ scale: 0.88 }}
-              transition={{ type: "spring", stiffness: 500, damping: 26 }}
-              className="relative h-8 w-8 rounded-full ring-2 ring-transparent focus:outline-none focus:ring-primary"
+              onClick={() => setSelectedColor(color)}
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: "spring", stiffness: 600, damping: 28 }}
+              className={cn(
+                "h-7 w-7 rounded-full border-2 transition-all",
+                selectedColor === color
+                  ? "border-foreground scale-110 shadow-md"
+                  : "border-transparent"
+              )}
               style={{ backgroundColor: color }}
-            >
-              <AnimatePresence>
-                {avatarColor === color && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    transition={{ type: "spring", stiffness: 600, damping: 22 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                  >
-                    <Check
-                      className="h-3.5 w-3.5 text-white drop-shadow"
-                      strokeWidth={3}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
+            />
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Preview:</span>
+        <div className="flex items-center gap-3">
           <Avatar
             name={profile.name}
             email={profile.email}
+            image={profile.image}
             userId={profile.id}
-            size="sm"
+            size="md"
             color={avatarColor}
+          />
+          <p className="text-xs text-muted-foreground">Preview</p>
+          <SaveButton
+            saving={colorSaving}
+            saved={colorSaved}
+            disabled={!selectedColor || selectedColor === profile.avatarColor}
+            onClick={handleSaveColor}
           />
         </div>
       </Section>
 
-      {/* Change password */}
+      {/* Change Password */}
       <Section
         icon={<Lock className="h-4 w-4" />}
         title="Change Password"
-        subtitle="Use at least 8 characters with mixed case"
+        subtitle="Must be at least 8 characters"
       >
         <form onSubmit={handleChangePassword} className="space-y-3">
           {[
             {
+              id: "cur",
               label: "Current Password",
               val: currentPw,
               set: setCurrentPw,
               show: showCur,
-              toggle: () => setShowCur(!showCur),
+              toggle: () => setShowCur((v) => !v),
               auto: "current-password",
+              min: 1,
             },
             {
+              id: "new",
               label: "New Password",
               val: newPw,
               set: setNewPw,
               show: showNew,
-              toggle: () => setShowNew(!showNew),
+              toggle: () => setShowNew((v) => !v),
               auto: "new-password",
               min: 8,
             },
-          ].map(({ label, val, set, show, toggle, auto, min }) => (
-            <div key={label}>
+          ].map(({ id, label, val, set, show, toggle, auto, min }) => (
+            <div key={id}>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
                 {label}
               </label>

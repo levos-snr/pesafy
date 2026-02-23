@@ -346,3 +346,50 @@ select:focus {
 /* Safe area for notched devices */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
 .pt-safe { padding-top: env(safe-area-inset-top, 0); }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   react-phone-number-input — Theme integration
+   Add this block at the END of your index.css
+   ═══════════════════════════════════════════════════════════════════════════
+
+   WHY CSS IS NEEDED:
+   The Tailwind [&_...] selectors in phoneInputWrapperClass handle most
+   styling, but the native OS <select> dropdown popup cannot be styled
+   with CSS at all — EXCEPT for `color-scheme`, which tells the browser
+   to render it dark or light. Without this, it always renders white.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Force the country <select> popup to match the current theme ── */
+/* Light mode: use light color-scheme (white dropdown — correct default) */
+.PhoneInputCountrySelect {
+  color-scheme: light;
+}
+
+/* Dark mode: tell the browser to render the native dropdown dark */
+.dark .PhoneInputCountrySelect {
+  color-scheme: dark;
+}
+
+/* ── 2. Override react-phone-number-input's own stylesheet defaults ── */
+/* The library injects its own styles for .PhoneInput, .PhoneInputInput etc.
+   These overrides ensure our theme variables win. */
+
+/* Remove the library's hardcoded white/light colors from the flag icon SVG border */
+.PhoneInputCountryIcon {
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* Remove the library's default focus outline on the internal input
+   (our wrapper div provides the focus ring instead) */
+.PhoneInputInput {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+
+
+
