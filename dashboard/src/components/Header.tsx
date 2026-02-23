@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ChevronRight, Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { ModeToggle } from "@/components/mode-toggle";
+import UserAvatarDropdown from "@/components/UserAvatarDropdown";
 import { cn } from "@/lib/utils";
 import { fadeUp, tapSpring } from "@/lib/variants";
 
@@ -80,6 +80,7 @@ export default function Header({
         className
       )}
     >
+      {/* Mobile hamburger */}
       {onMenuOpen && (
         <motion.button
           type="button"
@@ -96,6 +97,7 @@ export default function Header({
         </motion.button>
       )}
 
+      {/* Breadcrumb */}
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1 text-sm"
@@ -115,7 +117,9 @@ export default function Header({
         </motion.span>
       </nav>
 
+      {/* Right side */}
       <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        {/* Connection status pill */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -129,8 +133,18 @@ export default function Header({
           />
           <span>Connected</span>
         </motion.div>
+
+        {/* Extra right slot (optional) */}
         {rightSlot}
-        <ModeToggle />
+
+        {/* User avatar dropdown — replaces ModeToggle (theme is now inside dropdown) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <UserAvatarDropdown />
+        </motion.div>
       </div>
     </motion.header>
   );
