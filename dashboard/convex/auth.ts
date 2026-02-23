@@ -6,10 +6,24 @@ import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import authConfig from "./auth.config";
 
-// Parse comma-separated URLs into an array
+// Parse comma-separated URLs into an array (e.g. "https://pesafy.vercel.app,http://localhost:5173")
 const siteUrls = process.env.SITE_URL!.split(",").map((url) => url.trim());
-// Primary site URL (first one = production, or change order to your preference)
-const primarySiteUrl = siteUrls[0];
+
+// Auto-detect environment: CONVEX_CLOUD_URL is only defined in Convex cloud
+// deployments (production/preview). It is undefined during local `npx convex dev`.
+const isProduction = Boolean(process.env.CONVEX_CLOUD_URL);
+
+const devUrl = siteUrls.find(
+  (u) => u.includes("localhost") || u.includes("127.0.0.1")
+);
+const prodUrl = siteUrls.find(
+  (u) => !u.includes("localhost") && !u.includes("127.0.0.1")
+);
+
+// Pick the URL that matches the current runtime — no env var juggling needed.
+const primarySiteUrl = isProduction
+  ? (prodUrl ?? siteUrls[0])
+  : (devUrl ?? siteUrls[0]);
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
 

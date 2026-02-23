@@ -30,15 +30,29 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Always redirect back to the current origin so localhost stays on localhost
+    // and production (pesafy.vercel.app) stays on production — automatically.
+    const callbackURL = `${window.location.origin}/dashboard`;
+
     try {
       if (mode === "signup") {
-        const res = await authClient.signUp.email({ email, password, name });
+        const res = await authClient.signUp.email({
+          email,
+          password,
+          name,
+          callbackURL,
+        });
         if (res.error) {
           setError(res.error.message ?? "Sign up failed");
           setShakeKey((k) => k + 1);
         }
       } else {
-        const res = await authClient.signIn.email({ email, password });
+        const res = await authClient.signIn.email({
+          email,
+          password,
+          callbackURL,
+        });
         if (res.error) {
           setError(res.error.message ?? "Invalid credentials");
           setShakeKey((k) => k + 1);
