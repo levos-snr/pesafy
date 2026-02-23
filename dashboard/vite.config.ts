@@ -20,6 +20,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "@convex": path.resolve(__dirname, "./convex"),
     },
+    conditions: [
+      "@convex-dev/component-source",
+      "browser",
+      "module",
+      "import",
+      "default",
+    ],
+    dedupe: ["react", "react-dom"],
   },
   server: {
     port: 5173,

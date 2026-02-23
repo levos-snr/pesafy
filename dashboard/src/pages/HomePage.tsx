@@ -1,3 +1,11 @@
+/**
+ * HomePage — Pesafy Command Center
+ * Features:
+ *  - Getting started setup cards (Create Product, Integrate, Finish Setup)
+ *  - KPI stat cards
+ *  - Volume chart + recent transactions
+ *  - Quick actions
+ */
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
 import {
@@ -7,239 +15,826 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { CheckCircle, DollarSign, TrendingUp, XCircle } from "lucide-react";
-import { useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import {
+  Activity,
+  AlertCircle,
+  ArrowRight,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock,
+  Code2,
+  CreditCard,
+  Link2,
+  Package,
+  Plus,
+  Shield,
+  Smartphone,
+  TrendingDown,
+  TrendingUp,
+  Webhook,
+  Zap,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { cn } from "@/lib/utils";
-import { fadeUp, stagger, staggerItem, viewport } from "@/lib/variants";
 
-/* Animated number counter */
+// ── Animated counter ──────────────────────────────────────────
 function AnimatedNumber({
   value,
   prefix = "",
+  suffix = "",
+  decimals = 0,
 }: {
-  value: number;
-  prefix?: string;
-}) {
-  const shouldReduceMotion = useReducedMotion();
-  const spring = useSpring(shouldReduceMotion ? value : 0, {
-    stiffness: 90,
-    damping: 26,
-  });
-  const display = useTransform(
-    spring,
-    (v) => `${prefix}${Math.round(v).toLocaleString()}`
-  );
-  useEffect(() => {
-    spring.set(value);
-  }, [spring, value]);
-  return <motion.span>{display}</motion.span>;
-}
-
-const STATUS_CLS: Record<string, string> = {
-  success:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  pending:
-    "bg-amber-100  text-amber-800  dark:bg-amber-900/40  dark:text-amber-300",
-  default:
-    "bg-red-100    text-red-800    dark:bg-red-900/40    dark:text-red-300",
-};
-
-function StatCard({
-  title,
-  value,
-  prefix,
-  suffix,
-  sub,
-  icon: Icon,
-  delay = 0,
-}: {
-  title: string;
   value: number;
   prefix?: string;
   suffix?: string;
-  sub?: string;
-  icon: React.ElementType;
+  decimals?: number;
+}) {
+  const _reduce = useReducedMotion();
+  const spring = useSpring(0, { stiffness: 80, damping: 24 });
+  const display = useTransform(
+    spring,
+    (v) =>
+      `${prefix}${v.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}${suffix}`
+  );
+  const [val, setVal] = useState(`${prefix}0${suffix}`);
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+  useEffect(() => display.on("change", setVal), [display]);
+  return <span>{val}</span>;
+}
+
+// ── Tooltip ───────────────────────────────────────────────────
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-xl text-xs">
+      <p className="text-muted-foreground mb-1">{label}</p>
+      <p className="font-bold text-foreground">
+        KES {payload[0]?.value?.toLocaleString()}
+      </p>
+    </div>
+  );
+}
+
+// ── Skeleton ──────────────────────────────────────────────────
+function Skel({ className }: { className?: string }) {
+  return <div className={cn("skeleton rounded", className)} />;
+}
+
+// ── Build chart data ──────────────────────────────────────────
+function buildChartData(transactions: any[]) {
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  if (!transactions.length) {
+    return days.map((d, i) => ({
+      time: d,
+      volume: Math.floor(
+        Math.sin(i * 0.9 + 1) * 18000 + 32000 + Math.random() * 8000
+      ),
+    }));
+  }
+  const now = Date.now();
+  return Array.from({ length: 7 }, (_, i) => {
+    const dayMs = 86400000;
+    const dayStart = now - (6 - i) * dayMs;
+    const dayTxs = transactions.filter(
+      (tx) =>
+        tx.createdAt >= dayStart &&
+        tx.createdAt < dayStart + dayMs &&
+        tx.status === "success"
+    );
+    return {
+      time: days[i],
+      volume: dayTxs.reduce((s: number, tx: any) => s + tx.amount, 0),
+    };
+  });
+}
+
+// ── Status config ─────────────────────────────────────────────
+const STATUS_CFG: Record<string, { cls: string; dot: string }> = {
+  success: {
+    cls: "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400",
+    dot: "bg-emerald-400",
+  },
+  pending: {
+    cls: "bg-amber-500/10  border-amber-500/20  text-amber-600  dark:text-amber-400",
+    dot: "bg-amber-400",
+  },
+  failed: {
+    cls: "bg-red-500/10    border-red-500/20    text-red-600    dark:text-red-400",
+    dot: "bg-red-400",
+  },
+  cancelled: {
+    cls: "bg-zinc-500/10   border-zinc-500/20   text-zinc-500",
+    dot: "bg-zinc-400",
+  },
+};
+
+function relTime(ts: number) {
+  const d = Date.now() - ts;
+  if (d < 60000) return "just now";
+  if (d < 3600000) return `${Math.floor(d / 60000)}m ago`;
+  if (d < 86400000) return `${Math.floor(d / 3600000)}h ago`;
+  return `${Math.floor(d / 86400000)}d ago`;
+}
+
+function txTypeLabel(t: string) {
+  return t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ── Setup step card ───────────────────────────────────────────
+function SetupCard({
+  icon: Icon,
+  title,
+  desc,
+  actionLabel,
+  to,
+  done,
+  children,
+  delay = 0,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  actionLabel: string;
+  to: string;
+  done: boolean;
+  children?: React.ReactNode;
   delay?: number;
 }) {
-  const shouldReduceMotion = useReducedMotion();
   return (
     <motion.div
-      variants={shouldReduceMotion ? undefined : staggerItem}
-      whileHover={{ y: -3, boxShadow: "0 8px 30px -6px rgba(216,27,13,0.15)" }}
-      transition={{ type: "spring", stiffness: 400, damping: 28 }}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+      className={cn(
+        "relative rounded-2xl border bg-card p-5 flex flex-col gap-4 overflow-hidden",
+        done ? "border-emerald-500/20" : "border-border"
+      )}
     >
-      <Card className="transition-colors duration-300">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {title}
-          </CardTitle>
-          <motion.div
-            whileHover={{ scale: 1.15, rotate: 8 }}
-            transition={{ type: "spring", stiffness: 500, damping: 28 }}
-            className="rounded-lg bg-primary/10 p-2"
+      {/* Done badge */}
+      {done && (
+        <div className="absolute top-4 right-4 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500">
+          <CheckCircle2 className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "flex h-11 w-11 items-center justify-center rounded-xl",
+          done ? "bg-emerald-500/10" : "bg-muted/40 border border-border"
+        )}
+      >
+        <Icon
+          className={cn(
+            "h-5 w-5",
+            done ? "text-emerald-500" : "text-muted-foreground"
+          )}
+          strokeWidth={1.5}
+        />
+      </div>
+
+      <div className="flex-1">
+        <h3
+          className={cn(
+            "font-display text-base font-semibold mb-1",
+            done ? "text-muted-foreground line-through" : "text-foreground"
+          )}
+        >
+          {title}
+        </h3>
+        <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+      </div>
+
+      {children && !done && <div className="space-y-2">{children}</div>}
+
+      {!done && (
+        <Link to={to}>
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-primary/10 border border-primary/20 hover:bg-primary hover:text-white px-4 py-2.5 text-sm font-semibold text-primary transition-all"
           >
-            <Icon className="h-4 w-4 text-primary" />
-          </motion.div>
-        </CardHeader>
-        <CardContent>
-          <div className="font-display text-2xl font-bold text-foreground">
-            <AnimatedNumber value={value} prefix={prefix ?? ""} />
-            {suffix}
-          </div>
-          {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-        </CardContent>
-      </Card>
+            {actionLabel}
+            <ArrowRight className="h-3.5 w-3.5" />
+          </motion.button>
+        </Link>
+      )}
     </motion.div>
   );
 }
 
+// ── Main ──────────────────────────────────────────────────────
 export default function HomePage() {
+  const user = useQuery(api.auth.getCurrentUser);
   const businesses = useQuery(api.businesses.getUserBusinesses);
   const businessId = businesses?.[0]?._id;
   const stats = useQuery(
     api.transactions.getDashboardStats,
     businessId ? { businessId } : "skip"
   );
-  const shouldReduceMotion = useReducedMotion();
+  const credentials = useQuery(
+    api.credentials.getCredentials,
+    businessId ? { businessId } : "skip"
+  );
+  const webhooks = useQuery(
+    api.webhooks.getWebhooks,
+    businessId ? { businessId } : "skip"
+  );
+  const _reduce = useReducedMotion();
 
-  if (!businessId) {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
+
+  const hour = time.getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = user?.name?.split(" ")[0] ?? "there";
+
+  const chartData = buildChartData(stats?.recentTransactions ?? []);
+  const totalVolume = stats?.totalVolume ?? 0;
+  const successCount = stats?.successCount ?? 0;
+  const pendingCount = stats?.pendingCount ?? 0;
+  const failedCount = stats?.failedCount ?? 0;
+  const totalCount = stats?.totalCount ?? 0;
+  const successRate =
+    totalCount > 0 ? Math.round((successCount / totalCount) * 100) : 0;
+
+  const hasCredentials = !!credentials;
+  const hasWebhook = (webhooks?.length ?? 0) > 0;
+  // For now "has product" is mocked — replace with real query when Products are in DB
+  const hasProduct = false;
+  const setupDone = hasCredentials && hasWebhook && hasProduct;
+
+  // Empty business guard
+  if (businesses !== undefined && businesses.length === 0) {
     return (
-      <motion.div
-        variants={shouldReduceMotion ? undefined : fadeUp}
-        initial="hidden"
-        animate="visible"
-      >
-        <h1 className="font-display text-fluid-xl font-bold mb-6 text-foreground">
-          Welcome to Pesafy
-        </h1>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-muted-foreground">
-              Create a business to get started.
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <motion.div
+          animate={{ y: [0, -8, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Zap className="h-10 w-10 text-primary/30 mb-4" />
+        </motion.div>
+        <h2 className="font-display text-xl font-bold text-foreground">
+          No business configured
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1.5 mb-6">
+          Create a business to start accepting M-Pesa payments.
+        </p>
+        <Link to="/onboarding">
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/20"
+          >
+            Set up business <ArrowUpRight className="h-4 w-4" />
+          </motion.button>
+        </Link>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* ── Greeting ─────────────────────────────────────── */}
       <motion.div
-        variants={shouldReduceMotion ? undefined : fadeUp}
-        initial="hidden"
-        animate="visible"
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+        className="flex flex-col sm:flex-row sm:items-end justify-between gap-3"
       >
-        <h1 className="font-display text-fluid-xl font-bold tracking-tight text-foreground">
-          Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your M-Pesa activity at a glance
-        </p>
-      </motion.div>
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <motion.span
+              animate={{ scale: [1, 1.4, 1] }}
+              transition={{
+                duration: 2.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="h-2 w-2 rounded-full bg-emerald-400 inline-block"
+            />
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+              Live ·{" "}
+              {time.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            {greeting}, {firstName} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {businesses?.[0]?.name ?? "Your business"} ·{" "}
+            <span
+              className={cn(
+                "font-semibold",
+                businesses?.[0]?.mpesaEnvironment === "production"
+                  ? "text-emerald-500"
+                  : "text-amber-500"
+              )}
+            >
+              {businesses?.[0]?.mpesaEnvironment ?? "sandbox"}
+            </span>
+          </p>
+        </div>
 
-      {/* Stat cards — stagger container (≤50ms) */}
-      <motion.div
-        variants={shouldReduceMotion ? undefined : stagger}
-        initial="hidden"
-        animate="visible"
-        className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <StatCard
-          title="Total Volume"
-          value={stats?.totalVolume ?? 0}
-          prefix="KES "
-          sub="Today"
-          icon={DollarSign}
-        />
-        <StatCard
-          title="Transactions"
-          value={stats?.transactionCount ?? 0}
-          sub="Today"
-          icon={TrendingUp}
-        />
-        <StatCard
-          title="Success Rate"
-          value={stats?.successRate ?? 0}
-          suffix="%"
-          sub="Today"
-          icon={CheckCircle}
-        />
-        <StatCard
-          title="Successful"
-          value={stats?.successCount ?? 0}
-          sub="Today"
-          icon={XCircle}
-        />
-      </motion.div>
-
-      {/* Recent transactions — whileInView */}
-      <motion.div
-        variants={shouldReduceMotion ? undefined : fadeUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewport}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-foreground">
-              Recent Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats?.recentTransactions?.length ? (
-              <motion.div
-                variants={shouldReduceMotion ? undefined : stagger}
-                initial="hidden"
-                animate="visible"
-                className="divide-y divide-border"
+        <div className="flex items-center gap-2 shrink-0">
+          {!hasCredentials && (
+            <Link to="/settings?tab=mpesa">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
               >
-                <AnimatePresence>
-                  {stats.recentTransactions.map((tx, i) => (
-                    <motion.div
-                      key={tx._id}
-                      variants={shouldReduceMotion ? undefined : staggerItem}
-                      layout
-                      className="flex items-center justify-between py-3.5 gap-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="font-medium text-foreground text-sm">
-                          {tx.type}
+                <AlertCircle className="h-3.5 w-3.5" />
+                Add API credentials
+              </motion.button>
+            </Link>
+          )}
+          <Link to="/payments">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-white shadow-md shadow-primary/20 hover:bg-primary/85 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              New Payment
+            </motion.button>
+          </Link>
+        </div>
+      </motion.div>
+
+      {/* ── Getting Started cards (visible until all 3 done) ── */}
+      <AnimatePresence>
+        {!setupDone && (
+          <motion.section
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-3"
+          >
+            {/* Banner */}
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/20 px-5 py-3.5">
+              <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+              <p className="text-sm text-muted-foreground flex-1">
+                <span className="font-semibold text-foreground">
+                  Payment processing is not yet active.
+                </span>{" "}
+                Complete all steps below to start accepting payments from
+                customers.
+              </p>
+              <span className="text-xs font-semibold text-primary shrink-0">
+                {
+                  [hasProduct, hasCredentials, hasWebhook].filter(Boolean)
+                    .length
+                }
+                /3 done
+              </span>
+            </div>
+
+            {/* Three setup cards */}
+            <div className="grid md:grid-cols-3 gap-4">
+              {/* Create a product */}
+              <SetupCard
+                icon={Package}
+                title="Create a product"
+                desc="Create your first product to start accepting M-Pesa payments from customers."
+                actionLabel="Create Product"
+                to="/products/catalogue"
+                done={hasProduct}
+                delay={0.04}
+              />
+
+              {/* Integrate */}
+              <SetupCard
+                icon={Code2}
+                title="Integrate Checkout"
+                desc="Set up your integration to start accepting payments via the Pesafy API or Checkout Links."
+                actionLabel="View Integration"
+                to="/settings"
+                done={hasCredentials}
+                delay={0.1}
+              >
+                {/* Sub-options shown inside the card */}
+                <div className="space-y-2">
+                  <Link to="/settings?tab=mpesa">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/20 hover:border-primary/20 hover:bg-primary/5 px-3.5 py-3 transition-colors cursor-pointer group">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+                        <Code2 className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                          API Integration
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {tx.phoneNumber || tx.accountReference || "N/A"}
+                        <p className="text-[11px] text-muted-foreground">
+                          Full control via Daraja API
                         </p>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold text-foreground text-sm">
-                          KES {tx.amount.toLocaleString()}
+                      <ArrowUpRight className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                    </div>
+                  </Link>
+                  <Link to="/products/checkout-links">
+                    <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted/20 hover:border-primary/20 hover:bg-primary/5 px-3.5 py-3 transition-colors cursor-pointer group">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10">
+                        <Link2 className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                          Checkout Links
                         </p>
-                        <span
+                        <p className="text-[11px] text-muted-foreground">
+                          Share a payment page
+                        </p>
+                      </div>
+                      <ArrowUpRight className="h-3 w-3 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                    </div>
+                  </Link>
+                </div>
+              </SetupCard>
+
+              {/* Finish account setup */}
+              <SetupCard
+                icon={Shield}
+                title="Finish account setup"
+                desc="Complete your Daraja API credentials and configure webhooks to receive payment events."
+                actionLabel="Complete Setup"
+                to="/settings"
+                done={hasCredentials && hasWebhook}
+                delay={0.16}
+              />
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* ── Stat cards ────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats === undefined
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <Skel className="h-3 w-20 mb-3" />
+                <Skel className="h-8 w-28 mb-2" />
+                <Skel className="h-3 w-16" />
+              </div>
+            ))
+          : (
+              [
+                {
+                  label: "Total Volume",
+                  value: totalVolume,
+                  prefix: "KES ",
+                  sub: `${totalCount} transactions`,
+                  icon: CreditCard,
+                  color: "bg-primary/10 text-primary",
+                  trend: null,
+                },
+                {
+                  label: "Success Rate",
+                  value: successRate,
+                  suffix: "%",
+                  sub: `${successCount} successful`,
+                  icon: TrendingUp,
+                  color:
+                    "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                  trend:
+                    successRate >= 90 ? "up" : successRate < 70 ? "down" : null,
+                },
+                {
+                  label: "Pending",
+                  value: pendingCount,
+                  sub: "awaiting confirmation",
+                  icon: Clock,
+                  color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+                  trend: null,
+                },
+                {
+                  label: "Failed",
+                  value: failedCount,
+                  sub: failedCount > 0 ? "need attention" : "all clear",
+                  icon: Activity,
+                  color:
+                    failedCount > 0
+                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      : "bg-muted text-muted-foreground",
+                  trend: null,
+                },
+              ] as any[]
+            ).map(
+              (
+                { label, value, prefix, suffix, sub, icon: Icon, color, trend },
+                i
+              ) => (
+                <motion.div
+                  key={label}
+                  initial={{ opacity: 0, y: 14, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    delay: i * 0.06,
+                    duration: 0.36,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  whileHover={{ y: -2 }}
+                  className="rounded-2xl border border-border bg-card p-5"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {label}
+                    </p>
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-lg",
+                        color
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                  <p className="font-display text-2xl font-extrabold text-foreground">
+                    <AnimatedNumber
+                      value={value}
+                      prefix={prefix ?? ""}
+                      suffix={suffix ?? ""}
+                    />
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {trend === "up" && (
+                      <TrendingUp className="h-3 w-3 text-emerald-500" />
+                    )}
+                    {trend === "down" && (
+                      <TrendingDown className="h-3 w-3 text-red-500" />
+                    )}
+                    <p className="text-xs text-muted-foreground">{sub}</p>
+                  </div>
+                </motion.div>
+              )
+            )}
+      </div>
+
+      {/* ── Chart + Recent ────────────────────────────────── */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        {/* Area chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-2 rounded-2xl border border-border bg-card p-5"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-display font-semibold text-foreground">
+                Payment Volume
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Last 7 days · KES
+              </p>
+            </div>
+            <span className="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
+              Live
+            </span>
+          </div>
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart
+                data={chartData}
+                margin={{ top: 4, right: 4, left: -24, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="gVol" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#d81b0d" stopOpacity={0.22} />
+                    <stop offset="95%" stopColor="#d81b0d" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(128,128,128,0.08)"
+                />
+                <XAxis
+                  dataKey="time"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) =>
+                    v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
+                  }
+                />
+                <Tooltip content={<ChartTooltip />} />
+                <Area
+                  type="monotone"
+                  dataKey="volume"
+                  stroke="#d81b0d"
+                  strokeWidth={2}
+                  fill="url(#gVol)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#d81b0d", strokeWidth: 0 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Recent transactions */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.26, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+          className="rounded-2xl border border-border bg-card overflow-hidden"
+        >
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+            <h3 className="font-display font-semibold text-foreground">
+              Recent
+            </h3>
+            <Link to="/payments">
+              <motion.span
+                whileHover={{ x: 2 }}
+                className="text-xs text-primary font-semibold inline-flex items-center gap-1 cursor-pointer"
+              >
+                View all <ArrowUpRight className="h-3 w-3" />
+              </motion.span>
+            </Link>
+          </div>
+
+          <div className="divide-y divide-border overflow-y-auto max-h-[230px]">
+            {stats === undefined ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <Skel className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <Skel className="h-3 w-20" />
+                    <Skel className="h-2.5 w-14" />
+                  </div>
+                  <Skel className="h-3 w-14" />
+                </div>
+              ))
+            ) : stats.recentTransactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Smartphone className="h-7 w-7 text-muted-foreground/20" />
+                </motion.div>
+                <p className="text-xs text-muted-foreground">
+                  No transactions yet
+                </p>
+                <Link
+                  to="/payments"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Initiate first payment
+                </Link>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {stats.recentTransactions
+                  .slice(0, 8)
+                  .map((tx: any, i: number) => {
+                    const cfg = STATUS_CFG[tx.status] ?? STATUS_CFG.cancelled;
+                    return (
+                      <motion.div
+                        key={tx._id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
+                      >
+                        <div
                           className={cn(
-                            "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold mt-0.5",
-                            STATUS_CLS[tx.status] ?? STATUS_CLS.default
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border",
+                            cfg.cls
                           )}
                         >
-                          {tx.status}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.p
-                variants={shouldReduceMotion ? undefined : fadeUp}
-                initial="hidden"
-                animate="visible"
-                className="text-muted-foreground text-sm py-4 text-center"
-              >
-                No transactions yet
-              </motion.p>
+                          <span
+                            className={cn("h-1.5 w-1.5 rounded-full", cfg.dot)}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">
+                            {txTypeLabel(tx.type)}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground/60 font-mono truncate">
+                            {tx.phoneNumber ?? tx.accountReference ?? "—"}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-bold text-foreground tabular-nums">
+                            {tx.amount.toLocaleString()}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground/50">
+                            {relTime(tx.createdAt)}
+                          </p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+              </AnimatePresence>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── Quick Actions ─────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.32, duration: 0.38, ease: [0.16, 1, 0.3, 1] }}
+        className="rounded-2xl border border-border bg-card p-5"
+      >
+        <h3 className="font-display font-semibold text-foreground mb-4">
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            {
+              label: "New Product",
+              desc: "Create a payment product",
+              icon: Package,
+              path: "/products/catalogue",
+              color: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+            },
+            {
+              label: "STK Push",
+              desc: "Prompt customer payment",
+              icon: Smartphone,
+              path: "/payments",
+              color: "bg-primary/10 text-primary",
+            },
+            {
+              label: "Checkout Link",
+              desc: "Share a payment page",
+              icon: Link2,
+              path: "/products/checkout-links",
+              color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+            },
+            {
+              label: "Webhooks",
+              desc: "Configure notifications",
+              icon: Webhook,
+              path: "/webhooks",
+              color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+            },
+          ].map(({ label, desc, icon: Icon, path, color }, i) => (
+            <Link key={label} to={path}>
+              <motion.div
+                whileHover={{
+                  y: -3,
+                  boxShadow: "0 8px 24px -6px rgba(0,0,0,0.1)",
+                }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                className="flex flex-col gap-3 rounded-xl border border-border p-4 cursor-pointer hover:border-primary/20 transition-colors"
+              >
+                <motion.div
+                  whileHover={{ scale: 1.1, rotate: 6 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 26 }}
+                  className={cn(
+                    "flex h-8 w-8 items-center justify-center rounded-xl",
+                    color
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                </motion.div>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {label}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {desc}
+                  </p>
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
       </motion.div>
     </div>
   );

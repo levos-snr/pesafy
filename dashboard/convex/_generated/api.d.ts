@@ -15,6 +15,7 @@ import type * as http from "../http.js";
 import type * as mpesaActions from "../mpesaActions.js";
 import type * as mpesaTransactions from "../mpesaTransactions.js";
 import type * as transactions from "../transactions.js";
+import type * as userProfile from "../userProfile.js";
 import type * as webhooks from "../webhooks.js";
 
 import type {
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   mpesaActions: typeof mpesaActions;
   mpesaTransactions: typeof mpesaTransactions;
   transactions: typeof transactions;
+  userProfile: typeof userProfile;
   webhooks: typeof webhooks;
 }>;
 
