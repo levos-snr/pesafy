@@ -21,14 +21,12 @@ import { ThemeProvider } from "@/components/theme-provider";
 // ── Pages ─────────────────────────────────────────────────────────────────────
 import AccountPage from "@/pages/AccountPage";
 import EventsPage from "@/pages/analytics/EventsPage";
-// Analytics
 import MetricsPage from "@/pages/analytics/MetricsPage";
 import CustomersPage from "@/pages/CustomersPage";
 import ErrorPage from "@/pages/error/ErrorPage";
 import NoInternetPage from "@/pages/error/NoInternetPage";
 import NotFoundPage from "@/pages/error/NotFoundPage";
 import FinanceAccountPage from "@/pages/finance/FinanceAccountPage";
-// Finance
 import IncomePage from "@/pages/finance/IncomePage";
 import PayoutsPage from "@/pages/finance/PayoutsPage";
 import HomePage from "@/pages/HomePage";
@@ -37,12 +35,26 @@ import LoaderPage from "@/pages/LoaderPage";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import PaymentsPage from "@/pages/PaymentsPage";
-import ProductsPage from "@/pages/ProductsPage";
-import SettingsPage from "@/pages/SettingsPage";
+
+// Products — shell + sub-pages
+import ProductsShell from "@/pages/products";
+import BenefitsPage from "@/pages/products/BenefitsPage";
+import CataloguePage from "@/pages/products/CataloguePage";
+import CheckoutLinksPage from "@/pages/products/CheckoutLinksPage";
+import DiscountsPage from "@/pages/products/DiscountsPage";
+import MetersPage from "@/pages/products/MetersPage";
 import CheckoutsPage from "@/pages/sales/CheckoutsPage";
-// Sales
 import OrdersPage from "@/pages/sales/OrdersPage";
 import SubscriptionsPage from "@/pages/sales/SubscriptionsPage";
+import AppearanceSettings from "@/pages/settings/AppearanceSettings";
+import BillingSettings from "@/pages/settings/BillingSettings";
+import CustomFieldsSettings from "@/pages/settings/CustomFieldsSettings";
+// Settings — sub-pages
+import GeneralSettings from "@/pages/settings/GeneralSettings";
+import MembersSettings from "@/pages/settings/MembersSettings";
+import MpesaSettings from "@/pages/settings/MpesaSettings";
+import NotificationsSettings from "@/pages/settings/NotificationsSettings";
+import WebhooksSettings from "@/pages/settings/WebhooksSettings";
 import WebhooksPage from "@/pages/WebhooksPage";
 
 // ── Network hook ──────────────────────────────────────────────────────────────
@@ -141,12 +153,21 @@ export default function App() {
                     <Route path="/dashboard" element={<HomePage />} />
                     <Route path="/payments" element={<PaymentsPage />} />
 
-                    {/* Products */}
+                    {/* Products — shell wraps sub-pages via Outlet */}
                     <Route
                       path="/products"
                       element={<Navigate to="/products/catalogue" replace />}
                     />
-                    <Route path="/products/:tab" element={<ProductsPage />} />
+                    <Route path="/products" element={<ProductsShell />}>
+                      <Route path="catalogue" element={<CataloguePage />} />
+                      <Route
+                        path="checkout-links"
+                        element={<CheckoutLinksPage />}
+                      />
+                      <Route path="discounts" element={<DiscountsPage />} />
+                      <Route path="benefits" element={<BenefitsPage />} />
+                      <Route path="meters" element={<MetersPage />} />
+                    </Route>
 
                     {/* Customers */}
                     <Route path="/customers" element={<CustomersPage />} />
@@ -189,9 +210,43 @@ export default function App() {
                       element={<FinanceAccountPage />}
                     />
 
+                    {/* Settings — each tab is its own route */}
+                    <Route
+                      path="/settings"
+                      element={<Navigate to="/settings/general" replace />}
+                    />
+                    <Route
+                      path="/settings/general"
+                      element={<GeneralSettings />}
+                    />
+                    <Route
+                      path="/settings/billing"
+                      element={<BillingSettings />}
+                    />
+                    <Route
+                      path="/settings/members"
+                      element={<MembersSettings />}
+                    />
+                    <Route
+                      path="/settings/webhooks"
+                      element={<WebhooksSettings />}
+                    />
+                    <Route
+                      path="/settings/custom-fields"
+                      element={<CustomFieldsSettings />}
+                    />
+                    <Route path="/settings/mpesa" element={<MpesaSettings />} />
+                    <Route
+                      path="/settings/appearance"
+                      element={<AppearanceSettings />}
+                    />
+                    <Route
+                      path="/settings/notifications"
+                      element={<NotificationsSettings />}
+                    />
+
                     {/* System */}
                     <Route path="/webhooks" element={<WebhooksPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/account" element={<AccountPage />} />
                   </Route>
                 </Route>

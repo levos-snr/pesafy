@@ -46,7 +46,6 @@ export const getBusiness = query({
 
 /**
  * Internal-only version used by mpesaActions (Node.js runtime).
- * Auth is already verified in the action before this is called.
  */
 export const getBusinessInternal = internalQuery({
   args: { businessId: v.id("businesses") },
@@ -92,6 +91,10 @@ export const updateBusiness = mutation({
       v.union(v.literal("sandbox"), v.literal("production"))
     ),
     lipaNaMpesaShortCode: v.optional(v.string()),
+    // Organization profile fields
+    supportEmail: v.optional(v.string()),
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);

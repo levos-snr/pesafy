@@ -1,32 +1,23 @@
 /**
  * Layout.tsx — Pesafy SaaS Shell
- *
- * Sidebar nav:
- *  Dashboard
- *  Payments
- *  Products ▾   Catalogue · Checkout Links · Discounts · Benefits · Meters
- *  Customers
- *  Sales ▾      Orders · Subscriptions · Checkouts
- *  Finance ▾    Income · Payouts · Account
- *  ── System ──
- *  Webhooks
- *  Settings ▾   General · Billing · Members · Webhooks · Custom Fields
- *  Account
  */
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   BarChart2,
   BarChart3,
+  Bell,
   Box,
   ChevronDown,
   ChevronRight,
   CreditCard,
   DollarSign,
   FileText,
+  KeyRound,
   LayoutDashboard,
   LineChart,
   Link2,
   LogOut,
+  Monitor,
   Package,
   Percent,
   ReceiptText,
@@ -85,11 +76,14 @@ const FINANCE_SUB = [
 ];
 
 const SETTINGS_SUB = [
-  { path: "/settings?tab=general", label: "General", icon: Settings2 },
-  { path: "/settings?tab=billing", label: "Billing", icon: FileText },
-  { path: "/settings?tab=members", label: "Members", icon: Users },
-  { path: "/settings?tab=webhooks", label: "Webhooks", icon: Webhook },
-  { path: "/settings?tab=customfields", label: "Custom Fields", icon: Tag },
+  { path: "/settings/general", label: "General", icon: Settings2 },
+  { path: "/settings/billing", label: "Billing", icon: FileText },
+  { path: "/settings/members", label: "Members", icon: Users },
+  { path: "/settings/webhooks", label: "Webhooks", icon: Webhook },
+  { path: "/settings/custom-fields", label: "Custom Fields", icon: Tag },
+  { path: "/settings/mpesa", label: "M-Pesa", icon: KeyRound },
+  { path: "/settings/appearance", label: "Appearance", icon: Monitor },
+  { path: "/settings/notifications", label: "Notifications", icon: Bell },
 ];
 
 const NAV_SYSTEM = [{ path: "/account", label: "Account", icon: User }];
@@ -110,15 +104,10 @@ function NavLink({
   onClick?: () => void;
 }) {
   const loc = useLocation();
-
-  // For query-string based sub-routes (settings tabs) compare full path+search
-  const fullPath = loc.pathname + loc.search;
   const active =
     path === "/dashboard"
       ? loc.pathname === "/dashboard"
-      : path.includes("?")
-        ? fullPath === path || fullPath.startsWith(path)
-        : loc.pathname === path || loc.pathname.startsWith(path + "/");
+      : loc.pathname === path || loc.pathname.startsWith(path + "/");
 
   return (
     <Link to={path} onClick={onClick}>
@@ -228,68 +217,6 @@ function NavGroup({
   );
 }
 
-// ── Settings collapsible (special — basePath is /settings but sub-items use ?tab=) ──
-
-function SettingsNavGroup({ onNavigate }: { onNavigate: () => void }) {
-  const loc = useLocation();
-  const isActive = loc.pathname === "/settings";
-  const [open, setOpen] = useState(isActive);
-
-  useEffect(() => {
-    if (isActive) setOpen(true);
-  }, [isActive]);
-
-  return (
-    <div>
-      <motion.button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        whileHover={{ x: 2 }}
-        whileTap={{ scale: 0.97 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className={cn(
-          "w-full group flex items-center gap-3 rounded-xl px-3 py-[9px]",
-          "text-sm font-medium cursor-pointer transition-colors duration-150",
-          isActive
-            ? "text-primary"
-            : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-        )}
-      >
-        <Settings
-          className={cn(
-            "h-[15px] w-[15px] shrink-0",
-            isActive ? "opacity-100" : "opacity-60 group-hover:opacity-90"
-          )}
-          strokeWidth={isActive ? 2.5 : 2}
-        />
-        <span className="flex-1 text-left truncate">Settings</span>
-        <motion.div
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-        >
-          <ChevronDown className="h-3.5 w-3.5 opacity-40" />
-        </motion.div>
-      </motion.button>
-
-      <motion.div
-        initial={false}
-        animate={{
-          height: open ? SETTINGS_SUB.length * 37 : 0,
-          opacity: open ? 1 : 0,
-        }}
-        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
-        className="overflow-hidden"
-      >
-        <div className="mt-0.5 space-y-0.5 pb-0.5">
-          {SETTINGS_SUB.map((item) => (
-            <NavLink key={item.path} {...item} sub onClick={onNavigate} />
-          ))}
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
@@ -344,12 +271,10 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
         className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5"
         aria-label="Main navigation"
       >
-        {/* Dashboard + Payments */}
         {NAV_TOP.map((item) => (
           <NavLink key={item.path} {...item} onClick={onClose} />
         ))}
 
-        {/* Products ▾ */}
         <NavGroup
           label="Products"
           icon={Box}
@@ -358,7 +283,6 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
           onNavigate={onClose}
         />
 
-        {/* Customers */}
         <NavLink
           path="/customers"
           label="Customers"
@@ -366,7 +290,6 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
           onClick={onClose}
         />
 
-        {/* Analytics ▾ */}
         <NavGroup
           label="Analytics"
           icon={BarChart2}
@@ -375,7 +298,6 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
           onNavigate={onClose}
         />
 
-        {/* Sales ▾ */}
         <NavGroup
           label="Sales"
           icon={ShoppingBag}
@@ -384,7 +306,6 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
           onNavigate={onClose}
         />
 
-        {/* Finance ▾ */}
         <NavGroup
           label="Finance"
           icon={DollarSign}
@@ -399,10 +320,14 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
             System
           </p>
 
-          {/* Settings ▾ */}
-          <SettingsNavGroup onNavigate={onClose} />
+          <NavGroup
+            label="Settings"
+            icon={Settings}
+            basePath="/settings"
+            items={SETTINGS_SUB}
+            onNavigate={onClose}
+          />
 
-          {/* Account */}
           {NAV_SYSTEM.map((item) => (
             <NavLink key={item.path} {...item} onClick={onClose} />
           ))}
@@ -453,7 +378,7 @@ interface LayoutProps {
 export default function Layout({ children, user }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const loc = useLocation();
-  const shouldReduceMotion = useReducedMotion();
+  const _shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     setSidebarOpen(false);
@@ -486,20 +411,9 @@ export default function Layout({ children, user }: LayoutProps) {
       <div className="flex flex-1 min-w-0 flex-col overflow-hidden">
         <Header onMenuOpen={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={loc.pathname}
-              initial={
-                shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }
-              }
-              animate={{ opacity: 1, y: 0 }}
-              exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -4 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="p-4 sm:p-5 lg:p-6 xl:p-8 min-h-full"
-            >
-              <div className="mx-auto w-full max-w-screen-xl">{children}</div>
-            </motion.div>
-          </AnimatePresence>
+          <div className="p-4 sm:p-5 lg:p-6 xl:p-8">
+            <div className="mx-auto w-full max-w-screen-xl">{children}</div>
+          </div>
         </main>
       </div>
     </div>
