@@ -1,6 +1,6 @@
 {
   "name": "pesafy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "description": "A powerful payment gateway library for African payment systems, starting with M-Pesa Daraja API",
   "author": "lewisodero27@gmail.com",
@@ -19,6 +19,11 @@
       "require": "./dist/components/react/index.cjs"
     },
     "./components/react/styles.css": "./dist/components/react/styles.css",
+    "./express": {
+      "types": "./dist/express/index.d.ts",
+      "import": "./dist/express/index.js",
+      "require": "./dist/express/index.cjs"
+    },
     "./components/vue": "./src/components/vue/index.ts",
     "./components/vue/*": "./src/components/vue/*"
   },
@@ -77,21 +82,27 @@
     "@changesets/cli": "2.29.8",
     "@storybook/react": "^10.2.10",
     "@types/bun": "latest",
+    "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
+    "express": "^5.2.1",
     "gitmoji-cli": "^9.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "pesafy": "^0.1.0",
+    "pesafy": "^0.2.0",
     "prettier": "3.8.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
+    "express": ">=4.0.0",
     "react": ">=18.0.0",
     "vue": ">=3.0.0",
     "typescript": "^5"
   },
   "peerDependenciesMeta": {
+    "express": {
+      "optional": true
+    },
     "react": {
       "optional": true
     },

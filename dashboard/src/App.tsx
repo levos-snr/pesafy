@@ -92,6 +92,15 @@ const WebhooksSettings = lazy(
   () => import("@/pages/settings/WebhooksSettings")
 );
 
+// Docs
+const DocsLayout = lazy(() => import("@/pages/docs/DocsLayout"));
+const DocsOverviewPage = lazy(() => import("@/pages/docs/DocsOverviewPage"));
+const ExpressDocsPage = lazy(() => import("@/pages/docs/ExpressDocsPage"));
+const ReactDocsPage = lazy(() => import("@/pages/docs/ReactDocsPage"));
+const MpesaExpressDocsPage = lazy(
+  () => import("@/pages/docs/MpesaExpressDocsPage")
+);
+
 // ── A lightweight inline content loader ───────────────────────────────────────
 // Used inside the layout so only the content area shows a spinner — not the
 // whole shell. Avoids the "page reload" flicker on chunk download.
@@ -309,6 +318,20 @@ export default function App() {
                       path="/settings/notifications"
                       element={<NotificationsSettings />}
                     />
+
+                    {/* Docs (public in concept, but still rendered inside shell) */}
+                    <Route element={<DocsLayout />}>
+                      <Route path="/docs" element={<DocsOverviewPage />} />
+                      <Route
+                        path="/docs/express"
+                        element={<ExpressDocsPage />}
+                      />
+                      <Route path="/docs/react" element={<ReactDocsPage />} />
+                      <Route
+                        path="/docs/mpesa-express"
+                        element={<MpesaExpressDocsPage />}
+                      />
+                    </Route>
 
                     {/* System */}
                     <Route path="/webhooks" element={<WebhooksPage />} />

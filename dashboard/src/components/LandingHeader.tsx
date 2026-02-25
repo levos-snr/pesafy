@@ -7,7 +7,7 @@ import {
 } from "framer-motion";
 import { Menu, X, Zap } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ModeToggle } from "@/components/mode-toggle";
 import { tapSpring } from "@/lib/variants";
 
@@ -22,11 +22,17 @@ export default function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const _shouldReduceMotion = useReducedMotion();
   const { scrollY } = useScroll();
+  const navigate = useNavigate();
 
   const bgOpacity = useTransform(scrollY, [0, 60], [0, 1]);
   const borderOpacity = useTransform(scrollY, [0, 60], [0, 1]);
 
   const scrollTo = (href: string) => {
+    if (href === "#docs") {
+      setMenuOpen(false);
+      navigate("/docs");
+      return;
+    }
     setMenuOpen(false);
     const el = document.querySelector(href);
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
