@@ -6,6 +6,9 @@
   "author": "lewisodero27@gmail.com",
   "license": "MIT",
   "type": "module",
+  "workspaces": [
+    "dashboard"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
@@ -44,6 +47,7 @@
     "check:fix": "biome check --write ./src",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "bun run build && bun run typecheck",
+    "changeset": "changeset",
     "release": "changeset publish --access public",
     "version": "changeset version",
     "prepare": "husky"
@@ -88,7 +92,6 @@
     "gitmoji-cli": "^9.7.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
-    "pesafy": "^0.2.0",
     "prettier": "3.8.1",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2"
