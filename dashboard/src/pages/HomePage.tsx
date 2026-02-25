@@ -1,13 +1,3 @@
-/**
- * HomePage — Pesafy Command Center
- * Layout order:
- *  1. Greeting header + action buttons
- *  2. SetupBanner  ← standalone strip, checks completion, sits right after greeting
- *  3. KPI stat cards
- *  4. SetupSection ← the 3 action cards (only visible until setup complete)
- *  5. Volume chart (2/3) + Recent transactions (1/3)
- *  6. Quick actions
- */
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
 import {

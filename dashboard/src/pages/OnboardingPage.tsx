@@ -1,26 +1,3 @@
-/**
- * OnboardingPage — Pesafy M-Pesa Integration Setup
- * Steps:
- *  0 — Welcome + Business Info + Policy acceptance
- *  1 — M-Pesa Environment (sandbox / production)
- *  2 — Contact (phone)
- *  3 — Done
- *
- * WHAT CHANGED (step-by-step):
- *  1. Removed COUNTRY_CODES import from @/lib/countryCodes — not needed.
- *  2. Removed ChevronDown import (only used by old country dropdown).
- *  3. Step 2 state simplified:
- *       Before: selectedCountry (object) + phoneNumber (string) + countrySearch
- *               + showCountryList + filteredCountries computed value
- *       After:  phoneValue (E.164 string) — PhoneInput manages everything.
- *  4. handleNext step 2 save simplified:
- *       Before: manually built `${selectedCountry.dial}${phoneNumber}`
- *       After:  phoneValue is already E.164, saved directly.
- *  5. Step 2 UI: custom two-part picker → single PhoneInput (same as AccountPage).
- *  6. Added forwardRef PhoneNumberInput for the custom input slot.
- *
- * INSTALL: npm install react-phone-number-input
- */
 import { api } from "@convex/_generated/api";
 import { useMutation } from "convex/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";

@@ -35,9 +35,8 @@ export const fadeIn: Variants = {
 
 // ── Stagger container (50ms max per child) ─────────────────────
 export const stagger: Variants = {
-  hidden: { opacity: 0 },
+  hidden: {},
   visible: {
-    opacity: 1,
     transition: { staggerChildren: 0.05, delayChildren: 0.05 },
   },
 };
@@ -141,7 +140,8 @@ export const tapSpring = {
 } as const;
 
 // ── Number counter spring ──────────────────────────────────────
-export const numberSpring = { stiffness: 100, damping: 28 };
+// Used by Counter components — matches LandingPage's spring config
+export const numberSpring = { stiffness: 60, damping: 20 };
 
 // ── Step indicator variants ────────────────────────────────────
 export const stepDot: Variants = {
