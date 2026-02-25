@@ -1,10 +1,7 @@
-/**
- * App.tsx — root router + auth guards
- */
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
 import { AnimatePresence } from "framer-motion";
-import { Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -18,44 +15,67 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Layout from "@/components/Layout";
 import { ThemeProvider } from "@/components/theme-provider";
 
-// ── Pages ─────────────────────────────────────────────────────────────────────
-import AccountPage from "@/pages/AccountPage";
-import EventsPage from "@/pages/analytics/EventsPage";
-import MetricsPage from "@/pages/analytics/MetricsPage";
-import CustomersPage from "@/pages/CustomersPage";
-import ErrorPage from "@/pages/error/ErrorPage";
-import NoInternetPage from "@/pages/error/NoInternetPage";
-import NotFoundPage from "@/pages/error/NotFoundPage";
-import FinanceAccountPage from "@/pages/finance/FinanceAccountPage";
-import IncomePage from "@/pages/finance/IncomePage";
-import PayoutsPage from "@/pages/finance/PayoutsPage";
-import HomePage from "@/pages/HomePage";
-import LandingPage from "@/pages/LandingPage";
+// ── Always-needed (no lazy — loaded on every route) ───────────────────────────
 import LoaderPage from "@/pages/LoaderPage";
-import LoginPage from "@/pages/LoginPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import PaymentsPage from "@/pages/PaymentsPage";
+
+// ── Pages (lazy — each becomes its own chunk) ─────────────────────────────────
+const AccountPage = lazy(() => import("@/pages/AccountPage"));
+const CustomersPage = lazy(() => import("@/pages/CustomersPage"));
+const HomePage = lazy(() => import("@/pages/HomePage"));
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const OnboardingPage = lazy(() => import("@/pages/OnboardingPage"));
+const PaymentsPage = lazy(() => import("@/pages/PaymentsPage"));
+const WebhooksPage = lazy(() => import("@/pages/WebhooksPage"));
+
+// Error pages
+const ErrorPage = lazy(() => import("@/pages/error/ErrorPage"));
+const NoInternetPage = lazy(() => import("@/pages/error/NoInternetPage"));
+const NotFoundPage = lazy(() => import("@/pages/error/NotFoundPage"));
+
+// Analytics
+const EventsPage = lazy(() => import("@/pages/analytics/EventsPage"));
+const MetricsPage = lazy(() => import("@/pages/analytics/MetricsPage"));
+
+// Finance
+const FinanceAccountPage = lazy(
+  () => import("@/pages/finance/FinanceAccountPage")
+);
+const IncomePage = lazy(() => import("@/pages/finance/IncomePage"));
+const PayoutsPage = lazy(() => import("@/pages/finance/PayoutsPage"));
 
 // Products — shell + sub-pages
-import ProductsShell from "@/pages/products";
-import BenefitsPage from "@/pages/products/BenefitsPage";
-import CataloguePage from "@/pages/products/CataloguePage";
-import CheckoutLinksPage from "@/pages/products/CheckoutLinksPage";
-import DiscountsPage from "@/pages/products/DiscountsPage";
-import MetersPage from "@/pages/products/MetersPage";
-import CheckoutsPage from "@/pages/sales/CheckoutsPage";
-import OrdersPage from "@/pages/sales/OrdersPage";
-import SubscriptionsPage from "@/pages/sales/SubscriptionsPage";
-import AppearanceSettings from "@/pages/settings/AppearanceSettings";
-import BillingSettings from "@/pages/settings/BillingSettings";
-import CustomFieldsSettings from "@/pages/settings/CustomFieldsSettings";
-// Settings — sub-pages
-import GeneralSettings from "@/pages/settings/GeneralSettings";
-import MembersSettings from "@/pages/settings/MembersSettings";
-import MpesaSettings from "@/pages/settings/MpesaSettings";
-import NotificationsSettings from "@/pages/settings/NotificationsSettings";
-import WebhooksSettings from "@/pages/settings/WebhooksSettings";
-import WebhooksPage from "@/pages/WebhooksPage";
+const ProductsShell = lazy(() => import("@/pages/products"));
+const BenefitsPage = lazy(() => import("@/pages/products/BenefitsPage"));
+const CataloguePage = lazy(() => import("@/pages/products/CataloguePage"));
+const CheckoutLinksPage = lazy(
+  () => import("@/pages/products/CheckoutLinksPage")
+);
+const DiscountsPage = lazy(() => import("@/pages/products/DiscountsPage"));
+const MetersPage = lazy(() => import("@/pages/products/MetersPage"));
+
+// Sales
+const CheckoutsPage = lazy(() => import("@/pages/sales/CheckoutsPage"));
+const OrdersPage = lazy(() => import("@/pages/sales/OrdersPage"));
+const SubscriptionsPage = lazy(() => import("@/pages/sales/SubscriptionsPage"));
+
+// Settings
+const AppearanceSettings = lazy(
+  () => import("@/pages/settings/AppearanceSettings")
+);
+const BillingSettings = lazy(() => import("@/pages/settings/BillingSettings"));
+const CustomFieldsSettings = lazy(
+  () => import("@/pages/settings/CustomFieldsSettings")
+);
+const GeneralSettings = lazy(() => import("@/pages/settings/GeneralSettings"));
+const MembersSettings = lazy(() => import("@/pages/settings/MembersSettings"));
+const MpesaSettings = lazy(() => import("@/pages/settings/MpesaSettings"));
+const NotificationsSettings = lazy(
+  () => import("@/pages/settings/NotificationsSettings")
+);
+const WebhooksSettings = lazy(
+  () => import("@/pages/settings/WebhooksSettings")
+);
 
 // ── Network hook ──────────────────────────────────────────────────────────────
 
@@ -127,11 +147,18 @@ export default function App() {
     <ThemeProvider defaultTheme="system" storageKey="pesafy-theme">
       <ErrorBoundary>
         <AnimatePresence>
-          {!isOnline && <NoInternetPage key="offline" />}
+          {!isOnline && (
+            <Suspense fallback={null}>
+              <NoInternetPage key="offline" />
+            </Suspense>
+          )}
         </AnimatePresence>
 
         {isOnline && (
           <BrowserRouter>
+            {/* Single Suspense boundary: shows LoaderPage while any lazy
+                chunk is being downloaded. Nested Suspense boundaries can
+                be added inside individual pages for finer granularity. */}
             <Suspense fallback={<LoaderPage />}>
               <Routes>
                 {/* Public root */}

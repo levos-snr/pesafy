@@ -104,6 +104,9 @@ function NavLink({
   onClick?: () => void;
 }) {
   const loc = useLocation();
+  // Each component calls the hook directly — hooks cannot be passed as props
+  const shouldReduceMotion = useReducedMotion();
+
   const active =
     path === "/dashboard"
       ? loc.pathname === "/dashboard"
@@ -112,8 +115,8 @@ function NavLink({
   return (
     <Link to={path} onClick={onClick}>
       <motion.div
-        whileHover={{ x: active ? 0 : 2 }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={shouldReduceMotion ? undefined : { x: active ? 0 : 2 }}
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className={cn(
           "group flex items-center gap-3 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-150",
@@ -159,6 +162,7 @@ function NavGroup({
   onNavigate: () => void;
 }) {
   const loc = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const isActive = loc.pathname.startsWith(basePath);
   const [open, setOpen] = useState(isActive);
 
@@ -171,8 +175,8 @@ function NavGroup({
       <motion.button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        whileHover={{ x: 2 }}
-        whileTap={{ scale: 0.97 }}
+        whileHover={shouldReduceMotion ? undefined : { x: 2 }}
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
         transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className={cn(
           "w-full group flex items-center gap-3 rounded-xl px-3 py-[9px]",
@@ -192,7 +196,11 @@ function NavGroup({
         <span className="flex-1 text-left truncate">{label}</span>
         <motion.div
           animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+          transition={
+            shouldReduceMotion
+              ? { duration: 0 }
+              : { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
+          }
         >
           <ChevronDown className="h-3.5 w-3.5 opacity-40" />
         </motion.div>
@@ -204,7 +212,11 @@ function NavGroup({
           height: open ? items.length * 37 : 0,
           opacity: open ? 1 : 0,
         }}
-        transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        transition={
+          shouldReduceMotion
+            ? { duration: 0 }
+            : { duration: 0.22, ease: [0.4, 0, 0.2, 1] }
+        }
         className="overflow-hidden"
       >
         <div className="mt-0.5 space-y-0.5 pb-0.5">
@@ -226,6 +238,7 @@ interface SidebarProps {
 }
 
 function Sidebar({ open, onClose, user }: SidebarProps) {
+  const shouldReduceMotion = useReducedMotion();
   const initials = (user?.name?.[0] ?? user?.email?.[0] ?? "U").toUpperCase();
 
   const signOut = async () => {
@@ -246,7 +259,11 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-sidebar-border px-4">
         <motion.div
-          whileHover={{ rotate: [0, -12, 8, -4, 0], scale: 1.1 }}
+          whileHover={
+            shouldReduceMotion
+              ? undefined
+              : { rotate: [0, -12, 8, -4, 0], scale: 1.1 }
+          }
           transition={{ duration: 0.45 }}
           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary shadow-lg shadow-primary/30"
         >
@@ -338,7 +355,7 @@ function Sidebar({ open, onClose, user }: SidebarProps) {
       <div className="shrink-0 border-t border-sidebar-border p-2">
         <div className="flex items-center gap-2.5 rounded-xl px-2 py-2 hover:bg-sidebar-accent transition-colors">
           <motion.div
-            whileHover={{ scale: 1.08 }}
+            whileHover={shouldReduceMotion ? undefined : { scale: 1.08 }}
             transition={{ type: "spring", stiffness: 500, damping: 28 }}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-bold font-display"
           >
@@ -378,7 +395,6 @@ interface LayoutProps {
 export default function Layout({ children, user }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const loc = useLocation();
-  const _shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     setSidebarOpen(false);

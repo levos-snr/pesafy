@@ -23,7 +23,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import LandingHeader from "@/components/LandingHeader";
 import { cn } from "@/lib/utils";
-import { fadeUp, stagger, staggerItem, viewport } from "@/lib/variants";
+import {
+  fadeUp,
+  numberSpring,
+  stagger,
+  staggerItem,
+  viewport,
+} from "@/lib/variants";
 
 // ── Animated counter ─────────────────────────────────────────
 function Counter({
@@ -36,13 +42,21 @@ function Counter({
   suffix?: string;
 }) {
   const shouldReduceMotion = useReducedMotion();
-  const spring = useSpring(0, { stiffness: 60, damping: 20 });
+  // Use the shared numberSpring config from variants.ts
+  const spring = useSpring(0, numberSpring);
   const [display, setDisplay] = useState("0");
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
-    spring.set(shouldReduceMotion ? to : to);
+
+    if (shouldReduceMotion) {
+      // Skip the spring entirely — jump straight to the final value
+      setDisplay(Math.round(to).toLocaleString());
+      return;
+    }
+
+    spring.set(to);
     const unsub = spring.on("change", (v) =>
       setDisplay(Math.round(v).toLocaleString())
     );
@@ -244,7 +258,7 @@ function FeatureCard({
       className="group rounded-2xl border border-border bg-card p-6 transition-colors duration-300"
     >
       <motion.div
-        whileHover={{ scale: 1.12, rotate: 6 }}
+        whileHover={shouldReduceMotion ? undefined : { scale: 1.12, rotate: 6 }}
         transition={{ type: "spring", stiffness: 500, damping: 26 }}
         className={cn(
           "inline-flex h-11 w-11 items-center justify-center rounded-xl mb-4",
@@ -351,12 +365,20 @@ export default function LandingPage() {
 
         {/* Ambient glows */}
         <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.06, 0.12, 0.06] }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : { scale: [1, 1.15, 1], opacity: [0.06, 0.12, 0.06] }
+          }
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-1/4 left-1/3 h-[500px] w-[500px] rounded-full bg-primary blur-[120px] pointer-events-none"
         />
         <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.04, 0.08, 0.04] }}
+          animate={
+            shouldReduceMotion
+              ? undefined
+              : { scale: [1, 1.2, 1], opacity: [0.04, 0.08, 0.04] }
+          }
           transition={{
             duration: 10,
             repeat: Infinity,
@@ -383,7 +405,9 @@ export default function LandingPage() {
                 className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/8 px-4 py-1.5 text-xs font-semibold text-primary mb-6"
               >
                 <motion.span
-                  animate={{ scale: [1, 1.4, 1] }}
+                  animate={
+                    shouldReduceMotion ? undefined : { scale: [1, 1.4, 1] }
+                  }
                   transition={{
                     duration: 2,
                     repeat: Infinity,
@@ -438,14 +462,18 @@ export default function LandingPage() {
                 <Link to="/login?mode=signup">
                   <motion.button
                     type="button"
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
+                    whileHover={
+                      shouldReduceMotion ? undefined : { scale: 1.04 }
+                    }
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     className="inline-flex items-center gap-2.5 rounded-xl bg-primary px-6 py-3.5 text-base font-bold text-white shadow-xl shadow-primary/25 hover:bg-primary/85"
                   >
                     Start for free
                     <motion.span
-                      animate={{ x: [0, 4, 0] }}
+                      animate={
+                        shouldReduceMotion ? undefined : { x: [0, 4, 0] }
+                      }
                       transition={{
                         duration: 1.4,
                         repeat: Infinity,
@@ -464,8 +492,8 @@ export default function LandingPage() {
                       .querySelector("#how-it-works")
                       ?.scrollIntoView({ behavior: "smooth" })
                   }
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.03 }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                   className="inline-flex items-center gap-2 rounded-xl border border-border bg-background px-6 py-3.5 text-base font-semibold text-foreground hover:bg-muted transition-colors"
                 >
@@ -508,7 +536,7 @@ export default function LandingPage() {
               <div className="absolute -inset-4 rounded-3xl bg-primary/6 blur-xl" />
               <DashboardMockup />
 
-              {/* Floating notification card */}
+              {/* Floating notification card — animate-y prop removed (was a no-op) */}
               <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -518,7 +546,6 @@ export default function LandingPage() {
                   stiffness: 300,
                   damping: 24,
                 }}
-                animate-y={shouldReduceMotion ? undefined : undefined}
                 className="absolute -bottom-4 -left-4 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-xl shadow-black/10 dark:shadow-black/40"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10">
@@ -533,7 +560,9 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <motion.span
-                  animate={{ scale: [1, 1.4, 1] }}
+                  animate={
+                    shouldReduceMotion ? undefined : { scale: [1, 1.4, 1] }
+                  }
                   transition={{
                     duration: 2,
                     repeat: Infinity,
@@ -572,7 +601,7 @@ export default function LandingPage() {
           className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
         >
           <motion.div
-            animate={{ y: [0, 8, 0] }}
+            animate={shouldReduceMotion ? undefined : { y: [0, 8, 0] }}
             transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
             className="h-6 w-0.5 rounded-full bg-primary/30"
           />
@@ -694,14 +723,14 @@ export default function LandingPage() {
             {/* Connecting line (desktop) */}
             <div className="absolute top-8 left-[12.5%] right-[12.5%] h-px bg-border hidden lg:block" />
 
-            {HOW_IT_WORKS.map(({ step, title, desc }, i) => (
+            {HOW_IT_WORKS.map(({ step, title, desc }) => (
               <motion.div
                 key={step}
                 variants={shouldReduceMotion ? undefined : staggerItem}
                 className="relative text-center lg:text-left"
               >
                 <motion.div
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 26 }}
                   className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white font-display font-bold text-lg shadow-lg shadow-primary/25 mb-5 relative z-10"
                 >
@@ -787,7 +816,7 @@ export default function LandingPage() {
                 cta: "Contact us",
                 primary: false,
               },
-            ].map(({ name, price, period, features, cta, primary }, i) => (
+            ].map(({ name, price, period, features, cta, primary }) => (
               <motion.div
                 key={name}
                 variants={shouldReduceMotion ? undefined : staggerItem}
@@ -839,8 +868,10 @@ export default function LandingPage() {
                 <Link to="/login?mode=signup">
                   <motion.button
                     type="button"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={
+                      shouldReduceMotion ? undefined : { scale: 1.03 }
+                    }
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
                     transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     className={cn(
                       "w-full rounded-xl py-2.5 text-sm font-bold transition-colors",
@@ -862,7 +893,7 @@ export default function LandingPage() {
       <section className="py-20 relative overflow-hidden border-t border-border">
         <div className="absolute inset-0 grid-bg opacity-40 dark:opacity-25" />
         <motion.div
-          animate={{ scale: [1, 1.12, 1] }}
+          animate={shouldReduceMotion ? undefined : { scale: [1, 1.12, 1] }}
           transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
           className="absolute inset-0 flex items-center justify-center pointer-events-none"
         >
@@ -887,8 +918,8 @@ export default function LandingPage() {
             <Link to="/login?mode=signup">
               <motion.button
                 type="button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={shouldReduceMotion ? undefined : { scale: 1.05 }}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.95 }}
                 transition={{ type: "spring", stiffness: 500, damping: 28 }}
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-4 text-base font-bold text-white shadow-xl shadow-primary/25 hover:bg-primary/85"
               >
