@@ -27,6 +27,7 @@ export default defineConfig({
       "import",
       "default",
     ],
+    // dedupe is the correct way to prevent duplicate React — keep this
     dedupe: ["react", "react-dom"],
   },
   server: {
@@ -36,33 +37,25 @@ export default defineConfig({
     rollupOptions: {
       output: {
         /**
-         * manualChunks — Pesafy Dashboard chunking strategy
+         * manualChunks — safe chunking strategy
          *
-         * Goals:
-         *  1. Isolate stable vendor code so browsers cache it across deployments.
-         *  2. Group large / infrequently-changing libs into dedicated chunks.
-         *  3. Keep the main app bundle lean so only changed code busts the cache.
+         * ROOT CAUSE OF THE WHITE SCREEN:
+         * Isolating React into its own named chunk (react-vendor) causes a
+         * race condition — packages in the generic `vendor` catch-all that
+         * call React.createContext() execute before the react-vendor chunk
+         * has finished initialising, so React is undefined at that point.
          *
-         * Rule of thumb: favour fewer, well-named chunks over many tiny ones —
-         * each extra HTTP round-trip on a cold load costs more than a slightly
-         * larger file.
+         * FIX:
+         * Do NOT put React/ReactDOM/ReactRouter in a manual chunk.
+         * Let Vite's internal module graph keep React co-located with the
+         * packages that depend on it. Only split truly independent,
+         * heavy libraries that have no React initialisation dependency.
          */
         manualChunks(id) {
-          // ── 1. React core ─────────────────────────────────────────────────
-          // Isolated because it almost never changes between deployments.
-          // Any update to your app code will NOT invalidate this chunk.
-          if (
-            id.includes("node_modules/react/") ||
-            id.includes("node_modules/react-dom/") ||
-            id.includes("node_modules/react-router-dom/") ||
-            id.includes("node_modules/scheduler/")
-          ) {
-            return "react-vendor";
-          }
-
-          // ── 2. Convex + auth ──────────────────────────────────────────────
-          // Grouped together: they update in lockstep with your backend schema
-          // and are always needed on first load.
+          // ── 1. Convex + auth ──────────────────────────────────────────────
+          // These are always needed on first load and update together with
+          // your backend schema. They don't call createContext on module init
+          // so they are safe to isolate.
           if (
             id.includes("node_modules/convex/") ||
             id.includes("node_modules/better-auth/") ||
@@ -71,16 +64,10 @@ export default defineConfig({
             return "convex-auth";
           }
 
-          // ── 3. Animation ──────────────────────────────────────────────────
-          // framer-motion is large (~120 kB min+gz). Splitting it out means
-          // pages that don't animate don't pay the cost on first paint.
-          if (id.includes("node_modules/framer-motion/")) {
-            return "animation";
-          }
-
-          // ── 4. Charting ───────────────────────────────────────────────────
-          // recharts + its d3 sub-dependencies are only needed on analytics
-          // and finance pages — lazy-load friendly.
+          // ── 2. Charting ───────────────────────────────────────────────────
+          // recharts + d3 are large and only used on analytics/finance pages.
+          // They have no React.createContext() calls at module init level
+          // so isolating them is safe.
           if (
             id.includes("node_modules/recharts/") ||
             id.includes("node_modules/d3") ||
@@ -89,38 +76,18 @@ export default defineConfig({
             return "charting";
           }
 
-          // ── 5. UI primitives ──────────────────────────────────────────────
-          // radix-ui, lucide-react, class-variance-authority, clsx, and
-          // tailwind-merge are stable and used across every page.
-          if (
-            id.includes("node_modules/radix-ui/") ||
-            id.includes("node_modules/@radix-ui/") ||
-            id.includes("node_modules/lucide-react/") ||
-            id.includes("node_modules/class-variance-authority/") ||
-            id.includes("node_modules/clsx/") ||
-            id.includes("node_modules/tailwind-merge/")
-          ) {
-            return "ui-primitives";
+          // ── 3. Framer Motion ──────────────────────────────────────────────
+          // Large (~120 kB) and self-contained. Safe to isolate because it
+          // does not call createContext synchronously at module evaluation.
+          if (id.includes("node_modules/framer-motion/")) {
+            return "animation";
           }
 
-          // ── 6. Phone input ────────────────────────────────────────────────
-          // Used only on the onboarding / account pages; keep it out of the
-          // initial bundle so login and dashboard load faster.
-          if (id.includes("node_modules/react-phone-number-input/")) {
-            return "phone-input";
-          }
-
-          // ── 7. Everything else in node_modules → generic vendor chunk ─────
-          // Catches any transitive deps not matched above so they don't bloat
-          // the app chunk. Remove this fallback if you prefer Rollup's default
-          // automatic splitting behaviour.
-          if (id.includes("node_modules/")) {
-            return "vendor";
-          }
-
-          // App source: let Rollup decide based on the module graph.
-          // Dynamic imports in App.tsx (route-level) already create natural
-          // split points — no manual intervention needed here.
+          // ── Everything else (React, ReactDOM, ReactRouter, Radix, Lucide,
+          //    phone-input, etc.) ───────────────────────────────────────────
+          // Let Rollup/Vite decide. This keeps React and all React-dependent
+          // packages in the same dependency graph so createContext is always
+          // called after React has initialised.
           return undefined;
         },
       },

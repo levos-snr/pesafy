@@ -1,3 +1,18 @@
+/**
+ * App.tsx — root router + auth guards
+ *
+ * All page-level components are loaded with React.lazy() so Vite/Rollup
+ * can code-split them into separate chunks that are only downloaded when
+ * the user navigates to that route.
+ *
+ * IMPORTANT — Suspense boundary placement:
+ * The <Suspense> is intentionally placed INSIDE AuthenticatedLayout (wrapping
+ * only the <Outlet>) rather than around the entire <Routes> tree. This means
+ * when a lazy chunk is loading, only the main content area shows a loader —
+ * the sidebar, header and layout shell stay mounted and visible. Placing
+ * Suspense too high causes the entire shell to unmount on every navigation,
+ * which looks like a full page reload.
+ */
 import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
 import { AnimatePresence } from "framer-motion";
@@ -15,7 +30,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import Layout from "@/components/Layout";
 import { ThemeProvider } from "@/components/theme-provider";
 
-// ── Always-needed (no lazy — loaded on every route) ───────────────────────────
+// ── Always-needed (not lazy — used as Suspense fallbacks) ─────────────────────
 import LoaderPage from "@/pages/LoaderPage";
 
 // ── Pages (lazy — each becomes its own chunk) ─────────────────────────────────
@@ -44,7 +59,7 @@ const FinanceAccountPage = lazy(
 const IncomePage = lazy(() => import("@/pages/finance/IncomePage"));
 const PayoutsPage = lazy(() => import("@/pages/finance/PayoutsPage"));
 
-// Products — shell + sub-pages
+// Products
 const ProductsShell = lazy(() => import("@/pages/products"));
 const BenefitsPage = lazy(() => import("@/pages/products/BenefitsPage"));
 const CataloguePage = lazy(() => import("@/pages/products/CataloguePage"));
@@ -77,8 +92,18 @@ const WebhooksSettings = lazy(
   () => import("@/pages/settings/WebhooksSettings")
 );
 
-// ── Network hook ──────────────────────────────────────────────────────────────
+// ── A lightweight inline content loader ───────────────────────────────────────
+// Used inside the layout so only the content area shows a spinner — not the
+// whole shell. Avoids the "page reload" flicker on chunk download.
+function ContentLoader() {
+  return (
+    <div className="flex h-full min-h-[60vh] items-center justify-center">
+      <div className="spinner spinner-dark" />
+    </div>
+  );
+}
 
+// ── Network hook ──────────────────────────────────────────────────────────────
 function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   useEffect(() => {
@@ -95,7 +120,6 @@ function useNetworkStatus() {
 }
 
 // ── Auth guards ───────────────────────────────────────────────────────────────
-
 function RequireAuth() {
   const user = useQuery(api.auth.getCurrentUser);
   const businesses = useQuery(api.businesses.getUserBusinesses);
@@ -126,20 +150,32 @@ function RootRedirect() {
   const user = useQuery(api.auth.getCurrentUser);
   if (user === undefined) return <LoaderPage message="Loading Pesafy" />;
   if (user) return <Navigate to="/dashboard" replace />;
-  return <LandingPage />;
+  return (
+    // LandingPage is lazy — wrap with Suspense here since there's no layout shell
+    <Suspense fallback={<LoaderPage />}>
+      <LandingPage />
+    </Suspense>
+  );
 }
 
 function AuthenticatedLayout() {
   const user = useQuery(api.auth.getCurrentUser);
   return (
     <Layout user={user}>
-      <Outlet />
+      {/*
+       * Suspense is scoped to just the page content area.
+       * The Layout (sidebar + header) stays mounted during chunk downloads
+       * so the user sees a small spinner in the content area instead of
+       * the entire shell disappearing — no more "page reload" effect.
+       */}
+      <Suspense fallback={<ContentLoader />}>
+        <Outlet />
+      </Suspense>
     </Layout>
   );
 }
 
 // ── App ───────────────────────────────────────────────────────────────────────
-
 export default function App() {
   const isOnline = useNetworkStatus();
 
@@ -156,9 +192,11 @@ export default function App() {
 
         {isOnline && (
           <BrowserRouter>
-            {/* Single Suspense boundary: shows LoaderPage while any lazy
-                chunk is being downloaded. Nested Suspense boundaries can
-                be added inside individual pages for finer granularity. */}
+            {/*
+             * Outer Suspense: only catches non-layout routes (login, onboarding,
+             * error pages). The authenticated routes have their own inner Suspense
+             * inside AuthenticatedLayout so the shell never unmounts.
+             */}
             <Suspense fallback={<LoaderPage />}>
               <Routes>
                 {/* Public root */}
@@ -174,13 +212,13 @@ export default function App() {
                   {/* No layout */}
                   <Route path="/onboarding" element={<OnboardingPage />} />
 
-                  {/* With sidebar layout */}
+                  {/* With sidebar layout — Suspense lives inside AuthenticatedLayout */}
                   <Route element={<AuthenticatedLayout />}>
                     {/* Core */}
                     <Route path="/dashboard" element={<HomePage />} />
                     <Route path="/payments" element={<PaymentsPage />} />
 
-                    {/* Products — shell wraps sub-pages via Outlet */}
+                    {/* Products */}
                     <Route
                       path="/products"
                       element={<Navigate to="/products/catalogue" replace />}
@@ -237,7 +275,7 @@ export default function App() {
                       element={<FinanceAccountPage />}
                     />
 
-                    {/* Settings — each tab is its own route */}
+                    {/* Settings */}
                     <Route
                       path="/settings"
                       element={<Navigate to="/settings/general" replace />}
