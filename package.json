@@ -6,9 +6,6 @@
   "author": "lewisodero27@gmail.com",
   "license": "MIT",
   "type": "module",
-  "workspaces": [
-    "dashboard"
-  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
