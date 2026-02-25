@@ -1,5 +1,11 @@
 export { TokenManager } from "./core/auth";
 export { encryptSecurityCredential } from "./core/encryption";
+export type { MpesaExpressConfig } from "./express";
+export {
+  createMpesaExpressClient,
+  createMpesaExpressRouter,
+} from "./express";
+export { Mpesa } from "./mpesa";
 export type { B2BRequest, B2BResponse } from "./mpesa/b2b";
 export type { B2CRequest, B2CResponse } from "./mpesa/b2c";
 export type {
@@ -8,7 +14,6 @@ export type {
   C2BSimulateRequest,
   C2BSimulateResponse,
 } from "./mpesa/c2b";
-export { Mpesa } from "./mpesa/index";
 export type { DynamicQRRequest, DynamicQRResponse } from "./mpesa/qr-code";
 export type { ReversalRequest, ReversalResponse } from "./mpesa/reversal";
 // Re-export commonly used types

@@ -2,7 +2,9 @@ import { api } from "@convex/_generated/api";
 import { useQuery } from "convex/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CreditCard, Plus, Search, Smartphone, X } from "lucide-react";
+import { PaymentForm, PaymentStatus } from "pesafy/components/react";
 import { useState } from "react";
+import "pesafy/components/react/styles.css";
 import { cn, formatDate, formatKES } from "@/lib/utils";
 import {
   fadeUp,
@@ -37,7 +39,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const inp =
+const _inp =
   "w-full rounded-xl border border-border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:outline-none";
 const SKELETON_ROWS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5"];
 
@@ -50,28 +52,52 @@ export default function PaymentsPage() {
   );
 
   const [showForm, setShowForm] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [phone, setPhone] = useState("");
-  const [ref, setRef] = useState("");
-  const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [success, setSuccess] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "pending" | "success" | "error"
+  >("idle");
   const [search, setSearch] = useState("");
   const shouldReduceMotion = useReducedMotion();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (data: {
+    amount: number;
+    phoneNumber: string;
+    accountReference: string;
+    transactionDesc: string;
+  }) => {
     if (!businessId) return;
     setLoading(true);
     setErr("");
     setSuccess("");
+    setStatus("pending");
     try {
-      throw new Error(
-        "mpesaActions not yet configured — add your STK Push action"
+      const res = await fetch("/api/mpesa/express/stk-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+          message?: string;
+        } | null;
+        const message =
+          body?.message || body?.error || "Failed to initiate payment";
+        throw new Error(message);
+      }
+      const json = (await res.json().catch(() => null)) as {
+        CustomerMessage?: string;
+      } | null;
+      setSuccess(
+        json?.CustomerMessage ??
+          "STK Push sent. Ask the customer to check their phone."
       );
+      setStatus("success");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Failed to initiate payment");
+      setStatus("error");
     } finally {
       setLoading(false);
     }
@@ -165,64 +191,14 @@ export default function PaymentsPage() {
                 </div>
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                className="grid gap-4 sm:grid-cols-2"
-              >
-                {[
-                  {
-                    id: "amount",
-                    label: "Amount (KES)",
-                    type: "number",
-                    val: amount,
-                    set: setAmount,
-                    ph: "100",
-                    min: 1,
-                  },
-                  {
-                    id: "phone",
-                    label: "Phone Number",
-                    type: "tel",
-                    val: phone,
-                    set: setPhone,
-                    ph: "254712345678",
-                  },
-                  {
-                    id: "ref",
-                    label: "Account Ref",
-                    type: "text",
-                    val: ref,
-                    set: setRef,
-                    ph: "INV-001",
-                  },
-                  {
-                    id: "desc",
-                    label: "Description",
-                    type: "text",
-                    val: desc,
-                    set: setDesc,
-                    ph: "Payment for services",
-                  },
-                ].map(({ id, label, type, val, set, ph, min }: any) => (
-                  <div key={id}>
-                    <label
-                      htmlFor={id}
-                      className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5"
-                    >
-                      {label}
-                    </label>
-                    <input
-                      id={id}
-                      type={type}
-                      value={val}
-                      onChange={(e) => set(e.target.value)}
-                      placeholder={ph}
-                      required
-                      min={min}
-                      className={inp}
-                    />
-                  </div>
-                ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <PaymentForm
+                    onSubmit={handleSubmit}
+                    loading={loading}
+                    className="w-full"
+                  />
+                </div>
 
                 <AnimatePresence>
                   {err && (
@@ -245,31 +221,19 @@ export default function PaymentsPage() {
                       {success}
                     </motion.div>
                   )}
+                  {status !== "idle" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="sm:col-span-2"
+                    >
+                      <PaymentStatus status={status} />
+                    </motion.div>
+                  )}
                 </AnimatePresence>
 
                 <div className="sm:col-span-2 flex flex-wrap gap-3">
-                  <motion.button
-                    type="submit"
-                    disabled={loading || !businessId}
-                    {...tapSpring}
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary/85 disabled:opacity-45 disabled:cursor-not-allowed shadow-md shadow-primary/15"
-                  >
-                    {loading ? (
-                      <motion.span
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 0.7,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                        className="block h-4 w-4 rounded-full border-2 border-white/30 border-t-white"
-                      />
-                    ) : (
-                      <>
-                        <Smartphone className="h-4 w-4" /> Send STK Push
-                      </>
-                    )}
-                  </motion.button>
                   <motion.button
                     type="button"
                     onClick={() => setShowForm(false)}
@@ -279,7 +243,7 @@ export default function PaymentsPage() {
                     Cancel
                   </motion.button>
                 </div>
-              </form>
+              </div>
             </div>
           </motion.div>
         )}
