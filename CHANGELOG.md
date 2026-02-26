@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.2.2
+
+### Patch Changes
+
+- fix the missing pieces
+
 ## 0.2.1
 
 ### Patch Changes

@@ -12,10 +12,13 @@ export async function queryStkPush(
   accessToken: string,
   request: StkQueryRequest
 ): Promise<StkQueryResponse> {
+  // Generate timestamp ONCE — Password and Timestamp field must match exactly.
+  const timestamp = getTimestamp();
+
   const body = {
     BusinessShortCode: request.shortCode,
-    Password: getStkPushPassword(request.shortCode, request.passKey),
-    Timestamp: getTimestamp(),
+    Password: getStkPushPassword(request.shortCode, request.passKey, timestamp),
+    Timestamp: timestamp,
     CheckoutRequestID: request.checkoutRequestId,
   };
 
