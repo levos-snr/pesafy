@@ -1,14 +1,23 @@
 /**
- * C2B Register URLs - Register validation and confirmation URLs
+ * C2B Register URLs
  * API: POST /mpesa/c2b/v2/registerurl
+ *
+ * Registers Validation and Confirmation callback URLs for a short code.
+ * Sandbox: can be called multiple times.
+ * Production: one-time registration; contact Safaricom to change.
  */
-
 import { httpRequest } from "../../utils/http";
 import type { C2BRegisterUrlRequest } from "./types";
 
+/**
+ * Actual response shape from Daraja.
+ * Note: Daraja's field name has a typo ("CoversationID" — missing the 'n').
+ * We match it exactly so JSON parsing is lossless.
+ */
 export interface C2BRegisterUrlResponse {
-  ConversationID: string;
+  /** Global unique identifier for this registration request. Daraja typo: "Coversation" */
   OriginatorCoversationID: string;
+  /** "0" = accepted */
   ResponseCode: string;
   ResponseDescription: string;
 }
