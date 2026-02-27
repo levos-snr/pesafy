@@ -1,5 +1,14 @@
-export type { C2BRegisterUrlResponse } from "./register-url";
 export { registerC2BUrls } from "./register-url";
-export type { C2BSimulateResponse } from "./simulate";
 export { simulateC2B } from "./simulate";
-export type { C2BRegisterUrlRequest, C2BSimulateRequest } from "./types";
+export type {
+  C2BCallbackPayload,
+  C2BCommandId,
+  C2BRegisterUrlRequest,
+  C2BRegisterUrlResponse,
+  C2BRejectionCode,
+  C2BResponseType,
+  C2BSimulateRequest,
+  C2BSimulateResponse,
+  C2BValidationResponse,
+} from "./types";
+export { C2B_REJECTION_CODES } from "./types";
