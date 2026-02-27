@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.0
+
+### Minor Changes
+
+- fe95c2b: The C2B M-Pesa implementation in the pesafy package has been comprehensively overhauled for full Daraja C2B v2 compliance, including a complete rewrite of types.ts with all 13 callback fields (C2BCallbackPayload), validation responses, rejection codes, and command/response unions; fixes to register-url.ts ensuring ValidationURL is always sent (defaulting to confirmationUrl); enhanced simulate.ts supporting both CustomerPayBillOnline and CustomerBuyGoodsOnline with proper BillRefNumber handling, amount validation, and Msisdn casting; new c2b index exports; root index public exports; and improved http client error reporting. Dashboard updates add c2bRegisterUrls and c2bSimulate actions in mpesaActions.ts, fix http.ts webhook handlers with 6 missing fields (TransactionType, TransTime, etc.), upsert logic via createTransaction, a new getByShortCode query in businesses.ts, and a complete C2B tab in PaymentsPage.tsx featuring URL registration, simulation forms, and unified transactions—addressing prior gaps like hardcoded commands, missing UI, incomplete types, and non-upserting handlers.
+
 ## 0.2.4
 
 ### Patch Changes
