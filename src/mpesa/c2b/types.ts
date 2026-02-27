@@ -1,6 +1,9 @@
 /**
  * C2B (Customer to Business) types
- * Spec: https://developer.safaricom.co.ke/APIs/CustomerToBusinessRegisterURL
+ * API Reference: https://developer.safaricom.co.ke/APIs/CustomerToBusinessV2
+ *
+ * C2B v2 uses masked MSISDN (e.g. "2547 ***** 126").
+ * C2B v1 used SHA-256 hashed MSISDN — do NOT use v1.
  */
 
 // ─── Command IDs ─────────────────────────────────────────────────────────────
@@ -12,6 +15,14 @@
  */
 export type C2BCommandId = "CustomerPayBillOnline" | "CustomerBuyGoodsOnline";
 
+/**
+ * Default action when the ValidationURL is unreachable.
+ * "Completed" → M-PESA auto-completes the transaction.
+ * "Cancelled" → M-PESA auto-cancels the transaction.
+ * Note: values are case-sensitive per Daraja docs.
+ */
+export type C2BResponseType = "Completed" | "Cancelled";
+
 // ─── Register URL ─────────────────────────────────────────────────────────────
 
 export interface C2BRegisterUrlRequest {
@@ -21,13 +32,7 @@ export interface C2BRegisterUrlRequest {
   confirmationUrl: string;
   /** URL that receives validation requests (only when external validation is enabled) */
   validationUrl: string;
-  /**
-   * Default action when the validation URL is unreachable.
-   * "Completed" → M-PESA auto-completes the transaction.
-   * "Cancelled" → M-PESA auto-cancels the transaction.
-   * Note: the value is case-sensitive ("Completed" / "Cancelled").
-   */
-  responseType?: "Completed" | "Cancelled";
+  responseType?: C2BResponseType;
 }
 
 // ─── C2B Simulate (sandbox only) ─────────────────────────────────────────────
@@ -92,3 +97,19 @@ export type C2BConfirmationPayload = C2BCallbackPayloadBase;
  * or register separate Express routes for each URL.
  */
 export type C2BCallbackPayload = C2BValidationPayload | C2BConfirmationPayload;
+
+// ─── Validation response codes ────────────────────────────────────────────────
+
+/**
+ * Codes your ValidationURL must return to Safaricom to accept or reject
+ * a payment before it is processed.
+ */
+export const C2B_REJECTION_CODES = {
+  /** Accept the transaction — M-PESA proceeds to process and confirm */
+  ACCEPT: "0",
+  /** Reject the transaction — M-PESA cancels and notifies the customer */
+  REJECT: "1",
+} as const;
+
+export type C2BRejectionCode =
+  (typeof C2B_REJECTION_CODES)[keyof typeof C2B_REJECTION_CODES];

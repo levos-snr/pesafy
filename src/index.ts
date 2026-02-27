@@ -25,10 +25,12 @@ export type {
   C2BConfirmationPayload,
   C2BRegisterUrlRequest,
   C2BRegisterUrlResponse,
+  C2BRejectionCode,
   C2BSimulateRequest,
   C2BSimulateResponse,
   C2BValidationPayload,
 } from "./mpesa/c2b";
+export { C2B_REJECTION_CODES } from "./mpesa/c2b";
 // ─── QR Code ──────────────────────────────────────────────────────────────
 export type { DynamicQRRequest, DynamicQRResponse } from "./mpesa/qr-code";
 // ─── Reversal ─────────────────────────────────────────────────────────────

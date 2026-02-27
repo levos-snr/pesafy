@@ -9,7 +9,7 @@
 
 import { httpRequest } from "../../utils/http";
 import { msisdnToNumber } from "../../utils/phone";
-import type { C2BSimulateRequest } from "./types";
+import type { C2BCommandId, C2BSimulateRequest } from "./types";
 
 /**
  * Actual response shape from Daraja.
@@ -30,7 +30,7 @@ export async function simulateC2B(
   accessToken: string,
   request: C2BSimulateRequest
 ): Promise<C2BSimulateResponse> {
-  const commandId = request.commandId ?? "CustomerPayBillOnline";
+  const commandId: C2BCommandId = request.commandId ?? "CustomerPayBillOnline";
   const isBuyGoods = commandId === "CustomerBuyGoodsOnline";
 
   /**

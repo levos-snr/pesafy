@@ -7,7 +7,7 @@
  * Production: one-time registration; contact Safaricom to change.
  */
 import { httpRequest } from "../../utils/http";
-import type { C2BRegisterUrlRequest } from "./types";
+import type { C2BRegisterUrlRequest, C2BResponseType } from "./types";
 
 /**
  * Actual response shape from Daraja.
@@ -27,9 +27,11 @@ export async function registerC2BUrls(
   accessToken: string,
   request: C2BRegisterUrlRequest
 ): Promise<C2BRegisterUrlResponse> {
+  const responseType: C2BResponseType = request.responseType ?? "Completed";
+
   const body = {
     ShortCode: request.shortCode,
-    ResponseType: request.responseType ?? "Completed",
+    ResponseType: responseType,
     ConfirmationURL: request.confirmationUrl,
     ValidationURL: request.validationUrl,
   };

@@ -13,6 +13,9 @@ export type {
   C2BCommandId,
   C2BConfirmationPayload,
   C2BRegisterUrlRequest,
+  C2BRejectionCode,
+  C2BResponseType,
   C2BSimulateRequest,
   C2BValidationPayload,
 } from "./types";
+export { C2B_REJECTION_CODES } from "./types";
