@@ -1,6 +1,6 @@
 {
   "name": "pesafy",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": false,
   "description": "A powerful payment gateway library for African payment systems, starting with M-Pesa Daraja API",
   "author": "lewisodero27@gmail.com",
