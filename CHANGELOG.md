@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.2.3
+
+### Patch Changes
+
+- 16a7a59: error code fix
+
 ## 0.2.2
 
 ### Patch Changes
