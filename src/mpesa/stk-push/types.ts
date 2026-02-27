@@ -42,7 +42,16 @@ export interface StkQueryResponse {
   ResponseDescription: string;
   MerchantRequestID: string;
   CheckoutRequestID: string;
-  ResultCode: string;
+  /**
+   * Daraja returns ResultCode as a NUMBER, not a string.
+   * 0       = success
+   * 1032    = cancelled by user
+   * 1037    = timeout (customer did not respond)
+   * 2001    = wrong PIN
+   * etc.
+   * Always compare with === 0, not === "0".
+   */
+  ResultCode: number;
   ResultDesc: string;
 }
 
