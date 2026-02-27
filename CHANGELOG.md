@@ -1,5 +1,12 @@
 # pesafy
 
+## 0.3.1
+
+### Patch Changes
+
+- **C2B module rewrite & phone utility refactor** — Fixed `simulateC2B` where `CommandID` was hardcoded to `CustomerPayBillOnline`, making `CustomerBuyGoodsOnline` (Till) payments impossible. Corrected `BillRefNumber` logic so the field is omitted entirely for BuyGoods requests rather than defaulting to the string `"default"`, which caused a `400` from Daraja. Fixed `Msisdn` being sent as a quoted string instead of a JSON number as the spec requires. Removed the phantom `ConversationID` field from both `C2BSimulateResponse` and `C2BRegisterUrlResponse` — Daraja never returns this field for C2B, only `OriginatorCoversationID`. Extracted phone formatting into a shared `src/utils/phone.ts` module with two intentionally separate formatters: `formatSafaricomPhone` (strict, Safaricom/Airtel only, for STK Push) and `formatKenyanMsisdn` (permissive, all Kenyan networks, for C2B and B2C), eliminating duplicated logic across modules. Added the `C2BCommandId` union type and full callback payload types — `C2BValidationPayload`, `C2BConfirmationPayload`, and `C2BCallbackPayload` — to enable type-safe webhook handlers.
+- aa9c176: **C2B module rewrite & phone utility refactor** — Fixed `simulateC2B` where `CommandID` was hardcoded to `CustomerPayBillOnline`, making `CustomerBuyGoodsOnline` (Till) payments impossible. Corrected `BillRefNumber` logic so the field is omitted entirely for BuyGoods requests rather than defaulting to the string `"default"`, which caused a `400` from Daraja. Fixed `Msisdn` being sent as a quoted string instead of a JSON number as the spec requires. Removed the phantom `ConversationID` field from both `C2BSimulateResponse` and `C2BRegisterUrlResponse` — Daraja never returns this field for C2B, only `OriginatorCoversationID`. Extracted phone formatting into a shared `src/utils/phone.ts` module with two intentionally separate formatters: `formatSafaricomPhone` (strict, Safaricom/Airtel only, for STK Push) and `formatKenyanMsisdn` (permissive, all Kenyan networks, for C2B and B2C), eliminating duplicated logic across modules. Added the `C2BCommandId` union type and full callback payload types — `C2BValidationPayload`, `C2BConfirmationPayload`, and `C2BCallbackPayload` — to enable type-safe webhook handlers.
+
 ## 0.3.0
 
 ### Minor Changes
