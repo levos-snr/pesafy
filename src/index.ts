@@ -9,14 +9,19 @@ export { Mpesa } from "./mpesa";
 export type { B2BRequest, B2BResponse } from "./mpesa/b2b";
 export type { B2CRequest, B2CResponse } from "./mpesa/b2c";
 export type {
+  C2BCallbackPayload,
+  C2BCommandId,
   C2BRegisterUrlRequest,
   C2BRegisterUrlResponse,
+  C2BRejectionCode,
+  C2BResponseType,
   C2BSimulateRequest,
   C2BSimulateResponse,
+  C2BValidationResponse,
 } from "./mpesa/c2b";
+export { C2B_REJECTION_CODES } from "./mpesa/c2b";
 export type { DynamicQRRequest, DynamicQRResponse } from "./mpesa/qr-code";
 export type { ReversalRequest, ReversalResponse } from "./mpesa/reversal";
-// Re-export commonly used types
 export type {
   StkPushRequest,
   StkPushResponse,
@@ -40,7 +45,6 @@ export type {
   WebhookHandlerOptions,
   WebhookHandlerResult,
 } from "./mpesa/webhooks";
-// Webhook exports
 export {
   extractAmount,
   extractTransactionId,
