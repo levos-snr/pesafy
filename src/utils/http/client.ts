@@ -43,9 +43,13 @@ export async function httpRequest<T = unknown>(
     }
 
     if (!response.ok) {
+      // Include the full Daraja response body so callers can see exactly what
+      // Safaricom returned: "Invalid Access Token", "Bad Request - Invalid
+      // Shortcode", "Wrong credentials", etc. Previously this was swallowed.
+      const bodyStr = text.length > 0 ? ` — ${text}` : "";
       throw new PesafyError({
         code: "API_ERROR",
-        message: `Request failed with status ${response.status}`,
+        message: `Request failed with status ${response.status}${bodyStr}`,
         statusCode: response.status,
         response: data,
       });
