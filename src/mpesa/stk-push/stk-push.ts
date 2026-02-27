@@ -12,6 +12,15 @@ export async function processStkPush(
   accessToken: string,
   request: StkPushRequest
 ): Promise<StkPushResponse> {
+  // Validate amount: Daraja requires a whole number ≥ 1 KES.
+  // Math.round(0.3) = 0, which Daraja rejects — catch it here with a clear error.
+  const amount = Math.round(request.amount);
+  if (amount < 1) {
+    throw new Error(
+      `Amount must be at least KES 1 (got ${request.amount} which rounds to ${amount}).`
+    );
+  }
+
   // Generate timestamp ONCE — must be identical in both Password and Timestamp fields.
   // Safaricom validates that Base64(Shortcode+Passkey+Timestamp) matches the
   // Timestamp field; generating two separate timestamps causes auth failures.
@@ -27,7 +36,7 @@ export async function processStkPush(
     Password: getStkPushPassword(request.shortCode, request.passKey, timestamp),
     Timestamp: timestamp,
     TransactionType: request.transactionType ?? "CustomerPayBillOnline",
-    Amount: Math.round(request.amount),
+    Amount: amount,
     PartyA: formatPhoneNumber(request.phoneNumber),
     PartyB: partyB,
     PhoneNumber: formatPhoneNumber(request.phoneNumber),
