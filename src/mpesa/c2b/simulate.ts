@@ -34,14 +34,16 @@ export async function simulateC2B(
   const isBuyGoods = commandId === "CustomerBuyGoodsOnline";
 
   /**
-   * BillRefNumber rules per Daraja docs:
-   *  - CustomerPayBillOnline:  account reference (e.g. "Test Ref") — use passed value or empty string
-   *  - CustomerBuyGoodsOnline: must be null / omitted
+   * BillRefNumber rules — Daraja v2 sandbox behaviour (differs from docs):
+   *  - CustomerPayBillOnline:  account reference string (use passed value or "")
+   *  - CustomerBuyGoodsOnline: docs say omit, but Daraja v2 sandbox REQUIRES
+   *    the field present. Omitting causes: 500.003.1001
+   *    "The element AccountReference is invalid."
+   *    Sending "0" satisfies the validator.
    *
-   * We omit the key entirely for BuyGoods rather than sending null, which can
-   * cause a 400 "Invalid Request Payload" on some Daraja versions.
+   * Always include BillRefNumber. "0" is the safe default for Buy Goods.
    */
-  const billRef = isBuyGoods ? undefined : (request.billRefNumber ?? "");
+  const billRef = isBuyGoods ? "0" : (request.billRefNumber ?? "");
 
   const body: Record<string, unknown> = {
     ShortCode: Number(request.shortCode),
@@ -49,11 +51,9 @@ export async function simulateC2B(
     Amount: Math.round(request.amount),
     // Daraja expects Msisdn as a number (not a quoted string)
     Msisdn: msisdnToNumber(request.phoneNumber),
+    // Always included — see note above
+    BillRefNumber: billRef,
   };
-
-  if (billRef !== undefined) {
-    body.BillRefNumber = billRef;
-  }
 
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/v2/simulate`,
