@@ -6,7 +6,6 @@
  * This endpoint is NOT available in production — use STK Push or Dynamic QR
  * for production payment initiation.
  */
-
 import { httpRequest } from "../../utils/http";
 import { msisdnToNumber } from "../../utils/phone";
 import type { C2BCommandId, C2BSimulateRequest } from "./types";
@@ -34,26 +33,30 @@ export async function simulateC2B(
   const isBuyGoods = commandId === "CustomerBuyGoodsOnline";
 
   /**
-   * BillRefNumber rules — Daraja v2 sandbox behaviour (differs from docs):
-   *  - CustomerPayBillOnline:  account reference string (use passed value or "")
-   *  - CustomerBuyGoodsOnline: docs say omit, but Daraja v2 sandbox REQUIRES
-   *    the field present. Omitting causes: 500.003.1001
-   *    "The element AccountReference is invalid."
-   *    Sending "0" satisfies the validator.
+   * BillRefNumber (AccountReference) rules — Daraja v2 sandbox behaviour:
    *
-   * Always include BillRefNumber. "0" is the safe default for Buy Goods.
+   *  CustomerPayBillOnline:
+   *    - Required. Use the passed billRefNumber or fall back to empty string "".
+   *    - Empty string is accepted; it just means no account reference.
+   *
+   *  CustomerBuyGoodsOnline:
+   *    - The field MUST be omitted entirely from the request body.
+   *    - Sending any value (even "0", "", or null) triggers:
+   *      500.003.1001 "The element AccountReference is invalid."
+   *    - ✅ FIX: conditionally include the field only for Paybill.
    */
-  const billRef = isBuyGoods ? "0" : (request.billRefNumber ?? "");
-
   const body: Record<string, unknown> = {
     ShortCode: Number(request.shortCode),
     CommandID: commandId,
     Amount: Math.round(request.amount),
     // Daraja expects Msisdn as a number (not a quoted string)
     Msisdn: msisdnToNumber(request.phoneNumber),
-    // Always included — see note above
-    BillRefNumber: billRef,
   };
+
+  // ✅ FIXED: Only include BillRefNumber for Paybill — omit entirely for Buy Goods
+  if (!isBuyGoods) {
+    body.BillRefNumber = request.billRefNumber ?? "";
+  }
 
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/v2/simulate`,
