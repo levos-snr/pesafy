@@ -1,11 +1,11 @@
 /**
- * Webhook signature verification
+ * Webhook signature verification (STK Push focused)
  * Note: Daraja API doesn't provide webhook signatures in the same way as Stripe
  * Instead, verify by whitelisting IPs: 196.201.214.200, 196.201.214.206, etc.
  * This utility helps parse and validate webhook payloads
  */
 
-import type { B2CWebhook, C2BWebhook, StkPushWebhook } from "./types";
+import type { StkPushWebhook } from "./types";
 
 export interface WebhookVerificationOptions {
   /** IP whitelist - verify request comes from Safaricom */
@@ -40,26 +40,6 @@ export function parseStkPushWebhook(body: unknown): StkPushWebhook | null {
   try {
     const parsed = body as StkPushWebhook;
     if (parsed.Body?.stkCallback) return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-export function parseB2CWebhook(body: unknown): B2CWebhook | null {
-  try {
-    const parsed = body as B2CWebhook;
-    if (parsed.Result?.ResultCode !== undefined) return parsed;
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-export function parseC2BWebhook(body: unknown): C2BWebhook | null {
-  try {
-    const parsed = body as C2BWebhook;
-    if (parsed.TransID && parsed.TransAmount) return parsed;
     return null;
   } catch {
     return null;

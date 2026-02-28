@@ -1,5 +1,5 @@
 /**
- * Express-friendly helpers for M-Pesa Express (STK Push) and C2B simulate.
+ * Express-friendly helpers for M-Pesa Express (STK Push).
  *
  * NOTE: This module does NOT depend on Express at runtime. You pass in an
  * existing Express Router instance, and we attach handlers to it.
@@ -149,34 +149,6 @@ export function createMpesaExpressRouter(
           checkoutRequestId: body.checkoutRequestId,
         });
 
-        res.status(200).json(result);
-      } catch (error) {
-        if (res.headersSent) return next(error);
-        sendError(res, error);
-      }
-    }
-  );
-
-  // C2B simulate – sandbox only
-  router.post(
-    "/mpesa/c2b/simulate",
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await mpesa.c2bSimulate(req.body);
-        res.status(200).json(result);
-      } catch (error) {
-        if (res.headersSent) return next(error);
-        sendError(res, error);
-      }
-    }
-  );
-
-  // C2B register URLs – sandbox only
-  router.post(
-    "/mpesa/c2b/register-url",
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await mpesa.c2bRegisterUrls(req.body);
         res.status(200).json(result);
       } catch (error) {
         if (res.headersSent) return next(error);
