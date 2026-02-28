@@ -1,6 +1,6 @@
 /**
  * C2B Simulate (sandbox only)
- * API: POST /mpesa/c2b/v2/simulate
+ * API: POST /mpesa/c2b/v1/simulate   ← v1 (NOT v2 — v2 does not exist for this endpoint)
  *
  * Simulates a customer paying a Paybill or Till number.
  * This endpoint is NOT available in production — use STK Push or Dynamic QR
@@ -33,7 +33,7 @@ export async function simulateC2B(
   const isBuyGoods = commandId === "CustomerBuyGoodsOnline";
 
   /**
-   * BillRefNumber (AccountReference) rules — Daraja v2 sandbox behaviour:
+   * BillRefNumber (AccountReference) rules — Daraja v1 sandbox behaviour:
    *
    *  CustomerPayBillOnline:
    *    - Required. Use the passed billRefNumber or fall back to empty string "".
@@ -46,20 +46,24 @@ export async function simulateC2B(
    *    - ✅ FIX: conditionally include the field only for Paybill.
    */
   const body: Record<string, unknown> = {
-    ShortCode: Number(request.shortCode),
+    // ✅ FIXED: ShortCode must be a string — Daraja C2B simulate expects a string,
+    // not a number. Sending Number(shortCode) causes type mismatch errors.
+    ShortCode: request.shortCode,
     CommandID: commandId,
     Amount: Math.round(request.amount),
     // Daraja expects Msisdn as a number (not a quoted string)
     Msisdn: msisdnToNumber(request.phoneNumber),
   };
 
-  // ✅ FIXED: Only include BillRefNumber for Paybill — omit entirely for Buy Goods
+  // ✅ Only include BillRefNumber for Paybill — omit entirely for Buy Goods
   if (!isBuyGoods) {
     body.BillRefNumber = request.billRefNumber ?? "";
   }
 
+  // ✅ FIXED: /v1/simulate (was incorrectly /v2/simulate)
+  // The v2 path does not exist and will always return 500.003.1001.
   const { data } = await httpRequest<C2BSimulateResponse>(
-    `${baseUrl}/mpesa/c2b/v2/simulate`,
+    `${baseUrl}/mpesa/c2b/v1/simulate`,
     {
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
