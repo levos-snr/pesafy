@@ -1,5 +1,12 @@
 # pesafy
 
+## 0.3.6
+
+### Patch Changes
+
+- d202bbe: chnaging version to 0.3.6
+- a12678b: changing the verssion since l cant delete/unpublish previons versio to start from scratch
+
 ## 0.1.0
 
 ### Minor Changes
