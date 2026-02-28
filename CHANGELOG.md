@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.8
+
+### Patch Changes
+
+- Fixed four blocking TypeScript compilation errors before prepublish by extending the `ErrorCode` union to include `API_ERROR`, `NETWORK_ERROR`, and `TIMEOUT`, which resolved type assignment issues in the HTTP layer. Consolidated a duplicate `PesafyError` class (previously split between `index.ts` and `types.ts`) into a single authoritative implementation that preserves all fields, including `requestId`, `toJSON()`, and stack trace handling. Also corrected `x-forwarded-for` IP extraction in the Express webhook handler using safe optional chaining to prevent potential undefined access from the `split()` result.
+
 ## 0.3.7
 
 ### Patch Changes

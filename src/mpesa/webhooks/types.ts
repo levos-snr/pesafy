@@ -1,5 +1,5 @@
 /**
- * Webhook event types from Daraja API (STK Push focused)
+ * Webhook event types for Daraja callbacks
  */
 
 export type WebhookEventType = "stk_push";
@@ -10,12 +10,13 @@ export interface WebhookEvent {
   data: unknown;
 }
 
-/** STK Push webhook payload */
+/** STK Push webhook payload (POSTed to your CallBackURL) */
 export interface StkPushWebhook {
   Body: {
     stkCallback: {
       MerchantRequestID: string;
       CheckoutRequestID: string;
+      /** 0 = success */
       ResultCode: number;
       ResultDesc: string;
       CallbackMetadata?: {

@@ -1,24 +1,50 @@
+/**
+ * Core M-Pesa / Daraja API types
+ */
+
 export type Environment = "sandbox" | "production";
 
-export const DARAJA_BASE_URLS = {
+/** Base URLs per Daraja environment */
+export const DARAJA_BASE_URLS: Record<Environment, string> = {
   sandbox: "https://sandbox.safaricom.co.ke",
   production: "https://api.safaricom.co.ke",
 } as const;
 
 export interface MpesaConfig {
+  // ── Required for all APIs ─────────────────────────────────────────────────
   consumerKey: string;
   consumerSecret: string;
   environment: Environment;
-  /** Required for STK Push - Lipa Na M-Pesa passkey from Daraja portal */
+
+  // ── Required for STK Push (M-Pesa Express) ────────────────────────────────
+  /** Paybill / HO shortcode (5–7 digits). Required for STK Push & STK Query. */
   lipaNaMpesaShortCode?: string;
+  /**
+   * Passkey from Daraja portal.
+   * Sandbox: visible in the simulator test data section.
+   * Production: emailed after Go Live.
+   */
   lipaNaMpesaPassKey?: string;
-  /** Required for Transaction Status - initiator name and password */
+
+  // ── Required for Transaction Status / B2C / Reversals ────────────────────
+  /** M-PESA org portal API operator username */
   initiatorName?: string;
+  /** Plain-text password for the API operator (will be RSA-encrypted) */
   initiatorPassword?: string;
-  /** PEM certificate for encrypting initiator password. Download from Daraja portal */
+
+  // ── Certificate options (choose one) ─────────────────────────────────────
+  /**
+   * Path to the .cer file on disk.
+   * Bun: read via `Bun.file(path).text()`
+   * Node: read via `fs.promises.readFile(path, "utf-8")`
+   */
   certificatePath?: string;
-  /** PEM certificate string (alternative to certificatePath) */
+  /** PEM string contents of the certificate (alternative to certificatePath) */
   certificatePem?: string;
-  /** Pre-encrypted security credential (alternative to initiatorPassword + certificate) */
+  /**
+   * Pre-computed base64 security credential.
+   * Use this if you encrypt outside the library (e.g. at startup).
+   * Skips the RSA encryption step entirely.
+   */
   securityCredential?: string;
 }

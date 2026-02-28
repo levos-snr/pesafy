@@ -1,19 +1,14 @@
 /**
- * Pesafy — M-Pesa Daraja API (STK Push focused)
+ * pesafy — M-Pesa Daraja API SDK
+ *
+ * Public exports
  */
 
-// ─── Core ──────────────────────────────────────────────────────────────────
-export { TokenManager } from "./core/auth";
+// ── Encryption ────────────────────────────────────────────────────────────────
 export { encryptSecurityCredential } from "./core/encryption";
-
-// ─── Express helpers ──────────────────────────────────────────────────────
-export type { MpesaExpressConfig } from "./express";
-export { createMpesaExpressClient, createMpesaExpressRouter } from "./express";
-
-// ─── Main client ──────────────────────────────────────────────────────────
+// ── Main client ───────────────────────────────────────────────────────────────
 export { Mpesa } from "./mpesa";
-
-// ─── STK Push ─────────────────────────────────────────────────────────────
+// ── STK Push ──────────────────────────────────────────────────────────────────
 export type {
   StkCallbackFailure,
   StkCallbackInner,
@@ -24,6 +19,7 @@ export type {
   StkPushResponse,
   StkQueryRequest,
   StkQueryResponse,
+  TransactionType,
 } from "./mpesa/stk-push";
 export {
   formatPhoneNumber,
@@ -31,38 +27,36 @@ export {
   getTimestamp,
   isStkCallbackSuccess,
 } from "./mpesa/stk-push";
-// ─── Transaction Status ───────────────────────────────────────────────────
+// ── Transaction Status ────────────────────────────────────────────────────────
 export type {
   TransactionStatusRequest,
   TransactionStatusResponse,
+  TransactionStatusResult,
+  TransactionStatusResultParameter,
 } from "./mpesa/transaction-status";
-// ─── Config & Types ───────────────────────────────────────────────────────
-export type { MpesaConfig } from "./mpesa/types";
+export type { Environment, MpesaConfig } from "./mpesa/types";
 export { DARAJA_BASE_URLS } from "./mpesa/types";
-
-// ─── Webhooks (STK Push only) ──────────────────────────────────────────────
+// ── Webhooks ──────────────────────────────────────────────────────────────────
 export type {
   RetryOptions,
   RetryResult,
   StkPushWebhook,
+  WebhookEvent,
+  WebhookEventType,
   WebhookHandlerOptions,
   WebhookHandlerResult,
 } from "./mpesa/webhooks";
 export {
   extractAmount,
+  extractPhoneNumber,
   extractTransactionId,
   handleWebhook,
+  isSuccessfulCallback,
+  parseStkPushWebhook,
   retryWithBackoff,
+  SAFARICOM_IPS,
   verifyWebhookIP,
 } from "./mpesa/webhooks";
-
-// ─── Errors ───────────────────────────────────────────────────────────────
-export type { ErrorCode } from "./utils/errors";
+export type { ErrorCode, PesafyErrorOptions } from "./utils/errors";
+// ── Errors ────────────────────────────────────────────────────────────────────
 export { createError, PesafyError } from "./utils/errors";
-
-// ─── Shared phone utils ───────────────────────────────────────────────────
-export {
-  formatKenyanMsisdn,
-  formatSafaricomPhone,
-  msisdnToNumber,
-} from "./utils/phone";

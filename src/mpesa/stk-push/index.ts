@@ -10,6 +10,7 @@ export type {
   StkPushResponse,
   StkQueryRequest,
   StkQueryResponse,
+  TransactionType,
 } from "./types";
 export { getCallbackValue, isStkCallbackSuccess } from "./types";
 export { formatPhoneNumber, getTimestamp } from "./utils";

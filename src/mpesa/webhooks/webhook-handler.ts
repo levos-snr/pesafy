@@ -1,16 +1,16 @@
 /**
- * Webhook event handler utilities (STK Push focused)
+ * High-level webhook event handler
  */
 
 import { parseStkPushWebhook, verifyWebhookIP } from "./signature-verifier";
 import type { StkPushWebhook, WebhookEventType } from "./types";
 
 export interface WebhookHandlerOptions {
-  /** IP address of incoming request */
+  /** IP address of the incoming request (from req.ip or x-forwarded-for) */
   requestIP?: string;
-  /** Custom IP whitelist */
+  /** Override the default Safaricom IP whitelist */
   allowedIPs?: string[];
-  /** Skip IP verification (for testing) */
+  /** Skip IP verification — ONLY for local development/testing */
   skipIPCheck?: boolean;
 }
 
@@ -21,23 +21,35 @@ export interface WebhookHandlerResult<T = unknown> {
   error?: string;
 }
 
+/**
+ * Parses and validates an inbound Daraja webhook payload.
+ *
+ * @example
+ * // Express route
+ * app.post("/mpesa/callback", (req, res) => {
+ *   const result = handleWebhook(req.body, { requestIP: req.ip });
+ *   if (!result.success) return res.status(400).json({ error: result.error });
+ *   // process result.data (StkPushWebhook)
+ *   res.json({ ResultCode: 0, ResultDesc: "Accepted" });
+ * });
+ */
 export function handleWebhook(
   body: unknown,
   options: WebhookHandlerOptions = {}
 ): WebhookHandlerResult {
-  // Verify IP if provided
+  // ── IP verification ─────────────────────────────────────────────────────────
   if (!options.skipIPCheck && options.requestIP) {
     if (!verifyWebhookIP(options.requestIP, options.allowedIPs)) {
       return {
         success: false,
         eventType: null,
         data: null,
-        error: "IP address not whitelisted",
+        error: `IP address ${options.requestIP} is not in the Safaricom whitelist`,
       };
     }
   }
 
-  // Try to parse as STK Push
+  // ── Parse STK Push callback ─────────────────────────────────────────────────
   const stkPush = parseStkPushWebhook(body);
   if (stkPush) {
     return {
@@ -51,26 +63,34 @@ export function handleWebhook(
     success: false,
     eventType: null,
     data: null,
-    error: "Unknown webhook format",
+    error: "Unknown or malformed webhook payload",
   };
 }
 
+// ── Convenience extractors ────────────────────────────────────────────────────
+
+/** Extracts the M-Pesa receipt number from a successful STK Push callback */
 export function extractTransactionId(webhook: StkPushWebhook): string | null {
-  if ("Body" in webhook && webhook.Body?.stkCallback) {
-    const items = webhook.Body.stkCallback.CallbackMetadata?.Item;
-    const mpesaReceipt = items?.find(
-      (item) => item.Name === "MpesaReceiptNumber"
-    );
-    return mpesaReceipt ? String(mpesaReceipt.Value) : null;
-  }
-  return null;
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
+  const item = items?.find((i) => i.Name === "MpesaReceiptNumber");
+  return item ? String(item.Value) : null;
 }
 
+/** Extracts the transaction amount from a successful STK Push callback */
 export function extractAmount(webhook: StkPushWebhook): number | null {
-  if ("Body" in webhook && webhook.Body?.stkCallback) {
-    const items = webhook.Body.stkCallback.CallbackMetadata?.Item;
-    const amount = items?.find((item) => item.Name === "Amount");
-    return amount ? Number(amount.Value) : null;
-  }
-  return null;
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
+  const item = items?.find((i) => i.Name === "Amount");
+  return item ? Number(item.Value) : null;
+}
+
+/** Extracts the phone number from a successful STK Push callback */
+export function extractPhoneNumber(webhook: StkPushWebhook): string | null {
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
+  const item = items?.find((i) => i.Name === "PhoneNumber");
+  return item ? String(item.Value) : null;
+}
+
+/** Returns true if the STK Push callback represents a successful transaction */
+export function isSuccessfulCallback(webhook: StkPushWebhook): boolean {
+  return webhook.Body?.stkCallback?.ResultCode === 0;
 }
