@@ -4,6 +4,24 @@
 
 ### Patch Changes
 
+- add transaction status
+
+## 0.3.6
+
+### Patch Changes
+
+- add new version
+
+## 0.3.8
+
+### Patch Changes
+
+- cleaning up tag
+
+## 0.3.7
+
+### Patch Changes
+
 - d202bbe: chnaging version to 0.3.6
 - a12678b: changing the verssion since l cant delete/unpublish previons versio to start from scratch
 

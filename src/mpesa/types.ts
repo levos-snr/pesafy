@@ -12,7 +12,7 @@ export interface MpesaConfig {
   /** Required for STK Push - Lipa Na M-Pesa passkey from Daraja portal */
   lipaNaMpesaShortCode?: string;
   lipaNaMpesaPassKey?: string;
-  /** Required for B2C, B2B, Reversal - initiator name and password */
+  /** Required for Transaction Status - initiator name and password */
   initiatorName?: string;
   initiatorPassword?: string;
   /** PEM certificate for encrypting initiator password. Download from Daraja portal */

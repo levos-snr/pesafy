@@ -31,7 +31,11 @@ export {
   getTimestamp,
   isStkCallbackSuccess,
 } from "./mpesa/stk-push";
-
+// ─── Transaction Status ───────────────────────────────────────────────────
+export type {
+  TransactionStatusRequest,
+  TransactionStatusResponse,
+} from "./mpesa/transaction-status";
 // ─── Config & Types ───────────────────────────────────────────────────────
 export type { MpesaConfig } from "./mpesa/types";
 export { DARAJA_BASE_URLS } from "./mpesa/types";
