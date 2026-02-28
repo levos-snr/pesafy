@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.3
+
+### Patch Changes
+
+- 2790c0f: The v2 path for registerurl does not exist on Daraja
+
 ## 0.3.2
 
 ### Patch Changes
