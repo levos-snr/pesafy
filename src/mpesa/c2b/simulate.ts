@@ -14,7 +14,6 @@ import type { C2BCommandId, C2BSimulateRequest } from "./types";
  * Actual response shape from Daraja.
  * Note: Daraja's field name has a typo ("CoversationID" — missing the 'n').
  * We match it exactly so JSON parsing is lossless.
- * There is NO ConversationID field in this response (unlike B2C/B2B).
  */
 export interface C2BSimulateResponse {
   /** Global unique identifier for this simulate request. Daraja typo: "Coversation" */
@@ -33,35 +32,34 @@ export async function simulateC2B(
   const isBuyGoods = commandId === "CustomerBuyGoodsOnline";
 
   /**
-   * BillRefNumber (AccountReference) rules — Daraja v1 sandbox behaviour:
+   * BillRefNumber (AccountReference) rules — Daraja v1 sandbox:
    *
    *  CustomerPayBillOnline:
-   *    - Required. Use the passed billRefNumber or fall back to empty string "".
-   *    - Empty string is accepted; it just means no account reference.
+   *    - Include the field. Use billRefNumber or fall back to "".
+   *    - Empty string is accepted (no account reference).
    *
    *  CustomerBuyGoodsOnline:
-   *    - The field MUST be omitted entirely from the request body.
-   *    - Sending any value (even "0", "", or null) triggers:
+   *    - The KEY must be COMPLETELY ABSENT from the JSON body.
+   *    - Any value (even "", null, or undefined key) triggers:
    *      500.003.1001 "The element AccountReference is invalid."
-   *    - ✅ FIX: conditionally include the field only for Paybill.
+   *    - ✅ FIX: only add the key for Paybill.
    */
   const body: Record<string, unknown> = {
-    // ✅ FIXED: ShortCode must be a string — Daraja C2B simulate expects a string,
-    // not a number. Sending Number(shortCode) causes type mismatch errors.
+    // ✅ FIX: ShortCode as string — Daraja C2B simulate expects a string, not a number.
     ShortCode: request.shortCode,
     CommandID: commandId,
     Amount: Math.round(request.amount),
-    // Daraja expects Msisdn as a number (not a quoted string)
+    // Daraja expects Msisdn as a number, not a quoted string
     Msisdn: msisdnToNumber(request.phoneNumber),
   };
 
-  // ✅ Only include BillRefNumber for Paybill — omit entirely for Buy Goods
+  // ✅ FIX: Conditionally add BillRefNumber — the key must NOT exist at all for Buy Goods.
+  // Do NOT add an else that sets it to undefined/""/null — those still appear as keys.
   if (!isBuyGoods) {
     body.BillRefNumber = request.billRefNumber ?? "";
   }
 
-  // ✅ FIXED: /v1/simulate (was incorrectly /v2/simulate)
-  // The v2 path does not exist and will always return 500.003.1001.
+  // ✅ FIX: /v1/simulate — the v2 path does not exist and always returns 500.003.1001.
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/v1/simulate`,
     {
