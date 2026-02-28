@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.5
+
+### Patch Changes
+
+- d066c9c: conditional bill reference for bu goods
+
 ## 0.3.4
 
 ### Patch Changes
