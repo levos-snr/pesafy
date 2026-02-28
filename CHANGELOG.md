@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.1.1
+
+### Patch Changes
+
+- a12678b: changing the verssion since l cant delete/unpublish previons versio to start from scratch
+
 ## 0.1.0
 
 ### Minor Changes
