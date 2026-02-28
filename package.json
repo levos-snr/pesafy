@@ -1,7 +1,11 @@
 {
   "name": "pesafy",
-  "version": "0.3.8",
+  "version": "0.3.6",
   "private": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "description": "A powerful payment gateway library for African payment systems, starting with M-Pesa Daraja API",
   "author": "lewisodero27@gmail.com",
   "license": "MIT",
