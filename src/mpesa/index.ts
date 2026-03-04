@@ -5,6 +5,7 @@
  *   - STK Push (M-Pesa Express)   — stkPush()
  *   - STK Query                   — stkQuery()
  *   - Transaction Status Query    — transactionStatus()
+ *   - Dynamic QR Code             — generateDynamicQR()
  *
  * @example
  * const mpesa = new Mpesa({
@@ -22,6 +23,11 @@
 import { TokenManager } from "../core/auth";
 import { encryptSecurityCredential } from "../core/encryption";
 import { PesafyError } from "../utils/errors";
+import {
+  generateDynamicQR as _generateDynamicQR,
+  type DynamicQRRequest,
+  type DynamicQRResponse,
+} from "./dynamic-qr";
 import {
   processStkPush,
   queryStkPush,
@@ -63,10 +69,8 @@ export class Mpesa {
   }
 
   private async buildSecurityCredential(): Promise<string> {
-    // Option 1: caller pre-computed it
     if (this.config.securityCredential) return this.config.securityCredential;
 
-    // Option 2: we encrypt it
     if (!this.config.initiatorPassword) {
       throw new PesafyError({
         code: "INVALID_CREDENTIALS",
@@ -80,11 +84,9 @@ export class Mpesa {
     if (this.config.certificatePem) {
       cert = this.config.certificatePem;
     } else if (this.config.certificatePath) {
-      // Bun runtime
       if (typeof Bun !== "undefined") {
         cert = await Bun.file(this.config.certificatePath).text();
       } else {
-        // Node.js fallback
         const { readFile } = await import("node:fs/promises");
         cert = await readFile(this.config.certificatePath, "utf-8");
       }
@@ -114,7 +116,7 @@ export class Mpesa {
    *   accountReference: "INV-001",
    *   transactionDesc:  "Payment",
    * });
-   * console.log(res.CheckoutRequestID); // use to poll status
+   * console.log(res.CheckoutRequestID);
    */
   async stkPush(request: Omit<StkPushRequest, "shortCode" | "passKey">) {
     const shortCode = this.config.lipaNaMpesaShortCode ?? "";
@@ -192,7 +194,6 @@ export class Mpesa {
       });
     }
 
-    // Fetch token and encrypt credential concurrently
     const [token, securityCred] = await Promise.all([
       this.getToken(),
       this.buildSecurityCredential(),
@@ -205,6 +206,34 @@ export class Mpesa {
       initiator,
       request
     );
+  }
+
+  // ── Dynamic QR Code ───────────────────────────────────────────────────────
+
+  /**
+   * Dynamic QR — generates an M-PESA QR code for LNM merchant payments.
+   *
+   * Customers scan the code with My Safaricom App or M-PESA app to
+   * capture the till/paybill number and amount, then authorize payment.
+   *
+   * @example
+   * const res = await mpesa.generateDynamicQR({
+   *   merchantName: "My Shop",
+   *   refNo:        "INV-001",
+   *   amount:       500,
+   *   trxCode:      "BG",   // Buy Goods (till number)
+   *   cpi:          "373132",
+   *   size:         300,
+   * });
+   *
+   * // res.QRCode is a base64-encoded PNG — render in an <img> tag:
+   * // <img src={`data:image/png;base64,${res.QRCode}`} />
+   */
+  async generateDynamicQR(
+    request: DynamicQRRequest
+  ): Promise<DynamicQRResponse> {
+    const token = await this.getToken();
+    return _generateDynamicQR(this.baseUrl, token, request);
   }
 
   /** Force the cached OAuth token to be refreshed on the next API call */

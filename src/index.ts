@@ -8,6 +8,12 @@
 export { encryptSecurityCredential } from "./core/encryption";
 // ── Main client ───────────────────────────────────────────────────────────────
 export { Mpesa } from "./mpesa";
+// ── Dynamic QR ────────────────────────────────────────────────────────────────
+export type {
+  DynamicQRRequest,
+  DynamicQRResponse,
+  QRTransactionCode,
+} from "./mpesa/dynamic-qr";
 // ── STK Push ──────────────────────────────────────────────────────────────────
 export type {
   StkCallbackFailure,

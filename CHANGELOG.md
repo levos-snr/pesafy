@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.10
+
+### Patch Changes
+
+- Added Dynamic QR Code support to the pesafy SDK as a new mpesa/dynamic-qr module. This introduces three new files — types.ts, generate.ts, and index.ts — under src/mpesa/dynamic-qr/, implementing the Safaricom Daraja POST /mpesa/qrcode/v1/generate endpoint. The Mpesa class gains a new generateDynamicQR() method that handles token retrieval and delegates to the internal generateDynamicQR function, which validates all inputs (merchant name, reference, amount, transaction code, CPI, and size) before dispatching the request via the existing httpRequest utility. Three new public types — DynamicQRRequest, DynamicQRResponse, and QRTransactionCode — are exported from the root src/index.ts. No breaking changes were introduced; all existing APIs remain untouched.
+
 ## 0.3.9
 
 ### Patch Changes
