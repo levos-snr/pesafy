@@ -14,8 +14,15 @@
  * Daraja docs:
  *   - Simulation is not supported on production.
  *   - Use the test MSISDN from the Daraja simulator (e.g. 254708374149).
- *   - BillRefNumber is required for Paybill; null/empty for Buy Goods.
+ *   - BillRefNumber is required for Paybill; MUST BE OMITTED for Buy Goods.
+ *     Sending BillRefNumber="" for CustomerBuyGoodsOnline causes:
+ *     "The element AccountReference is invalid" (400) or HTTP 503.
  *   - Amount must be a whole number ≥ 1.
+ *
+ * Sandbox shortcodes:
+ *   CustomerPayBillOnline  → use your registered Paybill shortcode (e.g. 600977)
+ *   CustomerBuyGoodsOnline → use Daraja test Till shortcode: 600000
+ *     (Till shortcodes are different from Paybill in sandbox)
  */
 
 import { createError } from "../../utils/errors";
@@ -98,15 +105,34 @@ export async function simulateC2B(
   // ── API version ─────────────────────────────────────────────────────────────
   const version: C2BApiVersion = request.apiVersion ?? "v2";
 
+  const isBuyGoods = request.commandId === "CustomerBuyGoodsOnline";
+
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
-  // Daraja docs: ShortCode is numeric, Amount is numeric, Msisdn is numeric.
+  //
+  // CRITICAL: BillRefNumber handling differs by commandId:
+  //
+  //   CustomerPayBillOnline  (Paybill) → include BillRefNumber (account ref)
+  //   CustomerBuyGoodsOnline (Till)    → OMIT BillRefNumber entirely
+  //
+  // Sending BillRefNumber (even as empty string "") for Buy Goods causes:
+  //   HTTP 400: "The element AccountReference is invalid"
+  //   HTTP 503: Daraja sandbox rejects the malformed request
+  //
+  // Daraja docs are misleading here — the field is documented as optional,
+  // but sending it as "" for Buy Goods is treated as a validation error.
   const payload: Record<string, unknown> = {
     ShortCode: Number(request.shortCode),
     CommandID: request.commandId,
     Amount: amount,
     Msisdn: Number(request.msisdn),
-    BillRefNumber: request.billRefNumber ?? "",
   };
+
+  if (!isBuyGoods) {
+    // Paybill: BillRefNumber is the account/invoice reference the customer pays to.
+    // Include even if empty — Paybill payments require this field.
+    payload.BillRefNumber = request.billRefNumber ?? "";
+  }
+  // Buy Goods: BillRefNumber is intentionally omitted — Daraja rejects it.
 
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/${version}/simulate`,
