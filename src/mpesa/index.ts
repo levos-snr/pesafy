@@ -6,6 +6,8 @@
  *   - STK Query                   — stkQuery()
  *   - Transaction Status Query    — transactionStatus()
  *   - Dynamic QR Code             — generateDynamicQR()
+ *   - C2B Register URL            — registerC2BUrls()
+ *   - C2B Simulate (sandbox only) — simulateC2B()
  *
  * @example
  * const mpesa = new Mpesa({
@@ -23,6 +25,14 @@
 import { TokenManager } from "../core/auth";
 import { encryptSecurityCredential } from "../core/encryption";
 import { PesafyError } from "../utils/errors";
+import {
+  registerC2BUrls as _registerC2BUrls,
+  simulateC2B as _simulateC2B,
+  type C2BRegisterUrlRequest,
+  type C2BRegisterUrlResponse,
+  type C2BSimulateRequest,
+  type C2BSimulateResponse,
+} from "./c2b";
 import {
   generateDynamicQR as _generateDynamicQR,
   type DynamicQRRequest,
@@ -234,6 +244,71 @@ export class Mpesa {
   ): Promise<DynamicQRResponse> {
     const token = await this.getToken();
     return _generateDynamicQR(this.baseUrl, token, request);
+  }
+
+  // ── C2B Register URL ──────────────────────────────────────────────────────
+
+  /**
+   * Registers your Confirmation and Validation URLs with M-PESA.
+   *
+   * Use v2 (default) for new integrations — callbacks include a masked MSISDN.
+   * Use v1 only if you need SHA256-hashed MSISDN in callbacks.
+   *
+   * Sandbox: URLs can be re-registered freely (overwriting existing ones).
+   * Production: One-time call. To change URLs, delete them via Daraja Self
+   *   Services → URL Management, then call this again.
+   *
+   * URL rules (Daraja docs — enforced by this library):
+   *   ✓ Must be publicly accessible
+   *   ✓ Production: HTTPS required
+   *   ✗ Must NOT contain: M-PESA, Safaricom, exe, exec, cmd, sql, query
+   *   ✗ Do NOT use ngrok, mockbin, requestbin in production
+   *   ✓ responseType must be exactly "Completed" or "Cancelled" (sentence case)
+   *
+   * External Validation (optional):
+   *   By default it is disabled. To enable, email apisupport@safaricom.co.ke.
+   *   When enabled, Safaricom calls your validationUrl before processing payment.
+   *   You must respond within ~8 seconds.
+   *
+   * @example
+   * await mpesa.registerC2BUrls({
+   *   shortCode:       "600984",
+   *   responseType:    "Completed",
+   *   confirmationUrl: "https://yourdomain.com/mpesa/c2b/confirmation",
+   *   validationUrl:   "https://yourdomain.com/mpesa/c2b/validation",
+   *   apiVersion:      "v2",  // default — recommended
+   * });
+   */
+  async registerC2BUrls(
+    request: C2BRegisterUrlRequest
+  ): Promise<C2BRegisterUrlResponse> {
+    const token = await this.getToken();
+    return _registerC2BUrls(this.baseUrl, token, request);
+  }
+
+  // ── C2B Simulate (Sandbox ONLY) ───────────────────────────────────────────
+
+  /**
+   * Simulates a C2B customer payment. SANDBOX ONLY.
+   *
+   * In production, real customers initiate payments via M-PESA App, USSD,
+   * or SIM Toolkit — simulation is not available.
+   *
+   * The API version used here should match the version used when registering URLs.
+   *
+   * @example
+   * await mpesa.simulateC2B({
+   *   shortCode:     600984,
+   *   commandId:     "CustomerPayBillOnline",
+   *   amount:        10,
+   *   msisdn:        254708374149,  // Daraja test MSISDN
+   *   billRefNumber: "INV-001",     // account ref for Paybill; null for Till
+   *   apiVersion:    "v2",          // must match registered URL version
+   * });
+   */
+  async simulateC2B(request: C2BSimulateRequest): Promise<C2BSimulateResponse> {
+    const token = await this.getToken();
+    return _simulateC2B(this.baseUrl, token, request);
   }
 
   /** Force the cached OAuth token to be refreshed on the next API call */

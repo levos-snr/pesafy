@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.11
+
+### Patch Changes
+
+- add c2b feature
+
 ## 0.3.10
 
 ### Patch Changes
