@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.3.13
+
+### Patch Changes
+
+- C2B URL registration panel with per-shortcode tracking (Paybill + Buy Goods), dual registration support, and session-persisted status badges"
+
 ## 0.3.12
 
 ### Patch Changes
