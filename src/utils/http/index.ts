@@ -1,33 +1,49 @@
 /**
- * Minimal HTTP client for Daraja API calls.
+ * HTTP client for Daraja API calls.
  *
- * Why not use axios/got/ky?
- *   - Zero extra dependencies
- *   - Works in Node.js, Bun, and edge runtimes unchanged
- *   - Daraja only needs POST + GET with JSON bodies
+ * Single source of truth — previously this file contained TWO conflicting
+ * httpRequest implementations:
+ *   1. A retry-capable version (retries, retryDelay options)
+ *   2. An older timeout-based version (timeout option, no retries)
  *
- * Exported: httpRequest (the ONLY export — never export "httpClient")
+ * Having both caused TypeScript to pick an unpredictable implementation.
+ * The older version did NOT retry on 503 — meaning Daraja sandbox failures
+ * surfaced immediately rather than being absorbed by backoff.
+ *
+ * This file is the SINGLE canonical export. Only export: httpRequest.
+ * Never export "httpClient" — consumers must call httpRequest directly.
  */
 
-// src/utils/http/index.ts
-
 import { PesafyError } from "../errors";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface HttpRequestOptions {
   method: "GET" | "POST";
   headers?: Record<string, string>;
-  /** Will be JSON-serialised and sent as application/json */
+  /**
+   * Request body. Will be JSON.stringify'd and sent as application/json.
+   * Pass undefined (not null) to omit the body entirely.
+   */
   body?: unknown;
   /**
-   * Number of times to retry on transient errors (503, 429, network failures).
+   * Number of retry attempts on transient errors (503, 429, 502, 504, network).
    * Default: 4. Set to 0 to disable retries.
+   *
+   * Daraja sandbox is notoriously unstable — 503s are common under load.
+   * 4 retries with exponential backoff covers the typical sandbox blip.
    */
   retries?: number;
   /**
-   * Base delay in ms before first retry. Doubles each attempt + jitter.
-   * Default: 2000 (2 s). Daraja sandbox needs longer gaps than typical APIs.
+   * Base delay in ms before the first retry. Doubles each attempt + ±25% jitter.
+   * Default: 2000 (2 s).
    */
   retryDelay?: number;
+  /**
+   * Per-request timeout in ms. Default: 30000 (30 s).
+   * The timeout applies to each individual attempt, not the total retry duration.
+   */
+  timeout?: number;
 }
 
 export interface HttpResponse<T> {
@@ -36,31 +52,35 @@ export interface HttpResponse<T> {
   headers: Record<string, string>;
 }
 
-/** Status codes that are transient and safe to retry */
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** HTTP status codes that are transient and safe to retry */
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 
-/** Sleep for `ms` milliseconds */
+/** Promise-based sleep */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Returns a delay with ±25 % jitter to avoid retry storms.
- * Daraja sandbox 503s are caused by sandbox overload — spreading
- * retries prevents making it worse.
+ * Adds ±25% jitter to avoid thundering-herd retry storms.
+ * Daraja sandbox 503s are caused by sandbox overload — spreading retries
+ * across a time window prevents making the overload worse.
  */
-function jitter(baseMs: number): number {
+function withJitter(baseMs: number): number {
   const spread = baseMs * 0.25;
   return baseMs + (Math.random() * spread * 2 - spread);
 }
 
+// ── httpRequest ───────────────────────────────────────────────────────────────
+
 /**
  * Sends an HTTP request and returns parsed JSON.
  *
- * Automatically retries on transient errors (503, 429, network failures)
- * with exponential backoff + jitter. Never retries on 4xx client errors.
+ * Automatically retries on transient errors with exponential backoff + jitter.
+ * Never retries on 4xx client errors — those indicate a logic bug.
  *
- * NOTE: `httpClient` is NOT exported — the only export is `httpRequest`.
+ * @throws PesafyError on non-retryable errors or exhausted retries
  */
 export async function httpRequest<T = unknown>(
   url: string,
@@ -68,6 +88,7 @@ export async function httpRequest<T = unknown>(
 ): Promise<HttpResponse<T>> {
   const maxRetries = options.retries ?? 4;
   const baseDelay = options.retryDelay ?? 2000;
+  const timeout = options.timeout ?? 30_000;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -75,6 +96,7 @@ export async function httpRequest<T = unknown>(
     ...options.headers,
   };
 
+  // Build the fetch init once — body is immutable across retries
   const init: RequestInit = {
     method: options.method,
     headers,
@@ -86,45 +108,77 @@ export async function httpRequest<T = unknown>(
   let lastError: PesafyError | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    // Wait before retry (not before the first attempt)
+    // ── Backoff before retry (not before first attempt) ─────────────────────
     if (attempt > 0) {
-      const delay = jitter(baseDelay * Math.pow(2, attempt - 1));
+      const delay = withJitter(baseDelay * Math.pow(2, attempt - 1));
+      console.warn(
+        `[pesafy/http] Retry ${attempt}/${maxRetries} for ${options.method} ${url} ` +
+          `in ${Math.round(delay)}ms (last error: ${lastError?.message ?? "unknown"})`
+      );
       await sleep(delay);
     }
+
+    // ── Per-attempt timeout via AbortController ──────────────────────────────
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     let response: Response;
 
     try {
-      response = await fetch(url, init);
+      response = await fetch(url, { ...init, signal: controller.signal });
     } catch (err) {
-      // Network-level failure (DNS, connection refused, etc.)
+      clearTimeout(timeoutId);
+
+      // AbortError = timeout
+      if (err instanceof Error && err.name === "AbortError") {
+        lastError = new PesafyError({
+          code: "TIMEOUT",
+          message: `Request to ${url} timed out after ${timeout}ms`,
+          cause: err,
+        });
+        if (attempt < maxRetries) continue;
+        throw lastError;
+      }
+
+      // Network-level failure: DNS, ECONNRESET, ECONNREFUSED, etc.
       lastError = new PesafyError({
         code: "NETWORK_ERROR",
-        message: `Network error calling ${url}: ${String(err)}`,
+        message: `Network error calling ${url}: ${err instanceof Error ? err.message : String(err)}`,
         cause: err,
       });
-
-      if (attempt < maxRetries) continue; // retry
+      if (attempt < maxRetries) continue;
       throw lastError;
+    } finally {
+      clearTimeout(timeoutId);
     }
 
-    // Parse body regardless of status so we can include it in errors
+    // ── Parse body regardless of status ─────────────────────────────────────
+    // We always read the body so we can include Daraja's error message in
+    // thrown errors instead of just "HTTP 503".
+    let rawText = "";
     let data: unknown;
     const contentType = response.headers.get("content-type") ?? "";
+
     try {
-      data = contentType.includes("application/json")
-        ? await response.json()
-        : await response.text();
+      rawText = await response.text();
+      if (rawText) {
+        data = contentType.includes("application/json")
+          ? JSON.parse(rawText)
+          : rawText;
+      } else {
+        data = null;
+      }
     } catch {
-      data = null;
+      data = rawText || null;
     }
 
-    // Collect response headers
+    // ── Collect response headers ─────────────────────────────────────────────
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => {
       responseHeaders[key] = value;
     });
 
+    // ── Success ──────────────────────────────────────────────────────────────
     if (response.ok) {
       return {
         data: data as T,
@@ -133,25 +187,32 @@ export async function httpRequest<T = unknown>(
       };
     }
 
-    // ── Error response ────────────────────────────────────────────────────────
+    // ── Error response ───────────────────────────────────────────────────────
     const isTransient = RETRYABLE_STATUSES.has(response.status);
 
-    // Daraja error shape: { requestId, errorCode, errorMessage }
-    const daraja = (data ?? {}) as Record<string, unknown>;
-    const message =
-      (daraja.errorMessage as string) ??
-      (daraja.ResponseDescription as string) ??
+    // Daraja error envelope shapes:
+    //   { requestId, errorCode, errorMessage }
+    //   { ResponseCode, ResponseDescription }
+    const daraja =
+      typeof data === "object" && data !== null
+        ? (data as Record<string, unknown>)
+        : {};
+
+    const errorMessage =
+      (daraja.errorMessage as string | undefined) ??
+      (daraja.ResponseDescription as string | undefined) ??
+      rawText ??
       `HTTP ${response.status}`;
 
     lastError = new PesafyError({
-      code: isTransient ? "REQUEST_FAILED" : "HTTP_ERROR",
-      message,
+      code: isTransient ? "REQUEST_FAILED" : "API_ERROR",
+      message: errorMessage,
       statusCode: response.status,
       response: data,
       requestId: daraja.requestId as string | undefined,
     });
 
-    // Only retry transient errors — never retry 4xx client errors
+    // Only retry transient errors. 4xx errors are client bugs — never retry.
     if (isTransient && attempt < maxRetries) {
       continue;
     }
@@ -159,6 +220,6 @@ export async function httpRequest<T = unknown>(
     throw lastError;
   }
 
-  // Should never reach here, but TypeScript requires it
+  // Unreachable — TypeScript requires this
   throw lastError!;
 }

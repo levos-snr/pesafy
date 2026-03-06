@@ -1,27 +1,43 @@
 /**
- * Pesafy error utilities
+ * Pesafy error types and utilities.
+ *
+ * Single source of truth — no duplicate definitions.
+ * Previously this file had two conflicting ErrorCode aliases and two
+ * PesafyError class definitions which caused TypeScript to use an
+ * unpredictable one at runtime.
  */
+
+// ── Error code union ──────────────────────────────────────────────────────────
+
 export type ErrorCode =
-  | "INVALID_CREDENTIALS"
   | "AUTH_FAILED"
-  | "VALIDATION_ERROR"
-  | "ENCRYPTION_FAILED"
-  | "REQUEST_FAILED"
+  | "INVALID_CREDENTIALS"
   | "INVALID_PHONE"
-  | "HTTP_ERROR"
+  | "ENCRYPTION_FAILED"
+  | "VALIDATION_ERROR"
   | "API_ERROR"
+  | "HTTP_ERROR"
   | "NETWORK_ERROR"
-  | "TIMEOUT"
-  | "INVALID_RESPONSE";
+  | "REQUEST_FAILED"
+  | "INVALID_RESPONSE"
+  | "TIMEOUT";
+
+// ── Error options ─────────────────────────────────────────────────────────────
 
 export interface PesafyErrorOptions {
   code: ErrorCode;
   message: string;
+  /** HTTP status code from Daraja (if applicable) */
   statusCode?: number;
+  /** Raw Daraja response body (for debugging) */
   response?: unknown;
+  /** Underlying caught error (network, crypto, etc.) */
   cause?: unknown;
+  /** Daraja requestId from the error envelope */
   requestId?: string;
 }
+
+// ── PesafyError class ─────────────────────────────────────────────────────────
 
 export class PesafyError extends Error {
   readonly code: ErrorCode;
@@ -32,6 +48,7 @@ export class PesafyError extends Error {
 
   constructor(options: PesafyErrorOptions) {
     super(options.message);
+    // Ensure instanceof checks work correctly
     Object.defineProperty(this, "name", { value: "PesafyError" });
     this.code = options.code;
     this.statusCode = options.statusCode;
@@ -53,6 +70,8 @@ export class PesafyError extends Error {
     };
   }
 }
+
+// ── Factory ───────────────────────────────────────────────────────────────────
 
 /** Convenience factory — identical API to `new PesafyError(...)` */
 export function createError(options: PesafyErrorOptions): PesafyError {
