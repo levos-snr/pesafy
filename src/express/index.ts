@@ -22,12 +22,25 @@
  *     POST /mpesa/tax/remit                 — initiate a tax remittance to KRA
  *     POST /mpesa/tax/result                — receive Tax Remittance result from Safaricom
  *
+ *   B2B Express Checkout:
+ *     POST /mpesa/b2b/checkout              — initiate USSD Push to merchant's till
+ *     POST /mpesa/b2b/callback              — receive B2B transaction result from Safaricom
+ *
  * NOTE: This module does NOT import Express at runtime.
  * Pass in an existing Express Router and it attaches handlers.
  */
 
 import type { NextFunction, Request, Response, Router } from "express";
 import { Mpesa } from "../mpesa";
+import {
+  type B2BExpressCheckoutCallback,
+  getB2BAmount,
+  getB2BConversationId,
+  getB2BTransactionId,
+  isB2BCheckoutCallback,
+  isB2BCheckoutCancelled,
+  isB2BCheckoutSuccess,
+} from "../mpesa/b2b-express-checkout";
 import {
   acceptC2BValidation,
   type C2BConfirmationPayload,
@@ -58,13 +71,11 @@ export interface MpesaExpressConfig extends MpesaConfig {
   /**
    * Full public URL Safaricom will POST Transaction Status results to.
    * Required when using transactionStatus routes.
-   * @example "https://yourdomain.com/api/mpesa/transaction-status/result"
    */
   resultUrl?: string;
 
   /**
    * Full public URL Safaricom calls on queue timeout.
-   * @example "https://yourdomain.com/api/mpesa/transaction-status/timeout"
    */
   queueTimeOutUrl?: string;
 
@@ -80,7 +91,6 @@ export interface MpesaExpressConfig extends MpesaConfig {
    * Full public URL Safaricom POSTs C2B payment confirmations to.
    * Must not contain: M-PESA, Safaricom, exe, exec, cmd, sql, query.
    * Production: must be HTTPS.
-   * @example "https://yourdomain.com/api/mpesa/c2b/confirmation"
    */
   c2bConfirmationUrl?: string;
 
@@ -88,13 +98,12 @@ export interface MpesaExpressConfig extends MpesaConfig {
    * Full public URL Safaricom POSTs C2B validation requests to.
    * Only called if External Validation is enabled on your shortcode.
    * Email apisupport@safaricom.co.ke to enable External Validation.
-   * @example "https://yourdomain.com/api/mpesa/c2b/validation"
    */
   c2bValidationUrl?: string;
 
   /**
    * What M-PESA should do if your validation URL is unreachable.
-   * Must be exactly "Completed" or "Cancelled" (sentence case, well-spelled).
+   * Must be exactly "Completed" or "Cancelled" (sentence case).
    * Default: "Completed"
    */
   c2bResponseType?: "Completed" | "Cancelled";
@@ -108,40 +117,20 @@ export interface MpesaExpressConfig extends MpesaConfig {
 
   /**
    * Optional validation hook. Called when Safaricom sends a C2B validation
-   * request to your validationUrl (only if External Validation is enabled).
+   * request (only if External Validation is enabled on your shortcode).
    *
    * Return acceptC2BValidation() to allow or rejectC2BValidation() to block.
-   * Must resolve within ~8 seconds or M-PESA uses the c2bResponseType default.
+   * Must resolve within ~8 seconds.
    *
    * If not provided, all transactions are auto-accepted.
-   *
-   * @example
-   * onC2BValidation: async (payload) => {
-   *   const accountExists = await db.accounts.exists(payload.BillRefNumber);
-   *   return accountExists
-   *     ? acceptC2BValidation()
-   *     : rejectC2BValidation("C2B00012"); // Invalid Account Number
-   * }
    */
   onC2BValidation?: (
     payload: C2BValidationPayload
   ) => Promise<C2BValidationResponse> | C2BValidationResponse;
 
   /**
-   * Optional confirmation hook. Called when Safaricom confirms a successful
-   * C2B payment to your confirmationUrl.
-   *
-   * This is fire-and-forget — the 200 response to Safaricom is sent immediately.
-   * Errors in this hook are logged but do NOT affect the response.
-   *
-   * @example
-   * onC2BConfirmation: async (payload) => {
-   *   await db.payments.create({
-   *     transactionId: payload.TransID,
-   *     amount:        Number(payload.TransAmount),
-   *     accountRef:    payload.BillRefNumber,
-   *   });
-   * }
+   * Optional hook called when Safaricom confirms a successful C2B payment.
+   * Fire-and-forget — 200 response to Safaricom is sent immediately.
    */
   onC2BConfirmation?: (payload: C2BConfirmationPayload) => Promise<void> | void;
 
@@ -149,41 +138,63 @@ export interface MpesaExpressConfig extends MpesaConfig {
 
   /**
    * Your M-PESA business shortcode from which tax will be deducted.
-   * Used as the default partyA when not provided in the request body.
-   * Required when using tax remittance routes.
+   * Default partyA for tax remittance when not in the request body.
    */
   taxPartyA?: string;
 
   /**
    * Full public URL Safaricom POSTs Tax Remittance results to.
    * Required when using tax remittance routes.
-   * @example "https://yourdomain.com/api/mpesa/tax/result"
    */
   taxResultUrl?: string;
 
   /**
    * Full public URL Safaricom calls on Tax Remittance queue timeout.
    * Required when using tax remittance routes.
-   * @example "https://yourdomain.com/api/mpesa/tax/timeout"
    */
   taxQueueTimeOutUrl?: string;
 
   /**
-   * Optional hook called when a Tax Remittance result arrives at your resultUrl.
+   * Optional hook called when a Tax Remittance result arrives.
+   * Fire-and-forget — 200 response to Safaricom is sent immediately.
+   */
+  onTaxRemittanceResult?: (result: TaxRemittanceResult) => Promise<void> | void;
+
+  // ── B2B Express Checkout ───────────────────────────────────────────────────
+
+  /**
+   * Your Paybill shortcode (receiverShortCode) for B2B Express Checkout.
+   * Used as the default receiverShortCode when not provided in the request body.
+   */
+  b2bReceiverShortCode?: string;
+
+  /**
+   * Full public URL Safaricom POSTs B2B transaction results to.
+   * Used as the default callbackUrl for B2B when not provided in the request body.
+   * @example "https://yourdomain.com/api/mpesa/b2b/callback"
+   */
+  b2bCallbackUrl?: string;
+
+  /**
+   * Optional hook called when a B2B Express Checkout callback arrives.
+   * Called for BOTH successful payments and merchant cancellations.
    *
-   * This is fire-and-forget — the 200 response to Safaricom is sent immediately.
+   * Fire-and-forget — 200 response to Safaricom is sent immediately.
    * Errors in this hook are logged but do NOT affect the response.
    *
    * @example
-   * onTaxRemittanceResult: async (result) => {
-   *   if (result.Result.ResultCode === 0) {
-   *     await db.taxPayments.markPaid({
-   *       transactionId: result.Result.TransactionID,
+   * onB2BCheckoutCallback: async (callback) => {
+   *   if (isB2BCheckoutSuccess(callback)) {
+   *     await db.payments.record({
+   *       transactionId: callback.transactionId,
+   *       amount:        Number(callback.amount),
    *     });
    *   }
    * }
    */
-  onTaxRemittanceResult?: (result: TaxRemittanceResult) => Promise<void> | void;
+  onB2BCheckoutCallback?: (
+    callback: B2BExpressCheckoutCallback
+  ) => Promise<void> | void;
 
   /**
    * Skip Safaricom IP verification on callback routes.
@@ -252,11 +263,26 @@ interface C2BSimulateBody {
 
 interface TaxRemitBody {
   amount: number;
-  /** Override the taxPartyA set in config for this specific request */
   partyA?: string;
-  /** The KRA Payment Registration Number (PRN) */
   accountReference: string;
   remarks?: string;
+}
+
+interface B2BCheckoutBody {
+  /** Merchant's till number (debit party) */
+  primaryShortCode: string;
+  /** Amount to send to the vendor */
+  amount: number;
+  /** Payment reference shown in merchant's USSD prompt */
+  paymentRef: string;
+  /** Vendor's friendly name shown in merchant's USSD prompt */
+  partnerName: string;
+  /** Override the default receiverShortCode from config */
+  receiverShortCode?: string;
+  /** Override the default b2bCallbackUrl from config */
+  callbackUrl?: string;
+  /** Optional unique request ID (auto-generated if omitted) */
+  requestRefId?: string;
 }
 
 // ── Error helper ──────────────────────────────────────────────────────────────
@@ -277,7 +303,7 @@ function sendError(res: Response, error: unknown): void {
   });
 }
 
-// ── IP helper (shared across callbacks) ───────────────────────────────────────
+// ── IP helper ─────────────────────────────────────────────────────────────────
 
 function extractRequestIP(req: Request): string {
   return (
@@ -301,6 +327,7 @@ function extractRequestIP(req: Request): string {
  *   acceptC2BValidation,
  *   rejectC2BValidation,
  * } from "pesafy/express";
+ * import { isB2BCheckoutSuccess } from "pesafy";
  *
  * const router = express.Router();
  * createMpesaExpressRouter(router, {
@@ -313,21 +340,23 @@ function extractRequestIP(req: Request): string {
  *   initiatorName:        "testapi",
  *   initiatorPassword:    "Safaricom123!",
  *   certificatePath:      "./SandboxCertificate.cer",
+ *   // C2B
  *   c2bShortCode:         "600984",
  *   c2bConfirmationUrl:   "https://yourdomain.com/mpesa/c2b/confirmation",
  *   c2bValidationUrl:     "https://yourdomain.com/mpesa/c2b/validation",
- *   c2bResponseType:      "Completed",
- *   c2bApiVersion:        "v2",
+ *   // Tax Remittance
  *   taxPartyA:            "888880",
  *   taxResultUrl:         "https://yourdomain.com/mpesa/tax/result",
  *   taxQueueTimeOutUrl:   "https://yourdomain.com/mpesa/tax/timeout",
- *   onC2BValidation: async (payload) => {
- *     const valid = await db.accounts.exists(payload.BillRefNumber);
- *     return valid ? acceptC2BValidation() : rejectC2BValidation("C2B00012");
+ *   // B2B Express Checkout
+ *   b2bReceiverShortCode: "000002",
+ *   b2bCallbackUrl:       "https://yourdomain.com/mpesa/b2b/callback",
+ *   onB2BCheckoutCallback: async (callback) => {
+ *     if (isB2BCheckoutSuccess(callback)) {
+ *       await db.payments.record({ transactionId: callback.transactionId });
+ *     }
  *   },
- *   onC2BConfirmation: async (payload) => {
- *     await db.payments.record(payload);
- *   },
+ *   // Tax hook
  *   onTaxRemittanceResult: async (result) => {
  *     if (result.Result.ResultCode === 0) {
  *       await db.taxPayments.markPaid({ transactionId: result.Result.TransactionID });
@@ -523,8 +552,6 @@ export function createMpesaExpressRouter(
   );
 
   // ── POST /mpesa/c2b/register-url ──────────────────────────────────────────
-  // Registers your Confirmation + Validation URLs with Safaricom.
-  // Sandbox: can call multiple times. Production: one-time call.
   router.post(
     "/mpesa/c2b/register-url",
     async (req: Request, res: Response, next: NextFunction) => {
@@ -583,9 +610,7 @@ export function createMpesaExpressRouter(
     }
   );
 
-  // ── POST /mpesa/c2b/simulate ──────────────────────────────────────────────
-  // Simulates a C2B customer payment. SANDBOX ONLY.
-  // Safaricom does NOT support simulation in production.
+  // ── POST /mpesa/c2b/simulate (SANDBOX ONLY) ───────────────────────────────
   router.post(
     "/mpesa/c2b/simulate",
     async (req: Request, res: Response, next: NextFunction) => {
@@ -631,9 +656,6 @@ export function createMpesaExpressRouter(
   );
 
   // ── POST /mpesa/c2b/validation ────────────────────────────────────────────
-  // Safaricom POSTs here when External Validation is enabled on your shortcode.
-  // You must respond within ~8 seconds with accept or reject.
-  // Always respond HTTP 200 to Safaricom.
   router.post("/mpesa/c2b/validation", async (req: Request, res: Response) => {
     if (!config.skipIPCheck) {
       const requestIP = extractRequestIP(req);
@@ -675,9 +697,6 @@ export function createMpesaExpressRouter(
   });
 
   // ── POST /mpesa/c2b/confirmation ──────────────────────────────────────────
-  // Safaricom POSTs here after a successful C2B payment.
-  // Always respond { ResultCode: 0, ResultDesc: "Success" } immediately.
-  // Process the confirmation asynchronously to avoid delaying the response.
   router.post("/mpesa/c2b/confirmation", (req: Request, res: Response) => {
     const payload = req.body as C2BConfirmationPayload;
 
@@ -701,8 +720,6 @@ export function createMpesaExpressRouter(
   });
 
   // ── POST /mpesa/tax/remit ─────────────────────────────────────────────────
-  // Initiates a tax remittance to Kenya Revenue Authority (KRA).
-  // Requires initiatorName + securityCredential in config.
   router.post(
     "/mpesa/tax/remit",
     async (req: Request, res: Response, next: NextFunction) => {
@@ -758,8 +775,6 @@ export function createMpesaExpressRouter(
   );
 
   // ── POST /mpesa/tax/result ────────────────────────────────────────────────
-  // Safaricom POSTs the Tax Remittance result here after processing.
-  // Always respond HTTP 200 immediately; process result asynchronously.
   router.post("/mpesa/tax/result", (req: Request, res: Response) => {
     const body = req.body as TaxRemittanceResult;
     const result = body?.Result;
@@ -780,10 +795,140 @@ export function createMpesaExpressRouter(
       }
     }
 
-    // Call user hook fire-and-forget — never delay the 200 response
     if (config.onTaxRemittanceResult && body) {
       Promise.resolve(config.onTaxRemittanceResult(body)).catch((err) => {
         console.error("[pesafy] Tax Remittance result hook error:", err);
+      });
+    }
+
+    res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+  });
+
+  // ── POST /mpesa/b2b/checkout ───────────────────────────────────────────────
+  // Initiates a USSD Push to a merchant's till (B2B Express Checkout).
+  // Requires standard OAuth only — no initiator / SecurityCredential needed.
+  router.post(
+    "/mpesa/b2b/checkout",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const body = req.body as B2BCheckoutBody;
+
+        if (!body?.primaryShortCode) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "primaryShortCode is required — the merchant's till number (debit party)",
+          });
+        }
+        if (!body.amount || body.amount <= 0) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message: "amount must be a positive number",
+          });
+        }
+        if (!body.paymentRef) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "paymentRef is required — shown in the merchant's USSD prompt",
+          });
+        }
+        if (!body.partnerName) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "partnerName is required — your friendly name shown in the merchant's USSD prompt",
+          });
+        }
+
+        const receiverShortCode =
+          body.receiverShortCode ?? config.b2bReceiverShortCode ?? "";
+        if (!receiverShortCode) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "receiverShortCode is required — set b2bReceiverShortCode in config or provide in request body",
+          });
+        }
+
+        const callbackUrl = body.callbackUrl ?? config.b2bCallbackUrl ?? "";
+        if (!callbackUrl) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "callbackUrl is required — set b2bCallbackUrl in config or provide in request body",
+          });
+        }
+
+        const result = await mpesa.b2bExpressCheckout({
+          primaryShortCode: body.primaryShortCode,
+          receiverShortCode,
+          amount: body.amount,
+          paymentRef: body.paymentRef,
+          callbackUrl,
+          partnerName: body.partnerName,
+          requestRefId: body.requestRefId,
+        });
+
+        res.status(200).json(result);
+      } catch (error) {
+        if (res.headersSent) return next(error);
+        sendError(res, error);
+      }
+    }
+  );
+
+  // ── POST /mpesa/b2b/callback ───────────────────────────────────────────────
+  // Safaricom POSTs the B2B transaction result here after the merchant
+  // responds to the USSD Push.
+  //
+  // Two scenarios:
+  //   - Merchant completed payment → resultCode "0", includes transactionId
+  //   - Merchant cancelled         → resultCode "4001"
+  //
+  // Always respond HTTP 200 immediately — process callback asynchronously.
+  //
+  // NOTE: B2B callbacks do NOT use the same Safaricom IP whitelist as STK Push.
+  // We do NOT apply IP verification on this route.
+  router.post("/mpesa/b2b/callback", (req: Request, res: Response) => {
+    const body = req.body as unknown;
+
+    if (!isB2BCheckoutCallback(body)) {
+      console.error(
+        "[pesafy] B2B callback received unrecognised payload:",
+        JSON.stringify(body).slice(0, 200)
+      );
+      return res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
+    }
+
+    const callback = body as B2BExpressCheckoutCallback;
+
+    if (isB2BCheckoutSuccess(callback)) {
+      console.info("[pesafy] B2B Express Checkout success:", {
+        transactionId: getB2BTransactionId(callback),
+        conversationId: getB2BConversationId(callback),
+        amount: getB2BAmount(callback),
+        requestId: callback.requestId,
+        status: callback.status,
+      });
+    } else if (isB2BCheckoutCancelled(callback)) {
+      console.warn("[pesafy] B2B Express Checkout cancelled by merchant:", {
+        resultCode: callback.resultCode,
+        resultDesc: callback.resultDesc,
+        requestId: callback.requestId,
+        amount: getB2BAmount(callback),
+      });
+    } else {
+      console.warn("[pesafy] B2B Express Checkout unknown result:", {
+        resultCode: callback.resultCode,
+        resultDesc: callback.resultDesc,
+      });
+    }
+
+    // Call user hook fire-and-forget — never delay the 200 response
+    if (config.onB2BCheckoutCallback) {
+      Promise.resolve(config.onB2BCheckoutCallback(callback)).catch((err) => {
+        console.error("[pesafy] B2B callback hook error:", err);
       });
     }
 

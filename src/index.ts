@@ -6,8 +6,29 @@
 
 // ── Encryption ────────────────────────────────────────────────────────────────
 export { encryptSecurityCredential } from "./core/encryption";
+
 // ── Main client ───────────────────────────────────────────────────────────────
 export { Mpesa } from "./mpesa";
+export type {
+  B2BExpressCheckoutCallback,
+  B2BExpressCheckoutCallbackCancelled,
+  B2BExpressCheckoutCallbackSuccess,
+  B2BExpressCheckoutErrorCode,
+  B2BExpressCheckoutErrorResponse,
+  B2BExpressCheckoutRequest,
+  B2BExpressCheckoutResponse,
+} from "./mpesa/b2b-express-checkout";
+// ── B2B Express Checkout (USSD Push to Till) ──────────────────────────────────
+export {
+  getB2BAmount,
+  getB2BConversationId,
+  getB2BRequestId,
+  getB2BTransactionId,
+  initiateB2BExpressCheckout,
+  isB2BCheckoutCallback,
+  isB2BCheckoutCancelled,
+  isB2BCheckoutSuccess,
+} from "./mpesa/b2b-express-checkout";
 export type {
   C2BApiVersion,
   C2BCommandID,
@@ -82,6 +103,7 @@ export type {
   TransactionStatusResult,
   TransactionStatusResultParameter,
 } from "./mpesa/transaction-status";
+// ── Core types ────────────────────────────────────────────────────────────────
 export type { Environment, MpesaConfig } from "./mpesa/types";
 export { DARAJA_BASE_URLS } from "./mpesa/types";
 // ── Webhooks ──────────────────────────────────────────────────────────────────

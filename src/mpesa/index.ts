@@ -2,13 +2,14 @@
  * M-Pesa Daraja API client
  *
  * Supports:
- *   - STK Push (M-Pesa Express)   — stkPush()
- *   - STK Query                   — stkQuery()
- *   - Transaction Status Query    — transactionStatus()
- *   - Dynamic QR Code             — generateDynamicQR()
- *   - C2B Register URL            — registerC2BUrls()
- *   - C2B Simulate (sandbox only) — simulateC2B()
- *   - Tax Remittance (KRA)        — remitTax()
+ *   - STK Push (M-Pesa Express)             — stkPush()
+ *   - STK Query                             — stkQuery()
+ *   - Transaction Status Query              — transactionStatus()
+ *   - Dynamic QR Code                       — generateDynamicQR()
+ *   - C2B Register URL                      — registerC2BUrls()
+ *   - C2B Simulate (sandbox only)           — simulateC2B()
+ *   - Tax Remittance (KRA)                  — remitTax()
+ *   - B2B Express Checkout (USSD Push)      — b2bExpressCheckout()
  *
  * @example
  * const mpesa = new Mpesa({
@@ -26,6 +27,11 @@
 import { TokenManager } from "../core/auth";
 import { encryptSecurityCredential } from "../core/encryption";
 import { PesafyError } from "../utils/errors";
+import {
+  initiateB2BExpressCheckout as _initiateB2BExpressCheckout,
+  type B2BExpressCheckoutRequest,
+  type B2BExpressCheckoutResponse,
+} from "./b2b-express-checkout";
 import {
   registerC2BUrls as _registerC2BUrls,
   simulateC2B as _simulateC2B,
@@ -117,7 +123,7 @@ export class Mpesa {
     return encryptSecurityCredential(this.config.initiatorPassword, cert);
   }
 
-  // ── STK Push ──────────────────────────────────────────────────────────────
+  // ── STK Push ───────────────────────────────────────────────────────────────
 
   /**
    * M-Pesa Express — sends a payment prompt to the customer's phone.
@@ -224,7 +230,7 @@ export class Mpesa {
     );
   }
 
-  // ── Dynamic QR Code ───────────────────────────────────────────────────────
+  // ── Dynamic QR Code ────────────────────────────────────────────────────────
 
   /**
    * Dynamic QR — generates an M-PESA QR code for LNM merchant payments.
@@ -237,12 +243,10 @@ export class Mpesa {
    *   merchantName: "My Shop",
    *   refNo:        "INV-001",
    *   amount:       500,
-   *   trxCode:      "BG",   // Buy Goods (till number)
+   *   trxCode:      "BG",
    *   cpi:          "373132",
    *   size:         300,
    * });
-   *
-   * // res.QRCode is a base64-encoded PNG — render in an <img> tag:
    * // <img src={`data:image/png;base64,${res.QRCode}`} />
    */
   async generateDynamicQR(
@@ -252,7 +256,7 @@ export class Mpesa {
     return _generateDynamicQR(this.baseUrl, token, request);
   }
 
-  // ── C2B Register URL ──────────────────────────────────────────────────────
+  // ── C2B Register URL ───────────────────────────────────────────────────────
 
   /**
    * Registers your Confirmation and Validation URLs with M-PESA.
@@ -264,25 +268,13 @@ export class Mpesa {
    * Production: One-time call. To change URLs, delete them via Daraja Self
    *   Services → URL Management, then call this again.
    *
-   * URL rules (Daraja docs — enforced by this library):
-   *   ✓ Must be publicly accessible
-   *   ✓ Production: HTTPS required
-   *   ✗ Must NOT contain: M-PESA, Safaricom, exe, exec, cmd, sql, query
-   *   ✗ Do NOT use ngrok, mockbin, requestbin in production
-   *   ✓ responseType must be exactly "Completed" or "Cancelled" (sentence case)
-   *
-   * External Validation (optional):
-   *   By default it is disabled. To enable, email apisupport@safaricom.co.ke.
-   *   When enabled, Safaricom calls your validationUrl before processing payment.
-   *   You must respond within ~8 seconds.
-   *
    * @example
    * await mpesa.registerC2BUrls({
    *   shortCode:       "600984",
    *   responseType:    "Completed",
    *   confirmationUrl: "https://yourdomain.com/mpesa/c2b/confirmation",
    *   validationUrl:   "https://yourdomain.com/mpesa/c2b/validation",
-   *   apiVersion:      "v2",  // default — recommended
+   *   apiVersion:      "v2",
    * });
    */
   async registerC2BUrls(
@@ -292,7 +284,7 @@ export class Mpesa {
     return _registerC2BUrls(this.baseUrl, token, request);
   }
 
-  // ── C2B Simulate (Sandbox ONLY) ───────────────────────────────────────────
+  // ── C2B Simulate (Sandbox ONLY) ────────────────────────────────────────────
 
   /**
    * Simulates a C2B customer payment. SANDBOX ONLY.
@@ -300,16 +292,14 @@ export class Mpesa {
    * In production, real customers initiate payments via M-PESA App, USSD,
    * or SIM Toolkit — simulation is not available.
    *
-   * The API version used here should match the version used when registering URLs.
-   *
    * @example
    * await mpesa.simulateC2B({
    *   shortCode:     600984,
    *   commandId:     "CustomerPayBillOnline",
    *   amount:        10,
-   *   msisdn:        254708374149,  // Daraja test MSISDN
-   *   billRefNumber: "INV-001",     // account ref for Paybill; null for Till
-   *   apiVersion:    "v2",          // must match registered URL version
+   *   msisdn:        254708374149,
+   *   billRefNumber: "INV-001",
+   *   apiVersion:    "v2",
    * });
    */
   async simulateC2B(request: C2BSimulateRequest): Promise<C2BSimulateResponse> {
@@ -317,14 +307,12 @@ export class Mpesa {
     return _simulateC2B(this.baseUrl, token, request);
   }
 
-  // ── Tax Remittance ────────────────────────────────────────────────────────
+  // ── Tax Remittance ─────────────────────────────────────────────────────────
 
   /**
    * Tax Remittance — remits tax to Kenya Revenue Authority (KRA) via M-PESA.
    *
-   * Requires:
-   *   - initiatorName in config
-   *   - initiatorPassword + certificate (or pre-computed securityCredential)
+   * Requires: initiatorName + certificate (or pre-computed securityCredential).
    *
    * This is ASYNCHRONOUS. The synchronous response only confirms receipt.
    * Final details are POSTed to your resultUrl.
@@ -334,17 +322,17 @@ export class Mpesa {
    *   - A Payment Registration Number (PRN) from KRA.
    *   - Initiator with "Tax Remittance ORG API" role on M-PESA org portal.
    *
-   * Fixed values (set automatically — do NOT override unless Safaricom changes them):
+   * Fixed values (set automatically — do NOT override):
    *   CommandID:              "PayTaxToKRA"
    *   SenderIdentifierType:   "4"
    *   RecieverIdentifierType: "4"
-   *   PartyB:                 "572572"  (KRA shortcode)
+   *   PartyB:                 "572572" (KRA shortcode)
    *
    * @example
    * await mpesa.remitTax({
    *   amount:           5000,
    *   partyA:           "888880",
-   *   accountReference: "PRN1234XN",   // PRN from KRA
+   *   accountReference: "PRN1234XN",
    *   resultUrl:        "https://yourdomain.com/mpesa/tax/result",
    *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/tax/timeout",
    *   remarks:          "Monthly PAYE remittance",
@@ -367,6 +355,59 @@ export class Mpesa {
     ]);
 
     return _remitTax(this.baseUrl, token, securityCred, initiator, request);
+  }
+
+  // ── B2B Express Checkout ───────────────────────────────────────────────────
+
+  /**
+   * B2B Express Checkout — initiates a USSD Push to a merchant's till.
+   *
+   * Enables vendors to request payment from a fellow merchant by triggering
+   * a USSD Push to the merchant's till number. The merchant is prompted to
+   * enter their Operator ID and M-PESA PIN to authorise the payment.
+   *
+   * Requires: standard OAuth credentials only (consumerKey + consumerSecret).
+   * NO initiatorName or SecurityCredential needed.
+   *
+   * Flow:
+   *   1. You call b2bExpressCheckout() → Daraja sends USSD to merchant's till.
+   *   2. Merchant enters Operator ID + PIN to confirm.
+   *   3. M-PESA debits merchant (primaryShortCode), credits you (receiverShortCode).
+   *   4. Daraja POSTs result to your callbackUrl.
+   *
+   * Synchronous response: confirms USSD was triggered (code "0").
+   * Async callback: final success or cancellation result POSTed to callbackUrl.
+   *
+   * Prerequisites (from Daraja docs):
+   *   - Merchant's till (primaryShortCode) must have a Nominated Number
+   *     configured in M-PESA Web Portal (Organization Details).
+   *   - Merchant KYC must be valid.
+   *
+   * Error codes:
+   *   4104 — Missing Nominated Number → configure in M-PESA Web Portal
+   *   4102 — Merchant KYC Fail        → provide valid KYC
+   *   4201 — USSD Network Error       → retry on stable network
+   *   4203 — USSD Exception Error     → retry on stable network
+   *
+   * @example
+   * const res = await mpesa.b2bExpressCheckout({
+   *   primaryShortCode:  "000001",   // merchant's till (debit party)
+   *   receiverShortCode: "000002",   // your Paybill (credit party)
+   *   amount:            5000,
+   *   paymentRef:        "INV-001",
+   *   callbackUrl:       "https://yourdomain.com/mpesa/b2b/callback",
+   *   partnerName:       "My Vendor Co.",
+   * });
+   *
+   * if (res.code === "0") {
+   *   console.log("USSD Push triggered:", res.status);
+   * }
+   */
+  async b2bExpressCheckout(
+    request: B2BExpressCheckoutRequest
+  ): Promise<B2BExpressCheckoutResponse> {
+    const token = await this.getToken();
+    return _initiateB2BExpressCheckout(this.baseUrl, token, request);
   }
 
   /** Force the cached OAuth token to be refreshed on the next API call */

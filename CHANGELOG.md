@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.4.1
+
+### Patch Changes
+
+- added b2b express checkout capability
+
 ## 0.4.0
 
 ### Minor Changes
