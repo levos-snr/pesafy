@@ -18,6 +18,10 @@
  *     POST /mpesa/c2b/validation            — receive C2B validation from Safaricom
  *     POST /mpesa/c2b/confirmation          — receive C2B confirmation from Safaricom
  *
+ *   Tax Remittance:
+ *     POST /mpesa/tax/remit                 — initiate a tax remittance to KRA
+ *     POST /mpesa/tax/result                — receive Tax Remittance result from Safaricom
+ *
  * NOTE: This module does NOT import Express at runtime.
  * Pass in an existing Express Router and it attaches handlers.
  */
@@ -30,6 +34,7 @@ import {
   type C2BValidationPayload,
   type C2BValidationResponse,
 } from "../mpesa/c2b";
+import type { TaxRemittanceResult } from "../mpesa/tax-remittance";
 import type { MpesaConfig } from "../mpesa/types";
 import {
   extractAmount,
@@ -140,6 +145,46 @@ export interface MpesaExpressConfig extends MpesaConfig {
    */
   onC2BConfirmation?: (payload: C2BConfirmationPayload) => Promise<void> | void;
 
+  // ── Tax Remittance ─────────────────────────────────────────────────────────
+
+  /**
+   * Your M-PESA business shortcode from which tax will be deducted.
+   * Used as the default partyA when not provided in the request body.
+   * Required when using tax remittance routes.
+   */
+  taxPartyA?: string;
+
+  /**
+   * Full public URL Safaricom POSTs Tax Remittance results to.
+   * Required when using tax remittance routes.
+   * @example "https://yourdomain.com/api/mpesa/tax/result"
+   */
+  taxResultUrl?: string;
+
+  /**
+   * Full public URL Safaricom calls on Tax Remittance queue timeout.
+   * Required when using tax remittance routes.
+   * @example "https://yourdomain.com/api/mpesa/tax/timeout"
+   */
+  taxQueueTimeOutUrl?: string;
+
+  /**
+   * Optional hook called when a Tax Remittance result arrives at your resultUrl.
+   *
+   * This is fire-and-forget — the 200 response to Safaricom is sent immediately.
+   * Errors in this hook are logged but do NOT affect the response.
+   *
+   * @example
+   * onTaxRemittanceResult: async (result) => {
+   *   if (result.Result.ResultCode === 0) {
+   *     await db.taxPayments.markPaid({
+   *       transactionId: result.Result.TransactionID,
+   *     });
+   *   }
+   * }
+   */
+  onTaxRemittanceResult?: (result: TaxRemittanceResult) => Promise<void> | void;
+
   /**
    * Skip Safaricom IP verification on callback routes.
    * ONLY set true in local development — never in production.
@@ -205,6 +250,15 @@ interface C2BSimulateBody {
   shortCode?: string | number;
 }
 
+interface TaxRemitBody {
+  amount: number;
+  /** Override the taxPartyA set in config for this specific request */
+  partyA?: string;
+  /** The KRA Payment Registration Number (PRN) */
+  accountReference: string;
+  remarks?: string;
+}
+
 // ── Error helper ──────────────────────────────────────────────────────────────
 
 function sendError(res: Response, error: unknown): void {
@@ -256,17 +310,28 @@ function extractRequestIP(req: Request): string {
  *   lipaNaMpesaShortCode: "174379",
  *   lipaNaMpesaPassKey:   "bfb279...",
  *   callbackUrl:          "https://yourdomain.com/mpesa/express/callback",
+ *   initiatorName:        "testapi",
+ *   initiatorPassword:    "Safaricom123!",
+ *   certificatePath:      "./SandboxCertificate.cer",
  *   c2bShortCode:         "600984",
  *   c2bConfirmationUrl:   "https://yourdomain.com/mpesa/c2b/confirmation",
  *   c2bValidationUrl:     "https://yourdomain.com/mpesa/c2b/validation",
  *   c2bResponseType:      "Completed",
  *   c2bApiVersion:        "v2",
+ *   taxPartyA:            "888880",
+ *   taxResultUrl:         "https://yourdomain.com/mpesa/tax/result",
+ *   taxQueueTimeOutUrl:   "https://yourdomain.com/mpesa/tax/timeout",
  *   onC2BValidation: async (payload) => {
  *     const valid = await db.accounts.exists(payload.BillRefNumber);
  *     return valid ? acceptC2BValidation() : rejectC2BValidation("C2B00012");
  *   },
  *   onC2BConfirmation: async (payload) => {
  *     await db.payments.record(payload);
+ *   },
+ *   onTaxRemittanceResult: async (result) => {
+ *     if (result.Result.ResultCode === 0) {
+ *       await db.taxPayments.markPaid({ transactionId: result.Result.TransactionID });
+ *     }
  *   },
  *   skipIPCheck: true, // local dev only
  * });
@@ -464,8 +529,6 @@ export function createMpesaExpressRouter(
     "/mpesa/c2b/register-url",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
-        // Allow shortCode/URLs to be provided in request body (for flexibility)
-        // OR fall back to config values.
         const body = req.body as {
           shortCode?: string;
           confirmationUrl?: string;
@@ -572,7 +635,6 @@ export function createMpesaExpressRouter(
   // You must respond within ~8 seconds with accept or reject.
   // Always respond HTTP 200 to Safaricom.
   router.post("/mpesa/c2b/validation", async (req: Request, res: Response) => {
-    // ── IP verification ─────────────────────────────────────────────────────
     if (!config.skipIPCheck) {
       const requestIP = extractRequestIP(req);
       if (!verifyWebhookIP(requestIP)) {
@@ -580,7 +642,6 @@ export function createMpesaExpressRouter(
           "[pesafy] C2B validation rejected — IP not in Safaricom whitelist:",
           requestIP
         );
-        // Respond accepted to avoid M-PESA treating our endpoint as "unreachable"
         return res
           .status(200)
           .json({ ResultCode: "0", ResultDesc: "Accepted" });
@@ -593,10 +654,8 @@ export function createMpesaExpressRouter(
       let validationResponse: C2BValidationResponse;
 
       if (config.onC2BValidation) {
-        // Call user-provided validation hook
         validationResponse = await config.onC2BValidation(payload);
       } else {
-        // Default: auto-accept all (External Validation disabled by default anyway)
         validationResponse = acceptC2BValidation();
       }
 
@@ -610,7 +669,6 @@ export function createMpesaExpressRouter(
 
       return res.status(200).json(validationResponse);
     } catch (error) {
-      // If the hook throws, auto-accept to prevent transaction being stuck
       console.error("[pesafy] C2B validation hook threw an error:", error);
       return res.status(200).json({ ResultCode: "0", ResultDesc: "Accepted" });
     }
@@ -623,7 +681,6 @@ export function createMpesaExpressRouter(
   router.post("/mpesa/c2b/confirmation", (req: Request, res: Response) => {
     const payload = req.body as C2BConfirmationPayload;
 
-    // Log for observability
     console.info("[pesafy] C2B confirmation received:", {
       transactionId: payload.TransID,
       amount: payload.TransAmount,
@@ -634,15 +691,103 @@ export function createMpesaExpressRouter(
       balance: payload.OrgAccountBalance,
     });
 
-    // Call user hook fire-and-forget — never delay the 200 response
     if (config.onC2BConfirmation) {
       Promise.resolve(config.onC2BConfirmation(payload)).catch((err) => {
         console.error("[pesafy] C2B confirmation hook error:", err);
       });
     }
 
-    // Daraja docs: always respond 200 with this body
     res.status(200).json({ ResultCode: 0, ResultDesc: "Success" });
+  });
+
+  // ── POST /mpesa/tax/remit ─────────────────────────────────────────────────
+  // Initiates a tax remittance to Kenya Revenue Authority (KRA).
+  // Requires initiatorName + securityCredential in config.
+  router.post(
+    "/mpesa/tax/remit",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        if (!config.taxResultUrl || !config.taxQueueTimeOutUrl) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "taxResultUrl and taxQueueTimeOutUrl must be set in config to use tax remittance routes",
+          });
+        }
+
+        const body = req.body as TaxRemitBody;
+
+        if (!body || typeof body.amount !== "number" || body.amount <= 0) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message: "amount must be a positive number",
+          });
+        }
+        if (!body.accountReference) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "accountReference is required — the KRA Payment Registration Number (PRN)",
+          });
+        }
+
+        const partyA = body.partyA ?? config.taxPartyA ?? "";
+        if (!partyA) {
+          throw new PesafyError({
+            code: "VALIDATION_ERROR",
+            message:
+              "partyA is required — set taxPartyA in config or provide partyA in the request body",
+          });
+        }
+
+        const result = await mpesa.remitTax({
+          amount: body.amount,
+          partyA,
+          accountReference: body.accountReference,
+          resultUrl: config.taxResultUrl,
+          queueTimeOutUrl: config.taxQueueTimeOutUrl,
+          remarks: body.remarks,
+        });
+
+        res.status(200).json(result);
+      } catch (error) {
+        if (res.headersSent) return next(error);
+        sendError(res, error);
+      }
+    }
+  );
+
+  // ── POST /mpesa/tax/result ────────────────────────────────────────────────
+  // Safaricom POSTs the Tax Remittance result here after processing.
+  // Always respond HTTP 200 immediately; process result asynchronously.
+  router.post("/mpesa/tax/result", (req: Request, res: Response) => {
+    const body = req.body as TaxRemittanceResult;
+    const result = body?.Result;
+
+    if (result) {
+      if (result.ResultCode === 0) {
+        console.info("[pesafy] Tax Remittance result (success):", {
+          transactionId: result.TransactionID,
+          conversationId: result.ConversationID,
+          resultDesc: result.ResultDesc,
+        });
+      } else {
+        console.warn("[pesafy] Tax Remittance result (failed):", {
+          resultCode: result.ResultCode,
+          resultDesc: result.ResultDesc,
+          transactionId: result.TransactionID,
+        });
+      }
+    }
+
+    // Call user hook fire-and-forget — never delay the 200 response
+    if (config.onTaxRemittanceResult && body) {
+      Promise.resolve(config.onTaxRemittanceResult(body)).catch((err) => {
+        console.error("[pesafy] Tax Remittance result hook error:", err);
+      });
+    }
+
+    res.status(200).json({ ResultCode: 0, ResultDesc: "Accepted" });
   });
 
   return router;

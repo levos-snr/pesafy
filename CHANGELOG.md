@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.4.0
+
+### Minor Changes
+
+- added tax-remittance
+
 ## 0.3.13
 
 ### Patch Changes

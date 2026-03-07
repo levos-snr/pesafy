@@ -8,6 +8,7 @@
  *   - Dynamic QR Code             — generateDynamicQR()
  *   - C2B Register URL            — registerC2BUrls()
  *   - C2B Simulate (sandbox only) — simulateC2B()
+ *   - Tax Remittance (KRA)        — remitTax()
  *
  * @example
  * const mpesa = new Mpesa({
@@ -44,6 +45,11 @@ import {
   type StkPushRequest,
   type StkQueryRequest,
 } from "./stk-push";
+import {
+  remitTax as _remitTax,
+  type TaxRemittanceRequest,
+  type TaxRemittanceResponse,
+} from "./tax-remittance";
 import {
   queryTransactionStatus,
   type TransactionStatusRequest,
@@ -309,6 +315,58 @@ export class Mpesa {
   async simulateC2B(request: C2BSimulateRequest): Promise<C2BSimulateResponse> {
     const token = await this.getToken();
     return _simulateC2B(this.baseUrl, token, request);
+  }
+
+  // ── Tax Remittance ────────────────────────────────────────────────────────
+
+  /**
+   * Tax Remittance — remits tax to Kenya Revenue Authority (KRA) via M-PESA.
+   *
+   * Requires:
+   *   - initiatorName in config
+   *   - initiatorPassword + certificate (or pre-computed securityCredential)
+   *
+   * This is ASYNCHRONOUS. The synchronous response only confirms receipt.
+   * Final details are POSTed to your resultUrl.
+   *
+   * Prerequisites (from Daraja docs):
+   *   - Prior integration with KRA for tax declaration.
+   *   - A Payment Registration Number (PRN) from KRA.
+   *   - Initiator with "Tax Remittance ORG API" role on M-PESA org portal.
+   *
+   * Fixed values (set automatically — do NOT override unless Safaricom changes them):
+   *   CommandID:              "PayTaxToKRA"
+   *   SenderIdentifierType:   "4"
+   *   RecieverIdentifierType: "4"
+   *   PartyB:                 "572572"  (KRA shortcode)
+   *
+   * @example
+   * await mpesa.remitTax({
+   *   amount:           5000,
+   *   partyA:           "888880",
+   *   accountReference: "PRN1234XN",   // PRN from KRA
+   *   resultUrl:        "https://yourdomain.com/mpesa/tax/result",
+   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/tax/timeout",
+   *   remarks:          "Monthly PAYE remittance",
+   * });
+   */
+  async remitTax(
+    request: TaxRemittanceRequest
+  ): Promise<TaxRemittanceResponse> {
+    const initiator = this.config.initiatorName ?? "";
+    if (!initiator) {
+      throw new PesafyError({
+        code: "VALIDATION_ERROR",
+        message: "initiatorName is required for Tax Remittance",
+      });
+    }
+
+    const [token, securityCred] = await Promise.all([
+      this.getToken(),
+      this.buildSecurityCredential(),
+    ]);
+
+    return _remitTax(this.baseUrl, token, securityCred, initiator, request);
   }
 
   /** Force the cached OAuth token to be refreshed on the next API call */

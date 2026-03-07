@@ -24,19 +24,15 @@ export type {
 } from "./mpesa/c2b";
 // ── C2B (Customer to Business) ────────────────────────────────────────────────
 export {
-  // Validation helpers
   acceptC2BValidation,
   acknowledgeC2BConfirmation,
   getC2BAccountRef,
-  // Payload extractors
   getC2BAmount,
   getC2BCustomerName,
   getC2BTransactionId,
   isBuyGoodsPayment,
-  // Payload type guards
   isC2BPayload,
   isPaybillPayment,
-  // Core functions
   registerC2BUrls,
   rejectC2BValidation,
   simulateC2B,
@@ -66,6 +62,19 @@ export {
   getTimestamp,
   isStkCallbackSuccess,
 } from "./mpesa/stk-push";
+export type {
+  TaxRemittanceErrorResponse,
+  TaxRemittanceRequest,
+  TaxRemittanceResponse,
+  TaxRemittanceResult,
+  TaxRemittanceResultParameter,
+} from "./mpesa/tax-remittance";
+// ── Tax Remittance ────────────────────────────────────────────────────────────
+export {
+  KRA_SHORTCODE,
+  remitTax,
+  TAX_COMMAND_ID,
+} from "./mpesa/tax-remittance";
 // ── Transaction Status ────────────────────────────────────────────────────────
 export type {
   TransactionStatusRequest,
