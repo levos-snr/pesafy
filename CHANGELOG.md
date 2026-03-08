@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.4.2
+
+### Patch Changes
+
+- fix the missing exports
+
 ## 0.4.1
 
 ### Patch Changes
