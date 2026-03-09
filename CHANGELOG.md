@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.4.3
+
+### Patch Changes
+
+- b2c functions added
+
 ## 0.4.2
 
 ### Patch Changes

@@ -10,6 +10,7 @@
  *   - C2B Simulate (sandbox only)           — simulateC2B()
  *   - Tax Remittance (KRA)                  — remitTax()
  *   - B2B Express Checkout (USSD Push)      — b2bExpressCheckout()
+ *   - B2C Payment / Account Top Up         — b2cPayment()
  *
  * @example
  * const mpesa = new Mpesa({
@@ -32,6 +33,11 @@ import {
   type B2BExpressCheckoutRequest,
   type B2BExpressCheckoutResponse,
 } from "./b2b-express-checkout";
+import {
+  initiateB2CPayment as _initiateB2CPayment,
+  type B2CRequest,
+  type B2CResponse,
+} from "./b2c";
 import {
   registerC2BUrls as _registerC2BUrls,
   simulateC2B as _simulateC2B,
@@ -189,6 +195,8 @@ export class Mpesa {
     });
   }
 
+  // ── Transaction Status ─────────────────────────────────────────────────────
+
   /**
    * Transaction Status — queries the result of a completed M-Pesa transaction.
    *
@@ -235,9 +243,6 @@ export class Mpesa {
   /**
    * Dynamic QR — generates an M-PESA QR code for LNM merchant payments.
    *
-   * Customers scan the code with My Safaricom App or M-PESA app to
-   * capture the till/paybill number and amount, then authorize payment.
-   *
    * @example
    * const res = await mpesa.generateDynamicQR({
    *   merchantName: "My Shop",
@@ -261,13 +266,6 @@ export class Mpesa {
   /**
    * Registers your Confirmation and Validation URLs with M-PESA.
    *
-   * Use v2 (default) for new integrations — callbacks include a masked MSISDN.
-   * Use v1 only if you need SHA256-hashed MSISDN in callbacks.
-   *
-   * Sandbox: URLs can be re-registered freely (overwriting existing ones).
-   * Production: One-time call. To change URLs, delete them via Daraja Self
-   *   Services → URL Management, then call this again.
-   *
    * @example
    * await mpesa.registerC2BUrls({
    *   shortCode:       "600984",
@@ -288,9 +286,6 @@ export class Mpesa {
 
   /**
    * Simulates a C2B customer payment. SANDBOX ONLY.
-   *
-   * In production, real customers initiate payments via M-PESA App, USSD,
-   * or SIM Toolkit — simulation is not available.
    *
    * @example
    * await mpesa.simulateC2B({
@@ -313,20 +308,6 @@ export class Mpesa {
    * Tax Remittance — remits tax to Kenya Revenue Authority (KRA) via M-PESA.
    *
    * Requires: initiatorName + certificate (or pre-computed securityCredential).
-   *
-   * This is ASYNCHRONOUS. The synchronous response only confirms receipt.
-   * Final details are POSTed to your resultUrl.
-   *
-   * Prerequisites (from Daraja docs):
-   *   - Prior integration with KRA for tax declaration.
-   *   - A Payment Registration Number (PRN) from KRA.
-   *   - Initiator with "Tax Remittance ORG API" role on M-PESA org portal.
-   *
-   * Fixed values (set automatically — do NOT override):
-   *   CommandID:              "PayTaxToKRA"
-   *   SenderIdentifierType:   "4"
-   *   RecieverIdentifierType: "4"
-   *   PartyB:                 "572572" (KRA shortcode)
    *
    * @example
    * await mpesa.remitTax({
@@ -362,52 +343,95 @@ export class Mpesa {
   /**
    * B2B Express Checkout — initiates a USSD Push to a merchant's till.
    *
-   * Enables vendors to request payment from a fellow merchant by triggering
-   * a USSD Push to the merchant's till number. The merchant is prompted to
-   * enter their Operator ID and M-PESA PIN to authorise the payment.
-   *
-   * Requires: standard OAuth credentials only (consumerKey + consumerSecret).
-   * NO initiatorName or SecurityCredential needed.
-   *
-   * Flow:
-   *   1. You call b2bExpressCheckout() → Daraja sends USSD to merchant's till.
-   *   2. Merchant enters Operator ID + PIN to confirm.
-   *   3. M-PESA debits merchant (primaryShortCode), credits you (receiverShortCode).
-   *   4. Daraja POSTs result to your callbackUrl.
-   *
-   * Synchronous response: confirms USSD was triggered (code "0").
-   * Async callback: final success or cancellation result POSTed to callbackUrl.
-   *
-   * Prerequisites (from Daraja docs):
-   *   - Merchant's till (primaryShortCode) must have a Nominated Number
-   *     configured in M-PESA Web Portal (Organization Details).
-   *   - Merchant KYC must be valid.
-   *
-   * Error codes:
-   *   4104 — Missing Nominated Number → configure in M-PESA Web Portal
-   *   4102 — Merchant KYC Fail        → provide valid KYC
-   *   4201 — USSD Network Error       → retry on stable network
-   *   4203 — USSD Exception Error     → retry on stable network
-   *
    * @example
    * const res = await mpesa.b2bExpressCheckout({
-   *   primaryShortCode:  "000001",   // merchant's till (debit party)
-   *   receiverShortCode: "000002",   // your Paybill (credit party)
+   *   primaryShortCode:  "000001",
+   *   receiverShortCode: "000002",
    *   amount:            5000,
    *   paymentRef:        "INV-001",
    *   callbackUrl:       "https://yourdomain.com/mpesa/b2b/callback",
    *   partnerName:       "My Vendor Co.",
    * });
-   *
-   * if (res.code === "0") {
-   *   console.log("USSD Push triggered:", res.status);
-   * }
    */
   async b2bExpressCheckout(
     request: B2BExpressCheckoutRequest
   ): Promise<B2BExpressCheckoutResponse> {
     const token = await this.getToken();
     return _initiateB2BExpressCheckout(this.baseUrl, token, request);
+  }
+
+  // ── B2C Payment ────────────────────────────────────────────────────────────
+
+  /**
+   * B2C Payment — sends money from a business to customers, or loads funds
+   * to a B2C shortcode for bulk disbursement.
+   *
+   * Requires: initiatorName + (initiatorPassword + certificate) OR securityCredential.
+   * The initiator must have the appropriate role for the chosen CommandID.
+   *
+   * This is ASYNCHRONOUS. The synchronous response only confirms receipt.
+   * Final details are POSTed to your resultUrl.
+   *
+   * CommandID options:
+   *   "BusinessPayToBulk"  — Load funds to a B2C shortcode (Account Top Up)
+   *   "BusinessPayment"    — Direct unsecured payment to a customer
+   *   "SalaryPayment"      — Salary disbursement to a customer
+   *   "PromotionPayment"   — Promotion/bonus payment to a customer
+   *
+   * Required M-PESA org portal roles:
+   *   BusinessPayToBulk  → "Org Business Pay to Bulk API initiator"
+   *   BusinessPayment    → "Org Business Payment API initiator"
+   *   SalaryPayment      → "Org Salary Payment API initiator"
+   *   PromotionPayment   → "Org Promotion Payment API initiator"
+   *
+   * @example
+   * // B2C Account Top Up (load funds to B2C shortcode)
+   * await mpesa.b2cPayment({
+   *   commandId:        "BusinessPayToBulk",
+   *   amount:           10000,
+   *   partyA:           "600979",
+   *   partyB:           "600000",
+   *   accountReference: "BATCH-001",
+   *   resultUrl:        "https://yourdomain.com/mpesa/b2c/result",
+   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2c/timeout",
+   *   remarks:          "Monthly salary batch load",
+   * });
+   *
+   * @example
+   * // Direct customer payment
+   * await mpesa.b2cPayment({
+   *   commandId:        "SalaryPayment",
+   *   amount:           5000,
+   *   partyA:           "600979",
+   *   partyB:           "254712345678",
+   *   accountReference: "SAL-JAN-2024",
+   *   requester:        "254712345678",
+   *   resultUrl:        "https://yourdomain.com/mpesa/b2c/result",
+   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2c/timeout",
+   *   remarks:          "January salary",
+   * });
+   */
+  async b2cPayment(request: B2CRequest): Promise<B2CResponse> {
+    const initiator = this.config.initiatorName ?? "";
+    if (!initiator) {
+      throw new PesafyError({
+        code: "VALIDATION_ERROR",
+        message: "initiatorName is required for B2C Payment",
+      });
+    }
+
+    const [token, securityCred] = await Promise.all([
+      this.getToken(),
+      this.buildSecurityCredential(),
+    ]);
+
+    return _initiateB2CPayment(
+      this.baseUrl,
+      token,
+      securityCred,
+      initiator,
+      request
+    );
   }
 
   /** Force the cached OAuth token to be refreshed on the next API call */

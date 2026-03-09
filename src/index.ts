@@ -30,6 +30,33 @@ export {
   isB2BCheckoutSuccess,
 } from "./mpesa/b2b-express-checkout";
 export type {
+  B2CCommandID,
+  B2CErrorResponse,
+  B2CRequest,
+  B2CResponse,
+  B2CResult,
+  B2CResultParameter,
+} from "./mpesa/b2c";
+// ── B2C Payment / Account Top Up ─────────────────────────────────────────────
+export {
+  getB2CAmount,
+  getB2CConversationId,
+  getB2CCurrency,
+  getB2CDebitAccountBalance,
+  getB2CDebitPartyCharges,
+  getB2CInitiatorAccountBalance,
+  getB2COriginatorConversationId,
+  getB2CReceiverPublicName,
+  getB2CResultDesc,
+  getB2CResultParam,
+  getB2CTransactionCompletedTime,
+  getB2CTransactionId,
+  initiateB2CPayment,
+  isB2CFailure,
+  isB2CResult,
+  isB2CSuccess,
+} from "./mpesa/b2c";
+export type {
   C2BApiVersion,
   C2BCommandID,
   C2BConfirmationAck,
@@ -90,6 +117,7 @@ export type {
   TaxRemittanceResult,
   TaxRemittanceResultParameter,
 } from "./mpesa/tax-remittance";
+
 // ── Tax Remittance ────────────────────────────────────────────────────────────
 export {
   KRA_SHORTCODE,
