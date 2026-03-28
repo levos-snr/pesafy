@@ -1,96 +1,57 @@
+// 📁 PATH: src/index.ts
+
 /**
- * pesafy — M-Pesa Daraja API SDK
+ * pesafy — M-PESA Daraja API SDK
  *
- * Public exports
+ * @example
+ * import { Mpesa } from "pesafy";
+ * const mpesa = new Mpesa({ consumerKey: "...", consumerSecret: "...", environment: "sandbox" });
  */
+
+// ── Main client ───────────────────────────────────────────────────────────────
+export { Mpesa } from "./mpesa";
+
+// ── Core types ────────────────────────────────────────────────────────────────
+export type { Environment, MpesaConfig } from "./mpesa/types";
+export { DARAJA_BASE_URLS } from "./mpesa/types";
+
+// ── Branded types & helpers ───────────────────────────────────────────────────
+export type {
+  CheckoutRequestID,
+  ConversationID,
+  DeepReadonly,
+  KesAmount,
+  MpesaReceiptNumber,
+  MsisdnKE,
+  NonEmptyString,
+  OriginatorConversationID,
+  PaybillCode,
+  Result,
+  ShortCode,
+  StrictPick,
+  TillCode,
+} from "./types/branded";
+export {
+  err,
+  ok,
+  toKesAmount,
+  toMsisdn,
+  toNonEmpty,
+  toPaybill,
+  toShortCode,
+  toTill,
+} from "./types/branded";
+
+// ── Errors ────────────────────────────────────────────────────────────────────
+export type { ErrorCode, PesafyErrorOptions } from "./utils/errors";
+export { createError, isPesafyError, PesafyError } from "./utils/errors";
 
 // ── Encryption ────────────────────────────────────────────────────────────────
 export { encryptSecurityCredential } from "./core/encryption";
 
-// ── Main client ───────────────────────────────────────────────────────────────
-export { Mpesa } from "./mpesa";
-export type {
-  B2BExpressCheckoutCallback,
-  B2BExpressCheckoutCallbackCancelled,
-  B2BExpressCheckoutCallbackSuccess,
-  B2BExpressCheckoutErrorCode,
-  B2BExpressCheckoutErrorResponse,
-  B2BExpressCheckoutRequest,
-  B2BExpressCheckoutResponse,
-} from "./mpesa/b2b-express-checkout";
-// ── B2B Express Checkout (USSD Push to Till) ──────────────────────────────────
-export {
-  getB2BAmount,
-  getB2BConversationId,
-  getB2BRequestId,
-  getB2BTransactionId,
-  initiateB2BExpressCheckout,
-  isB2BCheckoutCallback,
-  isB2BCheckoutCancelled,
-  isB2BCheckoutSuccess,
-} from "./mpesa/b2b-express-checkout";
-export type {
-  B2CCommandID,
-  B2CErrorResponse,
-  B2CRequest,
-  B2CResponse,
-  B2CResult,
-  B2CResultParameter,
-} from "./mpesa/b2c";
-// ── B2C Payment / Account Top Up ─────────────────────────────────────────────
-export {
-  getB2CAmount,
-  getB2CConversationId,
-  getB2CCurrency,
-  getB2CDebitAccountBalance,
-  getB2CDebitPartyCharges,
-  getB2CInitiatorAccountBalance,
-  getB2COriginatorConversationId,
-  getB2CReceiverPublicName,
-  getB2CResultDesc,
-  getB2CResultParam,
-  getB2CTransactionCompletedTime,
-  getB2CTransactionId,
-  initiateB2CPayment,
-  isB2CFailure,
-  isB2CResult,
-  isB2CSuccess,
-} from "./mpesa/b2c";
-export type {
-  C2BApiVersion,
-  C2BCommandID,
-  C2BConfirmationAck,
-  C2BConfirmationPayload,
-  C2BRegisterUrlRequest,
-  C2BRegisterUrlResponse,
-  C2BResponseType,
-  C2BSimulateRequest,
-  C2BSimulateResponse,
-  C2BValidationPayload,
-  C2BValidationResponse,
-  C2BValidationResultCode,
-} from "./mpesa/c2b";
-// ── C2B (Customer to Business) ────────────────────────────────────────────────
-export {
-  acceptC2BValidation,
-  acknowledgeC2BConfirmation,
-  getC2BAccountRef,
-  getC2BAmount,
-  getC2BCustomerName,
-  getC2BTransactionId,
-  isBuyGoodsPayment,
-  isC2BPayload,
-  isPaybillPayment,
-  registerC2BUrls,
-  rejectC2BValidation,
-  simulateC2B,
-} from "./mpesa/c2b";
-// ── Dynamic QR ────────────────────────────────────────────────────────────────
-export type {
-  DynamicQRRequest,
-  DynamicQRResponse,
-  QRTransactionCode,
-} from "./mpesa/dynamic-qr";
+// ── Phone utilities ───────────────────────────────────────────────────────────
+export { formatSafaricomPhone } from "./utils/phone";
+
 // ── STK Push ──────────────────────────────────────────────────────────────────
 export type {
   StkCallbackFailure,
@@ -110,6 +71,87 @@ export {
   getTimestamp,
   isStkCallbackSuccess,
 } from "./mpesa/stk-push";
+
+// ── C2B ───────────────────────────────────────────────────────────────────────
+export type {
+  C2BApiVersion,
+  C2BCommandID,
+  C2BConfirmationAck,
+  C2BConfirmationPayload,
+  C2BRegisterUrlRequest,
+  C2BRegisterUrlResponse,
+  C2BResponseType,
+  C2BSimulateRequest,
+  C2BSimulateResponse,
+  C2BValidationPayload,
+  C2BValidationResponse,
+  C2BValidationResultCode,
+} from "./mpesa/c2b";
+export {
+  acceptC2BValidation,
+  acknowledgeC2BConfirmation,
+  getC2BAccountRef,
+  getC2BAmount,
+  getC2BCustomerName,
+  getC2BTransactionId,
+  isBuyGoodsPayment,
+  isC2BPayload,
+  isPaybillPayment,
+  registerC2BUrls,
+  rejectC2BValidation,
+  simulateC2B,
+} from "./mpesa/c2b";
+
+// ── B2C ───────────────────────────────────────────────────────────────────────
+export type {
+  B2CCommandID,
+  B2CErrorResponse,
+  B2CRequest,
+  B2CResponse,
+  B2CResult,
+  B2CResultParameter,
+} from "./mpesa/b2c";
+export {
+  getB2CAmount,
+  getB2CConversationId,
+  getB2CCurrency,
+  getB2CDebitAccountBalance,
+  getB2CDebitPartyCharges,
+  getB2CInitiatorAccountBalance,
+  getB2COriginatorConversationId,
+  getB2CReceiverPublicName,
+  getB2CResultDesc,
+  getB2CResultParam,
+  getB2CTransactionCompletedTime,
+  getB2CTransactionId,
+  initiateB2CPayment,
+  isB2CFailure,
+  isB2CResult,
+  isB2CSuccess,
+} from "./mpesa/b2c";
+
+// ── B2B Express Checkout ──────────────────────────────────────────────────────
+export type {
+  B2BExpressCheckoutCallback,
+  B2BExpressCheckoutCallbackCancelled,
+  B2BExpressCheckoutCallbackSuccess,
+  B2BExpressCheckoutErrorCode,
+  B2BExpressCheckoutErrorResponse,
+  B2BExpressCheckoutRequest,
+  B2BExpressCheckoutResponse,
+} from "./mpesa/b2b-express-checkout";
+export {
+  getB2BAmount,
+  getB2BConversationId,
+  getB2BRequestId,
+  getB2BTransactionId,
+  initiateB2BExpressCheckout,
+  isB2BCheckoutCallback,
+  isB2BCheckoutCancelled,
+  isB2BCheckoutSuccess,
+} from "./mpesa/b2b-express-checkout";
+
+// ── Tax Remittance ────────────────────────────────────────────────────────────
 export type {
   TaxRemittanceErrorResponse,
   TaxRemittanceRequest,
@@ -117,13 +159,8 @@ export type {
   TaxRemittanceResult,
   TaxRemittanceResultParameter,
 } from "./mpesa/tax-remittance";
+export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from "./mpesa/tax-remittance";
 
-// ── Tax Remittance ────────────────────────────────────────────────────────────
-export {
-  KRA_SHORTCODE,
-  remitTax,
-  TAX_COMMAND_ID,
-} from "./mpesa/tax-remittance";
 // ── Transaction Status ────────────────────────────────────────────────────────
 export type {
   TransactionStatusRequest,
@@ -131,9 +168,46 @@ export type {
   TransactionStatusResult,
   TransactionStatusResultParameter,
 } from "./mpesa/transaction-status";
-// ── Core types ────────────────────────────────────────────────────────────────
-export type { Environment, MpesaConfig } from "./mpesa/types";
-export { DARAJA_BASE_URLS } from "./mpesa/types";
+
+// ── Account Balance ───────────────────────────────────────────────────────────
+export type {
+  AccountBalanceData,
+  AccountBalanceRequest,
+  AccountBalanceResponse,
+  AccountBalanceResult,
+  ParsedAccount,
+} from "./mpesa/account-balance";
+export {
+  getAccountBalanceParam,
+  isAccountBalanceSuccess,
+  parseAccountBalance,
+} from "./mpesa/account-balance";
+
+// ── Reversal ──────────────────────────────────────────────────────────────────
+export type { ReversalRequest, ReversalResponse, ReversalResult } from "./mpesa/reversal";
+export {
+  getReversalConversationId,
+  getReversalTransactionId,
+  isReversalSuccess,
+} from "./mpesa/reversal";
+
+// ── Bill Manager ──────────────────────────────────────────────────────────────
+export type {
+  BillManagerBulkInvoiceRequest,
+  BillManagerBulkInvoiceResponse,
+  BillManagerCancelInvoiceRequest,
+  BillManagerCancelInvoiceResponse,
+  BillManagerInvoiceItem,
+  BillManagerOptInRequest,
+  BillManagerOptInResponse,
+  BillManagerPaymentNotification,
+  BillManagerSingleInvoiceRequest,
+  BillManagerSingleInvoiceResponse,
+} from "./mpesa/bill-manager";
+
+// ── Dynamic QR ────────────────────────────────────────────────────────────────
+export type { DynamicQRRequest, DynamicQRResponse, QRTransactionCode } from "./mpesa/dynamic-qr";
+
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 export type {
   RetryOptions,
@@ -155,6 +229,7 @@ export {
   SAFARICOM_IPS,
   verifyWebhookIP,
 } from "./mpesa/webhooks";
-// ── Errors ────────────────────────────────────────────────────────────────────
-export type { ErrorCode, PesafyErrorOptions } from "./utils/errors";
-export { createError, PesafyError } from "./utils/errors";
+
+// ── HTTP (advanced users) ─────────────────────────────────────────────────────
+export type { HttpRequestOptions, HttpResponse } from "./utils/http";
+export { httpRequest } from "./utils/http";

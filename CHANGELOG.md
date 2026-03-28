@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.5.0
+
+### Minor Changes
+
+- migration to vite+
+
 ## 0.4.3
 
 ### Patch Changes

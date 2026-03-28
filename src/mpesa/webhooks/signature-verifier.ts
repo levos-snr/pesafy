@@ -43,7 +43,7 @@ export const SAFARICOM_IPS: readonly string[] = [
  */
 export function verifyWebhookIP(
   requestIP: string,
-  allowedIPs: readonly string[] = SAFARICOM_IPS
+  allowedIPs: readonly string[] = SAFARICOM_IPS,
 ): boolean {
   return allowedIPs.includes(requestIP);
 }

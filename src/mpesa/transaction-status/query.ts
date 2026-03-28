@@ -11,17 +11,14 @@
 
 import { createError } from "../../utils/errors";
 import { httpRequest } from "../../utils/http"; // ← httpRequest, NOT httpClient
-import type {
-  TransactionStatusRequest,
-  TransactionStatusResponse,
-} from "./types";
+import type { TransactionStatusRequest, TransactionStatusResponse } from "./types";
 
 export async function queryTransactionStatus(
   baseUrl: string,
   token: string,
   securityCredential: string,
   initiator: string,
-  request: TransactionStatusRequest
+  request: TransactionStatusRequest,
 ): Promise<TransactionStatusResponse> {
   // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -35,24 +32,21 @@ export async function queryTransactionStatus(
   if (!request.partyA) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        "partyA is required (your business shortcode, till number, or MSISDN)",
+      message: "partyA is required (your business shortcode, till number, or MSISDN)",
     });
   }
 
   if (!request.identifierType) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        'identifierType is required: "1" (MSISDN) | "2" (Till) | "4" (ShortCode)',
+      message: 'identifierType is required: "1" (MSISDN) | "2" (Till) | "4" (ShortCode)',
     });
   }
 
   if (!request.resultUrl) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        "resultUrl is required — Safaricom POSTs the transaction result here",
+      message: "resultUrl is required — Safaricom POSTs the transaction result here",
     });
   }
 
@@ -84,7 +78,7 @@ export async function queryTransactionStatus(
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: payload,
-    }
+    },
   );
 
   return data;

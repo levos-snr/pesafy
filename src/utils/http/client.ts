@@ -9,14 +9,9 @@ const DEFAULT_TIMEOUT = 30000;
 
 export async function httpRequest<T = unknown>(
   url: string,
-  options: HttpRequestOptions = {}
+  options: HttpRequestOptions = {},
 ): Promise<HttpResponse<T>> {
-  const {
-    method = "GET",
-    headers = {},
-    body,
-    timeout = DEFAULT_TIMEOUT,
-  } = options;
+  const { method = "GET", headers = {}, body, timeout = DEFAULT_TIMEOUT } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);

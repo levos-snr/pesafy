@@ -20,11 +20,7 @@ export { formatSafaricomPhone as formatPhoneNumber } from "../../utils/phone";
  *
  * Uses btoa() — works in Node.js ≥18, Bun, browsers, and edge runtimes.
  */
-export function getStkPushPassword(
-  shortCode: string,
-  passKey: string,
-  timestamp: string
-): string {
+export function getStkPushPassword(shortCode: string, passKey: string, timestamp: string): string {
   return btoa(`${shortCode}${passKey}${timestamp}`);
 }
 

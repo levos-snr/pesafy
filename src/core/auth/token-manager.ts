@@ -65,8 +65,7 @@ export class TokenManager {
     if (!access_token) {
       throw new PesafyError({
         code: "AUTH_FAILED",
-        message:
-          "Daraja did not return an access token. Check your consumer key and secret.",
+        message: "Daraja did not return an access token. Check your consumer key and secret.",
         response: response.data,
       });
     }

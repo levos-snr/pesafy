@@ -8,23 +8,6 @@
  *      for bulk disbursement (salaries, commissions, winnings, etc.)
  *   2. Standard B2C       — pay directly to a customer's M-PESA wallet
  *
- * Daraja request body (from official B2C Account Top Up docs):
- * {
- *   "Initiator":             "testapi",
- *   "SecurityCredential":    "...",
- *   "CommandID":             "BusinessPayToBulk",
- *   "SenderIdentifierType":  "4",
- *   "RecieverIdentifierType":"4",
- *   "Amount":                "239",
- *   "PartyA":                "600979",
- *   "PartyB":                "600000",
- *   "AccountReference":      "353353",
- *   "Requester":             "254708374149",
- *   "Remarks":               "OK",
- *   "QueueTimeOutURL":       "https://mydomain/path/timeout",
- *   "ResultURL":             "https://mydomain/path/result"
- * }
- *
  * NOTE: This is an ASYNCHRONOUS API.
  * The synchronous response only confirms Safaricom received the request.
  * The actual result arrives later via POST to your ResultURL.
@@ -150,21 +133,31 @@ export interface B2CResponse {
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
 
+/**
+ * Known result parameter keys returned by Daraja for B2C transactions.
+ *
+ * `(string & {})` is used as the catch-all so that:
+ *   - The named literals appear in IntelliSense / autocomplete.
+ *   - Any unknown future key Daraja may return is still accepted.
+ *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
+ */
+export type B2CResultParameterKey =
+  | "DebitAccountBalance"
+  | "Amount"
+  | "DebitPartyAffectedAccountBalance"
+  | "TransCompletedTime"
+  | "DebitPartyCharges"
+  | "ReceiverPartyPublicName"
+  | "Currency"
+  | "InitiatorAccountCurrentBalance"
+  | "B2CRecipientIsRegisteredCustomer"
+  | "B2CChargesPaidAccountAvailableFunds"
+  | "B2CWorkingAccountAvailableFunds"
+  | "B2CUtilityAccountAvailableFunds"
+  | (string & {});
+
 export interface B2CResultParameter {
-  Key:
-    | "DebitAccountBalance"
-    | "Amount"
-    | "DebitPartyAffectedAccountBalance"
-    | "TransCompletedTime"
-    | "DebitPartyCharges"
-    | "ReceiverPartyPublicName"
-    | "Currency"
-    | "InitiatorAccountCurrentBalance"
-    | "B2CRecipientIsRegisteredCustomer"
-    | "B2CChargesPaidAccountAvailableFunds"
-    | "B2CWorkingAccountAvailableFunds"
-    | "B2CUtilityAccountAvailableFunds"
-    | string;
+  Key: B2CResultParameterKey;
   Value: string | number;
 }
 
@@ -183,9 +176,7 @@ export interface B2CResult {
       ResultParameter: B2CResultParameter | B2CResultParameter[];
     };
     ReferenceData?: {
-      ReferenceItem:
-        | { Key: string; Value?: string }
-        | Array<{ Key: string; Value?: string }>;
+      ReferenceItem: { Key: string; Value?: string } | Array<{ Key: string; Value?: string }>;
     };
   };
 }

@@ -3,22 +3,6 @@
  *
  * API: POST /mpesa/b2b/v1/remittax
  *
- * Daraja request body (from official Tax Remittance docs):
- * {
- *   "Initiator":             "TaxPayer",
- *   "SecurityCredential":    "...",
- *   "CommandID":             "PayTaxToKRA",
- *   "SenderIdentifierType":  "4",
- *   "RecieverIdentifierType":"4",
- *   "Amount":                "239",
- *   "PartyA":                "888880",
- *   "PartyB":                "572572",
- *   "AccountReference":      "353353",
- *   "Remarks":               "OK",
- *   "QueueTimeOutURL":       "https://mydomain.com/b2b/remittax/queue/",
- *   "ResultURL":             "https://mydomain.com/b2b/remittax/result/"
- * }
- *
  * NOTE: This is an ASYNCHRONOUS API.
  * The synchronous response only confirms Safaricom received the request.
  * The actual result arrives later via POST to your ResultURL.
@@ -93,17 +77,27 @@ export interface TaxRemittanceResponse {
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
 
+/**
+ * Known result parameter keys for Tax Remittance.
+ *
+ * `(string & {})` is used as the catch-all so that:
+ *   - Named literals appear in IntelliSense / autocomplete.
+ *   - Any unknown future key Daraja may return is still accepted.
+ *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
+ */
+export type TaxRemittanceResultParameterKey =
+  | "DebitAccountBalance"
+  | "Amount"
+  | "DebitPartyAffectedAccountBalance"
+  | "TransCompletedTime"
+  | "DebitPartyCharges"
+  | "ReceiverPartyPublicName"
+  | "Currency"
+  | "InitiatorAccountCurrentBalance"
+  | (string & {});
+
 export interface TaxRemittanceResultParameter {
-  Key:
-    | "DebitAccountBalance"
-    | "Amount"
-    | "DebitPartyAffectedAccountBalance"
-    | "TransCompletedTime"
-    | "DebitPartyCharges"
-    | "ReceiverPartyPublicName"
-    | "Currency"
-    | "InitiatorAccountCurrentBalance"
-    | string;
+  Key: TaxRemittanceResultParameterKey;
   Value: string | number;
 }
 
@@ -122,9 +116,7 @@ export interface TaxRemittanceResult {
       ResultParameter: TaxRemittanceResultParameter[];
     };
     ReferenceData?: {
-      ReferenceItem:
-        | { Key: string; Value: string }
-        | Array<{ Key: string; Value: string }>;
+      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>;
     };
   };
 }

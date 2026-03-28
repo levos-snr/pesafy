@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vite-plus/test";
 import { Mpesa, PesafyError } from "./index";
 import type { MpesaConfig } from "./mpesa/types";
 
