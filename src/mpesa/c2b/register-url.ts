@@ -22,22 +22,10 @@
 
 import { createError } from "../../utils/errors";
 import { httpRequest } from "../../utils/http";
-import type {
-  C2BApiVersion,
-  C2BRegisterUrlRequest,
-  C2BRegisterUrlResponse,
-} from "./types";
+import type { C2BApiVersion, C2BRegisterUrlRequest, C2BRegisterUrlResponse } from "./types";
 
 /** Forbidden URL keywords per Daraja docs */
-const FORBIDDEN_URL_KEYWORDS = [
-  "mpesa",
-  "safaricom",
-  ".exe",
-  ".exec",
-  "cmd",
-  "sql",
-  "query",
-];
+const FORBIDDEN_URL_KEYWORDS = ["mpesa", "safaricom", ".exe", ".exec", "cmd", "sql", "query"];
 
 /**
  * Validates a callback URL against Daraja's URL requirements.
@@ -76,7 +64,7 @@ function validateCallbackUrl(url: string, fieldName: string): void {
 export async function registerC2BUrls(
   baseUrl: string,
   accessToken: string,
-  request: C2BRegisterUrlRequest
+  request: C2BRegisterUrlRequest,
 ): Promise<C2BRegisterUrlResponse> {
   // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -95,15 +83,12 @@ export async function registerC2BUrls(
     });
   }
 
-  if (
-    request.responseType !== "Completed" &&
-    request.responseType !== "Cancelled"
-  ) {
+  if (request.responseType !== "Completed" && request.responseType !== "Cancelled") {
     throw createError({
       code: "VALIDATION_ERROR",
       message:
         `responseType must be exactly "Completed" or "Cancelled" (sentence case). ` +
-        `Got: "${request.responseType}"`,
+        `Got: "${String(request.responseType)}"`,
     });
   }
 
@@ -127,7 +112,7 @@ export async function registerC2BUrls(
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: payload,
-    }
+    },
   );
 
   return data;

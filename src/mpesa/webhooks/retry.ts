@@ -45,7 +45,7 @@ export interface RetryResult<T> {
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
-  options: RetryOptions = {}
+  options: RetryOptions = {},
 ): Promise<RetryResult<T>> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   let delay = opts.initialDelay;

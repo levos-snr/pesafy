@@ -1,10 +1,11 @@
+// 📁 PATH: src/mpesa/types.ts
+
 /**
- * Core M-Pesa / Daraja API types
+ * Core M-Pesa / Daraja configuration types
  */
 
 export type Environment = "sandbox" | "production";
 
-/** Base URLs per Daraja environment */
 export const DARAJA_BASE_URLS: Record<Environment, string> = {
   sandbox: "https://sandbox.safaricom.co.ke",
   production: "https://api.safaricom.co.ke",
@@ -16,35 +17,28 @@ export interface MpesaConfig {
   consumerSecret: string;
   environment: Environment;
 
-  // ── Required for STK Push (M-Pesa Express) ────────────────────────────────
-  /** Paybill / HO shortcode (5–7 digits). Required for STK Push & STK Query. */
+  // ── STK Push (M-Pesa Express) ─────────────────────────────────────────────
   lipaNaMpesaShortCode?: string;
-  /**
-   * Passkey from Daraja portal.
-   * Sandbox: visible in the simulator test data section.
-   * Production: emailed after Go Live.
-   */
   lipaNaMpesaPassKey?: string;
 
-  // ── Required for Transaction Status / B2C / Reversals ────────────────────
-  /** M-PESA org portal API operator username */
+  // ── Initiator (B2C / B2B / Reversal / Account Balance / Tax / TxStatus) ──
   initiatorName?: string;
-  /** Plain-text password for the API operator (will be RSA-encrypted) */
   initiatorPassword?: string;
 
-  // ── Certificate options (choose one) ─────────────────────────────────────
-  /**
-   * Path to the .cer file on disk.
-   * Bun: read via `Bun.file(path).text()`
-   * Node: read via `fs.promises.readFile(path, "utf-8")`
-   */
+  // ── Certificate (one of) ──────────────────────────────────────────────────
   certificatePath?: string;
-  /** PEM string contents of the certificate (alternative to certificatePath) */
   certificatePem?: string;
   /**
-   * Pre-computed base64 security credential.
-   * Use this if you encrypt outside the library (e.g. at startup).
-   * Skips the RSA encryption step entirely.
+   * Pre-computed base64 SecurityCredential — skips RSA encryption.
+   * Use when you encrypt at startup outside the library.
    */
   securityCredential?: string;
+
+  // ── HTTP tuning ───────────────────────────────────────────────────────────
+  /** Override default retry count (4) for all API calls */
+  retries?: number;
+  /** Override default base retry delay in ms (2000) */
+  retryDelay?: number;
+  /** Override default per-request timeout in ms (30000) */
+  timeout?: number;
 }

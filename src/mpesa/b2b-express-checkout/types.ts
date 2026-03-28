@@ -133,6 +133,9 @@ export type B2BExpressCheckoutCallback =
  *   4201 — USSD Network Error       → retry on stable network
  *   4203 — USSD Exception Error     → retry on stable network
  *   4001 — User cancelled           → callback only, not a thrown error
+ *
+ * `(string & {})` keeps these literals in IntelliSense while still
+ * accepting unknown codes, without triggering no-redundant-type-constituents.
  */
 export type B2BExpressCheckoutErrorCode =
   | "4001"
@@ -140,7 +143,7 @@ export type B2BExpressCheckoutErrorCode =
   | "4104"
   | "4201"
   | "4203"
-  | string;
+  | (string & {});
 
 // ── Synchronous error response ────────────────────────────────────────────────
 

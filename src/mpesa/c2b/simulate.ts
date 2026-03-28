@@ -38,11 +38,7 @@
 
 import { createError } from "../../utils/errors";
 import { httpRequest } from "../../utils/http";
-import type {
-  C2BApiVersion,
-  C2BSimulateRequest,
-  C2BSimulateResponse,
-} from "./types";
+import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from "./types";
 
 /**
  * Simulates a C2B customer payment. SANDBOX ONLY.
@@ -55,7 +51,7 @@ import type {
 export async function simulateC2B(
   baseUrl: string,
   accessToken: string,
-  request: C2BSimulateRequest
+  request: C2BSimulateRequest,
 ): Promise<C2BSimulateResponse> {
   // ── Sandbox guard ───────────────────────────────────────────────────────────
   if (!baseUrl.includes("sandbox")) {
@@ -84,7 +80,7 @@ export async function simulateC2B(
       code: "VALIDATION_ERROR",
       message:
         `commandId must be "CustomerPayBillOnline" or "CustomerBuyGoodsOnline". ` +
-        `Got: "${request.commandId}"`,
+        `Got: "${String(request.commandId)}"`,
     });
   }
 
@@ -141,16 +137,13 @@ export async function simulateC2B(
 
   // ── Defensive check — should never trigger given the logic above ─────────────
   // Acts as a compile-time-visible safety net for future refactors.
-  if (
-    isBuyGoods &&
-    Object.prototype.hasOwnProperty.call(payload, "BillRefNumber")
-  ) {
+  if (isBuyGoods && Object.prototype.hasOwnProperty.call(payload, "BillRefNumber")) {
     // This branch must never execute. If it does, remove the key to prevent
     // the "AccountReference is invalid" error from Daraja.
     delete payload["BillRefNumber"];
     console.warn(
       "[pesafy/simulateC2B] BillRefNumber leaked into Buy Goods payload — removed. " +
-        "This is a library bug; please report it."
+        "This is a library bug; please report it.",
     );
   }
 
@@ -161,7 +154,7 @@ export async function simulateC2B(
       method: "POST",
       headers: { Authorization: `Bearer ${accessToken}` },
       body: payload,
-    }
+    },
   );
 
   return data;

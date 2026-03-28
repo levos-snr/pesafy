@@ -177,30 +177,38 @@ export interface C2BValidationPayload {
 // ── Validation Response (your server → Safaricom) ────────────────────────────
 
 /**
- * Result codes for REJECTING a C2B validation.
- * When rejecting, use one of these codes — NOT 0.
- * These codes also determine the SMS the customer receives.
+ * Result codes for C2B validation.
+ *   "0"        — Accept the transaction
+ *   "C2B00011" — Invalid MSISDN
+ *   "C2B00012" — Invalid Account Number
+ *   "C2B00013" — Invalid Amount
+ *   "C2B00014" — Invalid KYC Details
+ *   "C2B00015" — Invalid Short code
+ *   "C2B00016" — Other Error
  */
 export type C2BValidationResultCode =
-  | "0" // Accept
-  | "C2B00011" // Invalid MSISDN
-  | "C2B00012" // Invalid Account Number
-  | "C2B00013" // Invalid Amount
-  | "C2B00014" // Invalid KYC Details
-  | "C2B00015" // Invalid Short code
-  | "C2B00016"; // Other Error
+  | "0"
+  | "C2B00011"
+  | "C2B00012"
+  | "C2B00013"
+  | "C2B00014"
+  | "C2B00015"
+  | "C2B00016";
 
 export interface C2BValidationResponse {
   /**
    * "0" = Accept the transaction.
    * Any C2B error code = Reject.
+   *
+   * Typed as `C2BValidationResultCode` for known codes.
+   * If you need to pass a custom/unknown code, cast to `string`.
    */
-  ResultCode: C2BValidationResultCode | string;
+  ResultCode: C2BValidationResultCode;
   /**
    * "Accepted" when ResultCode is "0".
    * "Rejected" when ResultCode is a non-zero error code.
    */
-  ResultDesc: "Accepted" | "Rejected" | string;
+  ResultDesc: "Accepted" | "Rejected";
   /**
    * Optional. If set, this value is echoed back in the Confirmation callback
    * as ThirdPartyTransID. Useful for correlating validation → confirmation.

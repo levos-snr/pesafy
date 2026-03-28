@@ -36,7 +36,7 @@ import { formatPhoneNumber, getStkPushPassword, getTimestamp } from "./utils";
 export async function processStkPush(
   baseUrl: string,
   accessToken: string,
-  request: StkPushRequest
+  request: StkPushRequest,
 ): Promise<StkPushResponse> {
   // ── Amount validation ───────────────────────────────────────────────────────
   const amount = Math.round(request.amount);
@@ -84,7 +84,7 @@ export async function processStkPush(
       // Daraja sandbox needs more retries and longer gaps due to instability
       retries: 5,
       retryDelay: 3000,
-    }
+    },
   );
 
   return data;

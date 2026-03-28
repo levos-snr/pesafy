@@ -13,9 +13,7 @@
  * CustomerPayBillOnline  → Paybill numbers  (PartyB = shortcode)
  * CustomerBuyGoodsOnline → Till numbers     (PartyB = till number)
  */
-export type TransactionType =
-  | "CustomerPayBillOnline"
-  | "CustomerBuyGoodsOnline";
+export type TransactionType = "CustomerPayBillOnline" | "CustomerBuyGoodsOnline";
 
 // ── STK Push request ─────────────────────────────────────────────────────────
 
@@ -123,12 +121,7 @@ export interface StkQueryResponse {
 
 /** Single metadata item in a successful STK callback */
 export interface StkCallbackMetadataItem {
-  Name:
-    | "Amount"
-    | "MpesaReceiptNumber"
-    | "TransactionDate"
-    | "PhoneNumber"
-    | "Balance";
+  Name: "Amount" | "MpesaReceiptNumber" | "TransactionDate" | "PhoneNumber" | "Balance";
   /** Present on successful transactions; absent on failure */
   Value?: number | string;
 }
@@ -173,9 +166,7 @@ export interface StkPushCallback {
  *   const receipt = getCallbackValue(callback, "MpesaReceiptNumber");
  * }
  */
-export function isStkCallbackSuccess(
-  cb: StkCallbackInner
-): cb is StkCallbackSuccess {
+export function isStkCallbackSuccess(cb: StkCallbackInner): cb is StkCallbackSuccess {
   return cb.ResultCode === 0;
 }
 
@@ -185,7 +176,7 @@ export function isStkCallbackSuccess(
  */
 export function getCallbackValue(
   callback: StkPushCallback,
-  name: StkCallbackMetadataItem["Name"]
+  name: StkCallbackMetadataItem["Name"],
 ): string | number | undefined {
   const inner = callback.Body.stkCallback;
   if (!isStkCallbackSuccess(inner)) return undefined;

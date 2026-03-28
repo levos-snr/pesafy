@@ -1,21 +1,82 @@
 {
   "name": "pesafy",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "private": false,
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
+  "description": "Type-safe M-PESA Daraja SDK for Node.js, Bun, Deno, Cloudflare Workers, and all JS frameworks",
+  "keywords": [
+    "africa",
+    "b2b",
+    "b2c",
+    "c2b",
+    "daraja",
+    "express",
+    "fastify",
+    "fintech",
+    "gateway",
+    "hono",
+    "kenya",
+    "kra",
+    "mpesa",
+    "nextjs",
+    "payment",
+    "pesafy",
+    "safaricom",
+    "stk-push",
+    "tax-remittance",
+    "typescript"
+  ],
+  "homepage": "https://github.com/levos-snr/pesafy#readme",
+  "bugs": {
+    "url": "https://github.com/levos-snr/pesafy/issues"
   },
-  "description": "A powerful payment gateway library for African payment systems, starting with M-Pesa Daraja API",
-  "author": "lewisodero27@gmail.com",
   "license": "MIT",
+  "author": {
+    "name": "Lewis Odero",
+    "email": "lewisodero27@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/levos-snr/pesafy.git"
+  },
+  "bin": {
+    "pesafy": "./dist/cli/index.cjs"
+  },
+  "files": [
+    "dist",
+    "src/components/vue",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./express": {
+      "types": "./dist/express/index.d.ts",
+      "import": "./dist/express/index.js",
+      "require": "./dist/express/index.cjs"
+    },
+    "./adapters/hono": {
+      "types": "./dist/adapters/hono.d.ts",
+      "import": "./dist/adapters/hono.js",
+      "require": "./dist/adapters/hono.cjs"
+    },
+    "./adapters/nextjs": {
+      "types": "./dist/adapters/nextjs.d.ts",
+      "import": "./dist/adapters/nextjs.js",
+      "require": "./dist/adapters/nextjs.cjs"
+    },
+    "./adapters/fastify": {
+      "types": "./dist/adapters/fastify.d.ts",
+      "import": "./dist/adapters/fastify.js",
+      "require": "./dist/adapters/fastify.cjs"
     },
     "./components/react": {
       "types": "./dist/components/react/index.d.ts",
@@ -23,88 +84,56 @@
       "require": "./dist/components/react/index.cjs"
     },
     "./components/react/styles.css": "./dist/components/react/styles.css",
-    "./express": {
-      "types": "./dist/express/index.d.ts",
-      "import": "./dist/express/index.js",
-      "require": "./dist/express/index.cjs"
-    },
     "./components/vue": "./src/components/vue/index.ts",
     "./components/vue/*": "./src/components/vue/*"
   },
-  "files": [
-    "dist",
-    "src/components/vue"
-  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "scripts": {
-    "build": "tsup",
-    "build:watch": "tsup --watch",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
-    "lint": "biome lint ./src",
-    "lint:fix": "biome lint --write ./src",
-    "format": "biome format --write ./src",
-    "format:prettier": "prettier --write .",
-    "check": "biome check ./src",
-    "check:fix": "biome check --write ./src",
+    "build": "vp pack",
+    "build:watch": "vp pack --watch",
+    "test": "vp test",
+    "test:watch": "vp test watch",
+    "lint": "vp lint",
+    "lint:fix": "vp lint --fix",
+    "format": "vp fmt",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "bun run build && bun run typecheck",
+    "prepublishOnly": "vp pack && tsc --noEmit",
     "changeset": "changeset",
     "release": "changeset publish --access public",
-    "version": "changeset version",
-    "prepare": "husky"
-  },
-  "keywords": [
-    "mpesa",
-    "daraja",
-    "safaricom",
-    "payment",
-    "gateway",
-    "africa",
-    "kenya",
-    "pesafy",
-    "stk-push",
-    "b2c",
-    "c2b"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/levos-snr/pesafy.git"
-  },
-  "homepage": "https://github.com/levos-snr/pesafy#readme",
-  "bugs": {
-    "url": "https://github.com/levos-snr/pesafy/issues"
-  },
-  "gitmoji": {
-    "autoAdd": false,
-    "emojiFormat": "emoji",
-    "scopePrompt": false,
-    "messagePrompt": true,
-    "capitalizeTitle": true,
-    "gitmojisUrl": "https://gitmoji.dev/api/gitmojis"
+    "version-bump": "changeset version",
+    "prepare": "vp config",
+    "cli": "node dist/cli/index.cjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.2",
     "@changesets/cli": "2.29.8",
-    "@storybook/react": "^10.2.10",
-    "@types/bun": "latest",
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
     "express": "^5.2.1",
-    "gitmoji-cli": "^9.7.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "prettier": "3.8.1",
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite-plus": "latest"
   },
   "peerDependencies": {
     "express": ">=4.0.0",
+    "fastify": ">=4.0.0",
+    "hono": ">=4.0.0",
     "react": ">=18.0.0",
-    "vue": ">=3.0.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
     "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "hono": {
       "optional": true
     },
     "react": {
@@ -115,7 +144,13 @@
     }
   },
   "engines": {
-    "node": ">=18.0.0",
-    "bun": ">=1.0.0"
+    "node": ">=18.0.0"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:@voidzero-dev/vite-plus-core@latest",
+      "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
+    }
   }
 }

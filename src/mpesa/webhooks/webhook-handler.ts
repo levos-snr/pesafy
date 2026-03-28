@@ -35,7 +35,7 @@ export interface WebhookHandlerResult<T = unknown> {
  */
 export function handleWebhook(
   body: unknown,
-  options: WebhookHandlerOptions = {}
+  options: WebhookHandlerOptions = {},
 ): WebhookHandlerResult {
   // ── IP verification ─────────────────────────────────────────────────────────
   if (!options.skipIPCheck && options.requestIP) {

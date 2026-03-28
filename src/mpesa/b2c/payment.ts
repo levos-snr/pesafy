@@ -57,7 +57,7 @@ export async function initiateB2CPayment(
   accessToken: string,
   securityCredential: string,
   initiatorName: string,
-  request: B2CRequest
+  request: B2CRequest,
 ): Promise<B2CResponse> {
   // ── Validation ──────────────────────────────────────────────────────────────
 
@@ -93,8 +93,7 @@ export async function initiateB2CPayment(
   if (!request.partyA?.trim()) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        "partyA is required — your business shortcode from which money is deducted.",
+      message: "partyA is required — your business shortcode from which money is deducted.",
     });
   }
 
@@ -109,8 +108,7 @@ export async function initiateB2CPayment(
   if (!request.accountReference?.trim()) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        "accountReference is required — a reference for this transaction.",
+      message: "accountReference is required — a reference for this transaction.",
     });
   }
 
@@ -124,8 +122,7 @@ export async function initiateB2CPayment(
   if (!request.queueTimeOutUrl?.trim()) {
     throw createError({
       code: "VALIDATION_ERROR",
-      message:
-        "queueTimeOutUrl is required — Safaricom calls this on request timeout.",
+      message: "queueTimeOutUrl is required — Safaricom calls this on request timeout.",
     });
   }
 
@@ -157,14 +154,11 @@ export async function initiateB2CPayment(
     payload["Requester"] = String(request.requester);
   }
 
-  const { data } = await httpRequest<B2CResponse>(
-    `${baseUrl}/mpesa/b2b/v1/paymentrequest`,
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: payload,
-    }
-  );
+  const { data } = await httpRequest<B2CResponse>(`${baseUrl}/mpesa/b2b/v1/paymentrequest`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: payload,
+  });
 
   return data;
 }
