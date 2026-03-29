@@ -128,11 +128,21 @@
     "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "express": { "optional": true },
-    "fastify": { "optional": true },
-    "hono": { "optional": true },
-    "react": { "optional": true },
-    "vue": { "optional": true }
+    "express": {
+      "optional": true
+    },
+    "fastify": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18.0.0"
