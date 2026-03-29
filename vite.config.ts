@@ -1,6 +1,4 @@
 // 📁 PATH: vite.config.ts
-
-// vite.config.ts
 import { defineConfig } from "vite-plus";
 
 /**
@@ -10,6 +8,7 @@ import { defineConfig } from "vite-plus";
  * eliminates the PLUGIN_TIMINGS "spent significant time in tsdown:external" warnings.
  */
 const NODE_BUILTINS = [
+  // node: protocol versions
   "node:fs",
   "node:fs/promises",
   "node:path",
@@ -41,6 +40,7 @@ const NODE_BUILTINS = [
 const SHARED_CHECKS = { pluginTimings: false } as const;
 
 export default defineConfig({
+  // ─── Pack (build entries) ─────────────────────────────────────────────────
   pack: [
     // 1. Main library entry
     {
@@ -63,8 +63,8 @@ export default defineConfig({
     },
 
     // 2. CLI entry
-    // ⚠️  No banner here — src/cli/index.ts already has #!/usr/bin/env node
-    //     on line 1.  Adding a banner too causes [DUPLICATE_SHEBANG].
+    // ⚠️  No banner — src/cli/index.ts already carries #!/usr/bin/env node
+    //     on line 1. Adding a banner too causes [DUPLICATE_SHEBANG].
     {
       entry: ["src/cli/index.ts"],
       format: ["esm", "cjs"],
@@ -149,6 +149,7 @@ export default defineConfig({
     },
   ],
 
+  // ─── Tests ────────────────────────────────────────────────────────────────
   test: {
     include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
     environment: "node",
@@ -160,13 +161,28 @@ export default defineConfig({
     },
   },
 
+  // ─── Lint (Oxlint + tsgolint) ─────────────────────────────────────────────
+  // typeAware enables rules that require TypeScript type information.
+  // typeCheck also runs full TypeScript diagnostics via the tsgo backend.
   lint: {
+    ignorePatterns: ["dist/**", "node_modules/**"],
     options: {
       typeAware: true,
       typeCheck: true,
     },
   },
 
+  // ─── Format (Oxfmt) ───────────────────────────────────────────────────────
+  // Oxfmt is Prettier-compatible. Config lives here — do not use .oxfmtrc.json.
+  fmt: {
+    singleQuote: false,
+    trailingComma: "all",
+    printWidth: 100,
+    tabWidth: 2,
+    semi: true,
+  },
+
+  // ─── Staged (lint-staged via vp staged) ───────────────────────────────────
   staged: {
     "*.{ts,tsx}": "vp check --fix",
     "*.{js,mjs,cjs}": "vp check --fix",

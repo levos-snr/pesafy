@@ -99,10 +99,11 @@
     "lint": "vp lint",
     "lint:fix": "vp lint --fix",
     "format": "vp fmt",
+    "format:check": "vp fmt --check",
     "check": "vp check",
     "check:fix": "vp check --fix",
-    "typecheck": "tsc --noEmit",
-    "prepublishOnly": "vp pack && tsc --noEmit",
+    "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
+    "prepublishOnly": "vp pack && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
     "changeset": "changeset",
     "release": "changeset publish --access public",
     "version-bump": "changeset version",
@@ -114,6 +115,7 @@
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
     "express": "^5.2.1",
+    "tsx": "^4.19.4",
     "typescript": "^5.7.2",
     "vite-plus": "latest"
   },
@@ -126,21 +128,11 @@
     "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "express": {
-      "optional": true
-    },
-    "fastify": {
-      "optional": true
-    },
-    "hono": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "vue": {
-      "optional": true
-    }
+    "express": { "optional": true },
+    "fastify": { "optional": true },
+    "hono": { "optional": true },
+    "react": { "optional": true },
+    "vue": { "optional": true }
   },
   "engines": {
     "node": ">=18.0.0"
