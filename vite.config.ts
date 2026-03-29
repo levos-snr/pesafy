@@ -150,20 +150,94 @@ export default defineConfig({
   ],
 
   // ─── Tests ────────────────────────────────────────────────────────────────
+  // vp test  → single run (CI-friendly, no watch)
+  // vp test watch → interactive watch mode
   test: {
-    include: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    // ── Discovery ──────────────────────────────────────────────────────────
+    // Pick up both *.test.ts and *.spec.ts anywhere under src/
+    include: ["src/**/*.{test,spec}.ts", "src/**/*.{test,spec}.tsx"],
+
+    // Keep dist, CLI, and generated declaration files out of test runs
+    exclude: ["**/node_modules/**", "**/dist/**", "src/cli/**", "src/**/*.d.ts"],
+
+    // ── Runtime ────────────────────────────────────────────────────────────
+    // All library code targets Node.js — no browser globals needed
     environment: "node",
+
+    // ── Globals ────────────────────────────────────────────────────────────
+    // Keep globals: false (the default) so every test file must import
+    // { describe, it, expect, vi } explicitly. This keeps test files
+    // portable and avoids accidental global pollution.
+    globals: false,
+
+    // ── Concurrency ────────────────────────────────────────────────────────
+    // forks pool is the safest choice for code that touches Node crypto /
+    // fs (like encryptSecurityCredential). It gives each worker its own
+    // process so native-module state never bleeds between test files.
+    pool: "forks",
+
+    // ── Timeouts ───────────────────────────────────────────────────────────
+    testTimeout: 10_000, // 10 s per test  (network mocks are instant, but keep headroom)
+    hookTimeout: 10_000, // 10 s per before/after hook
+
+    // ── Coverage ───────────────────────────────────────────────────────────
+    // Run with:  vp test run --coverage
     coverage: {
+      // v8 is built into Node — zero extra dependencies
       provider: "v8",
-      reporter: ["text", "lcov"],
-      include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/*.spec.ts", "src/**/*.d.ts", "src/cli/**"],
+
+      // What to measure
+      include: ["src/**/*.ts", "src/**/*.tsx"],
+      exclude: [
+        // test files themselves
+        "src/**/*.{test,spec}.ts",
+        "src/**/*.{test,spec}.tsx",
+        // type-only declarations
+        "src/**/*.d.ts",
+        // CLI is excluded from coverage (mostly imperative glue code)
+        "src/cli/**",
+        // stub / empty component files
+        "src/components/react/index.tsx",
+        "src/components/react/styles.css",
+      ],
+
+      // Reporters
+      // "text"   → printed to terminal after every run
+      // "html"   → browsable report in ./coverage/
+      // "lcov"   → consumed by GitHub Actions / Codecov / SonarQube
+      reporter: ["text", "html", "lcov"],
+
+      // Where to write the report
+      reportsDirectory: "./coverage",
+
+      // Always produce a coverage report, even when tests fail
+      reportOnFailure: true,
+
+      // Soft coverage thresholds — the build will warn (not fail) below these.
+      // Raise these gradually as you add more tests.
+      thresholds: {
+        statements: 60,
+        branches: 55,
+        functions: 60,
+        lines: 60,
+      },
     },
+
+    // ── Mock auto-reset ────────────────────────────────────────────────────
+    // Clear spy call history between tests but keep implementations intact.
+    // This matches the `beforeEach(() => vi.clearAllMocks())` pattern already
+    // used in the test files, making it the consistent default everywhere.
+    clearMocks: true,
+
+    // Don't reset mock implementations between tests — each test that needs
+    // a fresh implementation should use mockResolvedValueOnce / mockReturnValueOnce.
+    mockReset: false,
+
+    // Restore any vi.spyOn stubs to originals after each test suite
+    restoreMocks: true,
   },
 
   // ─── Lint (Oxlint + tsgolint) ─────────────────────────────────────────────
-  // typeAware enables rules that require TypeScript type information.
-  // typeCheck also runs full TypeScript diagnostics via the tsgo backend.
   lint: {
     ignorePatterns: ["dist/**", "node_modules/**"],
     options: {
@@ -173,7 +247,6 @@ export default defineConfig({
   },
 
   // ─── Format (Oxfmt) ───────────────────────────────────────────────────────
-  // Oxfmt is Prettier-compatible. Config lives here — do not use .oxfmtrc.json.
   fmt: {
     singleQuote: false,
     trailingComma: "all",

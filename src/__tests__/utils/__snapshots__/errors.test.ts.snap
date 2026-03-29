@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`PesafyError > toJSON serialises to a stable shape 1`] = `
+{
+  "code": "API_ERROR",
+  "message": "snapshot me",
+  "name": "PesafyError",
+  "requestId": "req-snap",
+  "retryable": false,
+  "statusCode": 400,
+}
+`;
