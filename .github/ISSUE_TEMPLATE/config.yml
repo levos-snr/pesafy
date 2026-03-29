@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Daraja API Docs
+    url: https://developer.safaricom.co.ke
+    about: Official Safaricom Daraja documentation
+  - name: 💬 Discussions
+    url: https://github.com/levos-snr/pesafy/discussions
+    about: Ask questions and share ideas
+  - name: 🔒 Security Vulnerability
+    url: mailto:lewisodero27@gmail.com
+    about: Report security issues privately — do not open a public issue
