@@ -114,7 +114,6 @@
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
     "express": "^5.2.1",
-    "prettier": "3.8.1",
     "typescript": "^5.7.2",
     "vite-plus": "latest"
   },
