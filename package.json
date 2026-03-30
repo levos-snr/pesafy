@@ -4,7 +4,6 @@
   "private": false,
   "description": "Type-safe M-PESA Daraja SDK for Node.js, Bun, Deno, Cloudflare Workers, and all JS frameworks",
   "keywords": [
-    "africa",
     "b2b",
     "b2c",
     "c2b",
@@ -15,15 +14,13 @@
     "gateway",
     "hono",
     "kenya",
-    "kra",
     "mpesa",
     "nextjs",
     "payment",
     "pesafy",
     "safaricom",
     "stk-push",
-    "tax-remittance",
-    "typescript"
+    "tax-remittance"
   ],
   "homepage": "https://github.com/levos-snr/pesafy#readme",
   "bugs": {
@@ -134,7 +131,10 @@
     "changeset": "changeset",
     "version-bump": "changeset version",
     "release": "changeset publish --access public",
-    "cli": "node dist/cli.js"
+    "cli": "node dist/cli.js",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
@@ -161,7 +161,9 @@
     "simple-git-hooks": "^2.13.0",
     "tsdown": "^0.21.7",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.2"
+    "vitepress": "next",
+    "vitest": "^4.1.2",
+    "vue": "catalog:"
   },
   "peerDependencies": {
     "express": ">=4.0.0",
@@ -191,5 +193,14 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "pnpm@10.33.0"
+  "packageManager": "pnpm@10.33.0",
+  "workspaces": {
+    "packages": [
+      "pesafy"
+    ],
+    "catalog": {
+      "vitepress": "^1.6.3",
+      "vue": "^3.5.13"
+    }
+  }
 }
