@@ -1,8 +1,6 @@
-// 📁 PATH: src/__tests__/mpesa/mpesa.test.ts
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PesafyError } from '../../utils/errors'
 
-// ── Mock all sub-modules so we can test Mpesa orchestration in isolation ──────
 vi.mock('../../mpesa/stk-push/stk-push', () => ({ processStkPush: vi.fn() }))
 vi.mock('../../mpesa/stk-push/stk-query', () => ({ queryStkPush: vi.fn() }))
 vi.mock('../../mpesa/dynamic-qr/generate', () => ({
@@ -15,11 +13,6 @@ vi.mock('../../mpesa/account-balance/query', () => ({
 }))
 vi.mock('../../mpesa/reversal/request', () => ({ requestReversal: vi.fn() }))
 
-// ── FIX: TokenManager must be a class / regular-function constructor. ─────────
-// Arrow functions cannot be used with `new`, which is exactly what
-// src/mpesa/index.ts:108 does: `this.tokenManager = new TokenManager(...)`.
-// Using a class here makes Vitest happy AND silences the "[vitest] The vi.fn()
-// mock did not use 'function' or 'class'" warning.
 vi.mock('../../core/auth/token-manager', () => ({
   TokenManager: vi.fn(function (this: {
     getAccessToken: () => Promise<string>
@@ -52,17 +45,16 @@ const mockProcessStkPush = vi.mocked(processStkPush)
 const mockQueryStkPush = vi.mocked(queryStkPush)
 const mockGenerateQR = vi.mocked(generateDynamicQR)
 const mockQueryBalance = vi.mocked(queryAccountBalance)
-// kept to avoid unused-import warnings even though reversal test only
-// checks the validation path (no mock call assertion needed there)
 vi.mocked(requestReversal)
 
+// Synthetic test config — no real credentials.
+// Integration test values are injected via environment variables in CI.
 const VALID_CONFIG = {
   consumerKey: 'test-consumer-key',
   consumerSecret: 'test-consumer-secret',
   environment: 'sandbox' as const,
   lipaNaMpesaShortCode: '174379',
-  lipaNaMpesaPassKey:
-    'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
+  lipaNaMpesaPassKey: 'test-lipa-na-mpesa-pass-key-for-unit-tests-only',
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -209,8 +201,8 @@ describe('Mpesa.accountBalance', () => {
 
     const mpesa = new Mpesa({
       ...VALID_CONFIG,
-      initiatorName: 'testapi',
-      initiatorPassword: 'Safaricom123!',
+      initiatorName: 'test-initiator',
+      initiatorPassword: 'test-initiator-password',
       certificatePath: './SandboxCertificate.cer',
     })
 

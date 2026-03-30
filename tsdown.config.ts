@@ -1,5 +1,3 @@
-// 📁 PATH: tsdown.config.ts
-
 import { defineConfig } from 'tsdown'
 
 const NODE_BUILTINS = [
@@ -31,7 +29,7 @@ const outExtensions = ({ format }: { format: string }) => ({
 })
 
 export default defineConfig([
-  // ── 1. CORE ──────────────────────────────────────────────────────────────
+  // ── 1. CORE ────────────────────────────────────────────────────────────────
   {
     entry: { index: 'src/index.ts' },
     format: ['esm', 'cjs'],
@@ -41,15 +39,15 @@ export default defineConfig([
     sourcemap: false,
     clean: true,
     hash: false,
-    treeshake: true, // ← fixed: removed unsupported "preset" key
+    treeshake: true,
     minify: true,
     target: 'es2020',
     platform: 'neutral',
     deps: { neverBundle: [...NODE_BUILTINS] },
-    publint: true, // validates package.json exports after build
+    publint: true,
   },
 
-  // ── 2. CLI ───────────────────────────────────────────────────────────────
+  // ── 2. CLI ─────────────────────────────────────────────────────────────────
   {
     entry: { cli: 'src/cli/index.ts' },
     format: ['esm'],
@@ -59,13 +57,13 @@ export default defineConfig([
     sourcemap: false,
     clean: false,
     hash: false,
-    minify: false, // readable stack traces for devs
+    minify: false,
     target: 'node18',
     platform: 'node',
     deps: { neverBundle: [...NODE_BUILTINS] },
   },
 
-  // ── 3. ADAPTERS ──────────────────────────────────────────────────────────
+  // ── 3. ADAPTERS ────────────────────────────────────────────────────────────
   {
     entry: {
       'adapters/express': 'src/express/index.ts',
@@ -80,7 +78,7 @@ export default defineConfig([
     sourcemap: false,
     clean: false,
     hash: false,
-    treeshake: true, // ← fixed
+    treeshake: true,
     minify: true,
     target: 'es2020',
     platform: 'neutral',
@@ -96,7 +94,7 @@ export default defineConfig([
     },
   },
 
-  // ── 4. REACT ─────────────────────────────────────────────────────────────
+  // ── 4. REACT ───────────────────────────────────────────────────────────────
   {
     entry: { 'react/index': 'src/components/react/index.tsx' },
     format: ['esm'],
@@ -106,7 +104,7 @@ export default defineConfig([
     sourcemap: false,
     clean: false,
     hash: false,
-    treeshake: true, // ← fixed
+    treeshake: true,
     minify: true,
     target: 'es2020',
     platform: 'browser',

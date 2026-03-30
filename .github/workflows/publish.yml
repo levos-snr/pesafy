@@ -1,4 +1,3 @@
-# 📁 PATH: .github/workflows/publish.yml
 name: Publish to npm
 
 on:
@@ -13,9 +12,9 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     permissions:
-      contents: write # create releases / tags
-      pull-requests: write # open version-bump PRs
-      id-token: write # npm provenance
+      contents: write
+      pull-requests: write
+      id-token: write
 
     steps:
       - uses: actions/checkout@v4

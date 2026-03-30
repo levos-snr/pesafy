@@ -1,4 +1,3 @@
-// 📁 PATH: src/__tests__/core/encryption/security-credentials.test.ts
 /**
  * Advanced patterns used here:
  *   • beforeAll with real async crypto — generate an RSA key-pair once for the suite
@@ -29,44 +28,42 @@ beforeAll(() => {
 
 describe('encryptSecurityCredential', () => {
   it('returns a non-empty string', () => {
-    const result = encryptSecurityCredential('Safaricom123!', publicKeyPem)
+    const result = encryptSecurityCredential('test-plaintext', publicKeyPem)
     expect(typeof result).toBe('string')
     expect(result.length).toBeGreaterThan(0)
   })
 
   it('returns a valid base64-encoded string', () => {
-    const result = encryptSecurityCredential('Safaricom123!', publicKeyPem)
+    const result = encryptSecurityCredential('test-plaintext', publicKeyPem)
     expect(result).toMatch(/^[A-Za-z0-9+/]+=*$/)
   })
 
   it('produces different ciphertext for the same plaintext (RSA PKCS1 is probabilistic)', () => {
-    const r1 = encryptSecurityCredential('SamePassword', publicKeyPem)
-    const r2 = encryptSecurityCredential('SamePassword', publicKeyPem)
+    const r1 = encryptSecurityCredential('same-plaintext', publicKeyPem)
+    const r2 = encryptSecurityCredential('same-plaintext', publicKeyPem)
     expect(r1).not.toBe(r2)
   })
 
-  it('produces different ciphertext for different passwords', () => {
-    const r1 = encryptSecurityCredential('Password1', publicKeyPem)
-    const r2 = encryptSecurityCredential('Password2', publicKeyPem)
+  it('produces different ciphertext for different plaintexts', () => {
+    const r1 = encryptSecurityCredential('plaintext-alpha', publicKeyPem)
+    const r2 = encryptSecurityCredential('plaintext-beta', publicKeyPem)
     expect(r1).not.toBe(r2)
   })
 
   it('decodes to a buffer of the expected RSA block size (256 bytes for 2048-bit key)', () => {
-    const result = encryptSecurityCredential('test', publicKeyPem)
+    const result = encryptSecurityCredential('test-plaintext', publicKeyPem)
     const buf = Buffer.from(result, 'base64')
     expect(buf.length).toBe(256)
   })
 
   it('uses RSA_PKCS1_PADDING (not OAEP) — verified by rejecting OAEP decryption', () => {
-    const password = 'check-padding'
-    const encrypted = encryptSecurityCredential(password, publicKeyPem)
-    const cipherBuf = Buffer.from(encrypted, 'base64')
-
     // If the ciphertext were OAEP-encrypted, OAEP decryption would succeed.
     // Since we use PKCS1v15, attempting OAEP decryption must throw — proving
     // the padding scheme is PKCS1, not OAEP.
     // Note: RSA_PKCS1_PADDING private decrypt is blocked in Node ≥ 20
     // (CVE-2023-46809), so we verify padding indirectly via this negative assertion.
+    const encrypted = encryptSecurityCredential('check-padding', publicKeyPem)
+    const cipherBuf = Buffer.from(encrypted, 'base64')
     expect(() =>
       privateDecrypt(
         { key: privateKeyPem, padding: constants.RSA_PKCS1_OAEP_PADDING },
@@ -78,7 +75,7 @@ describe('encryptSecurityCredential', () => {
   it('throws ENCRYPTION_FAILED for an invalid / empty PEM', () => {
     expect.assertions(2)
     try {
-      encryptSecurityCredential('password', 'not-a-valid-pem')
+      encryptSecurityCredential('test-plaintext', 'not-a-valid-pem')
     } catch (e) {
       expect(e).toBeInstanceOf(PesafyError)
       expect((e as PesafyError).code).toBe('ENCRYPTION_FAILED')

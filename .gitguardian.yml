@@ -1,0 +1,11 @@
+version: 2
+
+# Exclude test fixtures from secret scanning.
+# These files contain synthetic placeholder values, not real credentials.
+# Real secrets are never committed — they are injected via environment
+# variables in CI (see .github/workflows/ci.yml).
+ignore_paths:
+  - src/__tests__/**
+  - src/**/*.test.ts
+  - src/**/*.spec.ts
+  - "**/__mocks__/**"
