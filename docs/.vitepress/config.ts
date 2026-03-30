@@ -125,6 +125,11 @@ export default defineConfig({
       label: 'On this page',
     },
 
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/levos-snr/pesafy' },
+      { icon: 'npm', link: 'https://www.npmjs.com/package/pesafy' },
+    ],
+
     footer: {
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2026 Lewis Odero',
@@ -147,11 +152,6 @@ export default defineConfig({
       prev: 'Previous',
       next: 'Next',
     },
-
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/levos-snr/pesafy' },
-      { icon: 'npm', link: 'https://www.npmjs.com/package/pesafy' },
-    ],
 
     externalLinkIcon: true,
   },

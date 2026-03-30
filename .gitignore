@@ -1,5 +1,3 @@
-# .gitignore
-
 # dependencies
 node_modules
 
@@ -38,6 +36,9 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # vite-plus / tsdown
 .vite-plus
 
+# vitepress
 docs/.vitepress/dist
 docs/.vitepress/cache
 
+# vercel
+.vercel
