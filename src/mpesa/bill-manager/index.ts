@@ -1,6 +1,11 @@
 // 📁 PATH: src/mpesa/bill-manager/index.ts
 
-export { billManagerOptIn, cancelInvoice, sendBulkInvoices, sendSingleInvoice } from "./invoice";
+export {
+  billManagerOptIn,
+  cancelInvoice,
+  sendBulkInvoices,
+  sendSingleInvoice,
+} from './invoice'
 export type {
   BillManagerBulkInvoiceRequest,
   BillManagerBulkInvoiceResponse,
@@ -12,4 +17,4 @@ export type {
   BillManagerPaymentNotification,
   BillManagerSingleInvoiceRequest,
   BillManagerSingleInvoiceResponse,
-} from "./types";
+} from './types'

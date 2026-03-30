@@ -1,24 +1,26 @@
+// src/mpesa/webhooks/webhook-handler.ts
+
 /**
  * High-level webhook event handler
  */
 
-import { parseStkPushWebhook, verifyWebhookIP } from "./signature-verifier";
-import type { StkPushWebhook, WebhookEventType } from "./types";
+import { parseStkPushWebhook, verifyWebhookIP } from './signature-verifier'
+import type { StkPushWebhook, WebhookEventType } from './types'
 
 export interface WebhookHandlerOptions {
   /** IP address of the incoming request (from req.ip or x-forwarded-for) */
-  requestIP?: string;
+  requestIP?: string
   /** Override the default Safaricom IP whitelist */
-  allowedIPs?: string[];
+  allowedIPs?: string[]
   /** Skip IP verification — ONLY for local development/testing */
-  skipIPCheck?: boolean;
+  skipIPCheck?: boolean
 }
 
 export interface WebhookHandlerResult<T = unknown> {
-  success: boolean;
-  eventType: WebhookEventType | null;
-  data: T | null;
-  error?: string;
+  success: boolean
+  eventType: WebhookEventType | null
+  data: T | null
+  error?: string
 }
 
 /**
@@ -45,52 +47,52 @@ export function handleWebhook(
         eventType: null,
         data: null,
         error: `IP address ${options.requestIP} is not in the Safaricom whitelist`,
-      };
+      }
     }
   }
 
   // ── Parse STK Push callback ─────────────────────────────────────────────────
-  const stkPush = parseStkPushWebhook(body);
+  const stkPush = parseStkPushWebhook(body)
   if (stkPush) {
     return {
       success: true,
-      eventType: "stk_push",
+      eventType: 'stk_push',
       data: stkPush,
-    };
+    }
   }
 
   return {
     success: false,
     eventType: null,
     data: null,
-    error: "Unknown or malformed webhook payload",
-  };
+    error: 'Unknown or malformed webhook payload',
+  }
 }
 
 // ── Convenience extractors ────────────────────────────────────────────────────
 
 /** Extracts the M-Pesa receipt number from a successful STK Push callback */
 export function extractTransactionId(webhook: StkPushWebhook): string | null {
-  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
-  const item = items?.find((i) => i.Name === "MpesaReceiptNumber");
-  return item ? String(item.Value) : null;
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item
+  const item = items?.find((i) => i.Name === 'MpesaReceiptNumber')
+  return item ? String(item.Value) : null
 }
 
 /** Extracts the transaction amount from a successful STK Push callback */
 export function extractAmount(webhook: StkPushWebhook): number | null {
-  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
-  const item = items?.find((i) => i.Name === "Amount");
-  return item ? Number(item.Value) : null;
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item
+  const item = items?.find((i) => i.Name === 'Amount')
+  return item ? Number(item.Value) : null
 }
 
 /** Extracts the phone number from a successful STK Push callback */
 export function extractPhoneNumber(webhook: StkPushWebhook): string | null {
-  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item;
-  const item = items?.find((i) => i.Name === "PhoneNumber");
-  return item ? String(item.Value) : null;
+  const items = webhook.Body?.stkCallback?.CallbackMetadata?.Item
+  const item = items?.find((i) => i.Name === 'PhoneNumber')
+  return item ? String(item.Value) : null
 }
 
 /** Returns true if the STK Push callback represents a successful transaction */
 export function isSuccessfulCallback(webhook: StkPushWebhook): boolean {
-  return webhook.Body?.stkCallback?.ResultCode === 0;
+  return webhook.Body?.stkCallback?.ResultCode === 0
 }

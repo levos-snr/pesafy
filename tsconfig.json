@@ -1,24 +1,41 @@
 {
   "compilerOptions": {
+    // ── Target & module ─────────────────────────────────────────────────────
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
-    "jsx": "react-jsx",
-    "allowJs": true,
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "noEmit": true,
+
+    // ── JSX ─────────────────────────────────────────────────────────────────
+    "jsx": "react-jsx",
+
+    // ── Strict mode (kept fully on — no regressions) ──────────────────────
     "strict": true,
-    "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+
+    // ── Interop ─────────────────────────────────────────────────────────────
+    "verbatimModuleSyntax": true, // import type enforced at boundaries
+    "skipLibCheck": true, // faster CI; avoids third-party .d.ts issues
+
+    // ── Emit control ─────────────────────────────────────────────────────────
+    // tsdown handles compilation and DTS generation via oxc-transform.
+    // tsc is used only for type-checking (noEmit: true).
+    "noEmit": true,
+    "allowImportingTsExtensions": true, // required when noEmit: true
+
+    // ── Performance ──────────────────────────────────────────────────────────
+    "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+
+    // ── Intentionally relaxed (not errors, just noise in an SDK) ─────────────
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
+
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "vite.config.ts"]
+  "exclude": ["node_modules", "dist", "coverage", "tsdown.config.ts"]
 }

@@ -28,10 +28,10 @@
  * - TransactionDesc max 13 chars.
  */
 
-import { PesafyError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { StkPushRequest, StkPushResponse } from "./types";
-import { formatPhoneNumber, getStkPushPassword, getTimestamp } from "./utils";
+import { PesafyError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type { StkPushRequest, StkPushResponse } from './types'
+import { formatPhoneNumber, getStkPushPassword, getTimestamp } from './utils'
 
 export async function processStkPush(
   baseUrl: string,
@@ -39,28 +39,28 @@ export async function processStkPush(
   request: StkPushRequest,
 ): Promise<StkPushResponse> {
   // ── Amount validation ───────────────────────────────────────────────────────
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (amount < 1) {
     throw new PesafyError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `Amount must be at least KES 1 (got ${request.amount} which rounds to ${amount}).`,
-    });
+    })
   }
 
   // ── Generate timestamp ONCE ─────────────────────────────────────────────────
   // Must be identical in Password (encoded) and Timestamp (body) fields.
-  const timestamp = getTimestamp();
+  const timestamp = getTimestamp()
 
   // ── PartyB logic ────────────────────────────────────────────────────────────
   // Paybill → PartyB = shortCode
   // Buy Goods (Till) → PartyB = till number (passed as request.partyB)
-  const partyB = request.partyB ?? request.shortCode;
+  const partyB = request.partyB ?? request.shortCode
 
   const body = {
     BusinessShortCode: request.shortCode,
     Password: getStkPushPassword(request.shortCode, request.passKey, timestamp),
     Timestamp: timestamp,
-    TransactionType: request.transactionType ?? "CustomerPayBillOnline",
+    TransactionType: request.transactionType ?? 'CustomerPayBillOnline',
     Amount: amount,
     PartyA: formatPhoneNumber(request.phoneNumber),
     PartyB: partyB,
@@ -69,7 +69,7 @@ export async function processStkPush(
     // Daraja docs: AccountReference max 12 chars, TransactionDesc max 13 chars
     AccountReference: request.accountReference.slice(0, 12),
     TransactionDesc: request.transactionDesc.slice(0, 13),
-  };
+  }
 
   // httpRequest already retries 503/429/5xx with exponential backoff + jitter.
   // If all retries are exhausted it throws PesafyError with code "REQUEST_FAILED"
@@ -78,14 +78,14 @@ export async function processStkPush(
   const { data } = await httpRequest<StkPushResponse>(
     `${baseUrl}/mpesa/stkpush/v1/processrequest`,
     {
-      method: "POST",
+      method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body,
       // Daraja sandbox needs more retries and longer gaps due to instability
       retries: 5,
       retryDelay: 3000,
     },
-  );
+  )
 
-  return data;
+  return data
 }

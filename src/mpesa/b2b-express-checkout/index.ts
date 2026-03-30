@@ -1,3 +1,5 @@
+// src/mpesa/b2b-express-checkout/index.ts
+
 /**
  * B2B Express Checkout module exports
  *
@@ -34,7 +36,7 @@
  *   4001 — User cancelled           → async callback only, not a thrown error
  */
 
-export { initiateB2BExpressCheckout } from "./initiate";
+export { initiateB2BExpressCheckout } from './initiate'
 export type {
   B2BExpressCheckoutCallback,
   B2BExpressCheckoutCallbackCancelled,
@@ -43,7 +45,7 @@ export type {
   B2BExpressCheckoutErrorResponse,
   B2BExpressCheckoutRequest,
   B2BExpressCheckoutResponse,
-} from "./types";
+} from './types'
 export {
   getB2BAmount,
   getB2BConversationId,
@@ -52,4 +54,4 @@ export {
   isB2BCheckoutCallback,
   isB2BCheckoutCancelled,
   isB2BCheckoutSuccess,
-} from "./webhooks";
+} from './webhooks'

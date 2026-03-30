@@ -1,3 +1,5 @@
+// src/mpesa/b2b-express-checkout/initiate.ts
+
 /**
  * B2B Express Checkout — initiates a USSD Push to a merchant's till.
  *
@@ -26,9 +28,12 @@
  *   4203 — USSD Exception Error     → retry on stable network
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { B2BExpressCheckoutRequest, B2BExpressCheckoutResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type {
+  B2BExpressCheckoutRequest,
+  B2BExpressCheckoutResponse,
+} from './types'
 
 /**
  * Generates a random UUID v4-style string for RequestRefID.
@@ -37,8 +42,8 @@ import type { B2BExpressCheckoutRequest, B2BExpressCheckoutResponse } from "./ty
  */
 function generateRequestRefId(): string {
   try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) {
-      return crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID()
     }
   } catch {
     // fall through
@@ -47,7 +52,7 @@ function generateRequestRefId(): string {
     `${Date.now().toString(16)}-` +
     `${Math.random().toString(16).slice(2)}-` +
     `${Math.random().toString(16).slice(2)}`
-  );
+  )
 }
 
 /**
@@ -67,46 +72,50 @@ export async function initiateB2BExpressCheckout(
 
   if (!request.primaryShortCode?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "primaryShortCode is required — the merchant's till number (debit party).",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        "primaryShortCode is required — the merchant's till number (debit party).",
+    })
   }
 
   if (!request.receiverShortCode?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "receiverShortCode is required — the vendor's Paybill account (credit party).",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        "receiverShortCode is required — the vendor's Paybill account (credit party).",
+    })
   }
 
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `amount must be a whole number ≥ 1 (got ${request.amount} which rounds to ${amount}).`,
-    });
+    })
   }
 
   if (!request.paymentRef?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
         "paymentRef is required — shown in the merchant's USSD prompt as the payment reference.",
-    });
+    })
   }
 
   if (!request.callbackUrl?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "callbackUrl is required — Safaricom POSTs the transaction result here.",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'callbackUrl is required — Safaricom POSTs the transaction result here.',
+    })
   }
 
   if (!request.partnerName?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "partnerName is required — your friendly name shown in the merchant's USSD prompt.",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        "partnerName is required — your friendly name shown in the merchant's USSD prompt.",
+    })
   }
 
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
@@ -122,16 +131,16 @@ export async function initiateB2BExpressCheckout(
     callbackUrl: request.callbackUrl,
     partnerName: request.partnerName,
     RequestRefID: request.requestRefId ?? generateRequestRefId(),
-  };
+  }
 
   const { data } = await httpRequest<B2BExpressCheckoutResponse>(
     `${baseUrl}/v1/ussdpush/get-msisdn`,
     {
-      method: "POST",
+      method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body: payload,
     },
-  );
+  )
 
-  return data;
+  return data
 }

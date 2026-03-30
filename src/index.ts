@@ -9,11 +9,11 @@
  */
 
 // ── Main client ───────────────────────────────────────────────────────────────
-export { Mpesa } from "./mpesa";
+export { Mpesa } from './mpesa'
 
 // ── Core types ────────────────────────────────────────────────────────────────
-export type { Environment, MpesaConfig } from "./mpesa/types";
-export { DARAJA_BASE_URLS } from "./mpesa/types";
+export type { Environment, MpesaConfig } from './mpesa/types'
+export { DARAJA_BASE_URLS } from './mpesa/types'
 
 // ── Branded types & helpers ───────────────────────────────────────────────────
 export type {
@@ -30,7 +30,7 @@ export type {
   ShortCode,
   StrictPick,
   TillCode,
-} from "./types/branded";
+} from './types/branded'
 export {
   err,
   ok,
@@ -40,17 +40,17 @@ export {
   toPaybill,
   toShortCode,
   toTill,
-} from "./types/branded";
+} from './types/branded'
 
 // ── Errors ────────────────────────────────────────────────────────────────────
-export type { ErrorCode, PesafyErrorOptions } from "./utils/errors";
-export { createError, isPesafyError, PesafyError } from "./utils/errors";
+export type { ErrorCode, PesafyErrorOptions } from './utils/errors'
+export { createError, isPesafyError, PesafyError } from './utils/errors'
 
 // ── Encryption ────────────────────────────────────────────────────────────────
-export { encryptSecurityCredential } from "./core/encryption";
+export { encryptSecurityCredential } from './core/encryption'
 
 // ── Phone utilities ───────────────────────────────────────────────────────────
-export { formatSafaricomPhone } from "./utils/phone";
+export { formatSafaricomPhone } from './utils/phone'
 
 // ── STK Push ──────────────────────────────────────────────────────────────────
 export type {
@@ -64,13 +64,13 @@ export type {
   StkQueryRequest,
   StkQueryResponse,
   TransactionType,
-} from "./mpesa/stk-push";
+} from './mpesa/stk-push'
 export {
   formatPhoneNumber,
   getCallbackValue,
   getTimestamp,
   isStkCallbackSuccess,
-} from "./mpesa/stk-push";
+} from './mpesa/stk-push'
 
 // ── C2B ───────────────────────────────────────────────────────────────────────
 export type {
@@ -86,7 +86,7 @@ export type {
   C2BValidationPayload,
   C2BValidationResponse,
   C2BValidationResultCode,
-} from "./mpesa/c2b";
+} from './mpesa/c2b'
 export {
   acceptC2BValidation,
   acknowledgeC2BConfirmation,
@@ -100,7 +100,7 @@ export {
   registerC2BUrls,
   rejectC2BValidation,
   simulateC2B,
-} from "./mpesa/c2b";
+} from './mpesa/c2b'
 
 // ── B2C ───────────────────────────────────────────────────────────────────────
 export type {
@@ -110,7 +110,7 @@ export type {
   B2CResponse,
   B2CResult,
   B2CResultParameter,
-} from "./mpesa/b2c";
+} from './mpesa/b2c'
 export {
   getB2CAmount,
   getB2CConversationId,
@@ -128,7 +128,7 @@ export {
   isB2CFailure,
   isB2CResult,
   isB2CSuccess,
-} from "./mpesa/b2c";
+} from './mpesa/b2c'
 
 // ── B2B Express Checkout ──────────────────────────────────────────────────────
 export type {
@@ -139,7 +139,7 @@ export type {
   B2BExpressCheckoutErrorResponse,
   B2BExpressCheckoutRequest,
   B2BExpressCheckoutResponse,
-} from "./mpesa/b2b-express-checkout";
+} from './mpesa/b2b-express-checkout'
 export {
   getB2BAmount,
   getB2BConversationId,
@@ -149,7 +149,7 @@ export {
   isB2BCheckoutCallback,
   isB2BCheckoutCancelled,
   isB2BCheckoutSuccess,
-} from "./mpesa/b2b-express-checkout";
+} from './mpesa/b2b-express-checkout'
 
 // ── Tax Remittance ────────────────────────────────────────────────────────────
 export type {
@@ -158,8 +158,8 @@ export type {
   TaxRemittanceResponse,
   TaxRemittanceResult,
   TaxRemittanceResultParameter,
-} from "./mpesa/tax-remittance";
-export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from "./mpesa/tax-remittance";
+} from './mpesa/tax-remittance'
+export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from './mpesa/tax-remittance'
 
 // ── Transaction Status ────────────────────────────────────────────────────────
 export type {
@@ -167,7 +167,7 @@ export type {
   TransactionStatusResponse,
   TransactionStatusResult,
   TransactionStatusResultParameter,
-} from "./mpesa/transaction-status";
+} from './mpesa/transaction-status'
 
 // ── Account Balance ───────────────────────────────────────────────────────────
 export type {
@@ -176,20 +176,24 @@ export type {
   AccountBalanceResponse,
   AccountBalanceResult,
   ParsedAccount,
-} from "./mpesa/account-balance";
+} from './mpesa/account-balance'
 export {
   getAccountBalanceParam,
   isAccountBalanceSuccess,
   parseAccountBalance,
-} from "./mpesa/account-balance";
+} from './mpesa/account-balance'
 
 // ── Reversal ──────────────────────────────────────────────────────────────────
-export type { ReversalRequest, ReversalResponse, ReversalResult } from "./mpesa/reversal";
+export type {
+  ReversalRequest,
+  ReversalResponse,
+  ReversalResult,
+} from './mpesa/reversal'
 export {
   getReversalConversationId,
   getReversalTransactionId,
   isReversalSuccess,
-} from "./mpesa/reversal";
+} from './mpesa/reversal'
 
 // ── Bill Manager ──────────────────────────────────────────────────────────────
 export type {
@@ -203,10 +207,14 @@ export type {
   BillManagerPaymentNotification,
   BillManagerSingleInvoiceRequest,
   BillManagerSingleInvoiceResponse,
-} from "./mpesa/bill-manager";
+} from './mpesa/bill-manager'
 
 // ── Dynamic QR ────────────────────────────────────────────────────────────────
-export type { DynamicQRRequest, DynamicQRResponse, QRTransactionCode } from "./mpesa/dynamic-qr";
+export type {
+  DynamicQRRequest,
+  DynamicQRResponse,
+  QRTransactionCode,
+} from './mpesa/dynamic-qr'
 
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 export type {
@@ -217,7 +225,7 @@ export type {
   WebhookEventType,
   WebhookHandlerOptions,
   WebhookHandlerResult,
-} from "./mpesa/webhooks";
+} from './mpesa/webhooks'
 export {
   extractAmount,
   extractPhoneNumber,
@@ -228,8 +236,8 @@ export {
   retryWithBackoff,
   SAFARICOM_IPS,
   verifyWebhookIP,
-} from "./mpesa/webhooks";
+} from './mpesa/webhooks'
 
 // ── HTTP (advanced users) ─────────────────────────────────────────────────────
-export type { HttpRequestOptions, HttpResponse } from "./utils/http";
-export { httpRequest } from "./utils/http";
+export type { HttpRequestOptions, HttpResponse } from './utils/http'
+export { httpRequest } from './utils/http'

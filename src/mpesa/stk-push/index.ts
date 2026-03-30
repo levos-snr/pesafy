@@ -1,5 +1,7 @@
-export { processStkPush } from "./stk-push";
-export { queryStkPush } from "./stk-query";
+// src/mpesa/stk-push/index.ts
+
+export { processStkPush } from './stk-push'
+export { queryStkPush } from './stk-query'
 export type {
   StkCallbackFailure,
   StkCallbackInner,
@@ -11,6 +13,6 @@ export type {
   StkQueryRequest,
   StkQueryResponse,
   TransactionType,
-} from "./types";
-export { getCallbackValue, isStkCallbackSuccess } from "./types";
-export { formatPhoneNumber, getTimestamp } from "./utils";
+} from './types'
+export { getCallbackValue, isStkCallbackSuccess } from './types'
+export { formatPhoneNumber, getTimestamp } from './utils'

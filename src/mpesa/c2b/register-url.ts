@@ -1,3 +1,5 @@
+// src/mpesa/c2b/register-url.ts
+
 /**
  * C2B Register URL
  *
@@ -20,12 +22,24 @@
  *   - Do not use public URL testers (ngrok, mockbin, requestbin) in production.
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { C2BApiVersion, C2BRegisterUrlRequest, C2BRegisterUrlResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type {
+  C2BApiVersion,
+  C2BRegisterUrlRequest,
+  C2BRegisterUrlResponse,
+} from './types'
 
 /** Forbidden URL keywords per Daraja docs */
-const FORBIDDEN_URL_KEYWORDS = ["mpesa", "safaricom", ".exe", ".exec", "cmd", "sql", "query"];
+const FORBIDDEN_URL_KEYWORDS = [
+  'mpesa',
+  'safaricom',
+  '.exe',
+  '.exec',
+  'cmd',
+  'sql',
+  'query',
+]
 
 /**
  * Validates a callback URL against Daraja's URL requirements.
@@ -34,21 +48,21 @@ const FORBIDDEN_URL_KEYWORDS = ["mpesa", "safaricom", ".exe", ".exec", "cmd", "s
 function validateCallbackUrl(url: string, fieldName: string): void {
   if (!url || !url.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `${fieldName} is required`,
-    });
+    })
   }
 
-  const lower = url.toLowerCase();
+  const lower = url.toLowerCase()
 
   for (const keyword of FORBIDDEN_URL_KEYWORDS) {
     if (lower.includes(keyword)) {
       throw createError({
-        code: "VALIDATION_ERROR",
+        code: 'VALIDATION_ERROR',
         message:
           `${fieldName} must not contain the keyword "${keyword}". ` +
-          "Daraja rejects URLs containing: M-PESA, Safaricom, exe, exec, cmd, sql, query.",
-      });
+          'Daraja rejects URLs containing: M-PESA, Safaricom, exe, exec, cmd, sql, query.',
+      })
     }
   }
 }
@@ -70,33 +84,36 @@ export async function registerC2BUrls(
 
   if (!request.shortCode) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "shortCode is required",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'shortCode is required',
+    })
   }
 
   if (!request.responseType) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
         'responseType is required: "Completed" or "Cancelled" (sentence case, exactly as spelled)',
-    });
+    })
   }
 
-  if (request.responseType !== "Completed" && request.responseType !== "Cancelled") {
+  if (
+    request.responseType !== 'Completed' &&
+    request.responseType !== 'Cancelled'
+  ) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
         `responseType must be exactly "Completed" or "Cancelled" (sentence case). ` +
         `Got: "${String(request.responseType)}"`,
-    });
+    })
   }
 
-  validateCallbackUrl(request.confirmationUrl, "confirmationUrl");
-  validateCallbackUrl(request.validationUrl, "validationUrl");
+  validateCallbackUrl(request.confirmationUrl, 'confirmationUrl')
+  validateCallbackUrl(request.validationUrl, 'validationUrl')
 
   // ── Determine API version ───────────────────────────────────────────────────
-  const version: C2BApiVersion = request.apiVersion ?? "v2";
+  const version: C2BApiVersion = request.apiVersion ?? 'v2'
 
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
   const payload = {
@@ -104,16 +121,16 @@ export async function registerC2BUrls(
     ResponseType: request.responseType,
     ConfirmationURL: request.confirmationUrl,
     ValidationURL: request.validationUrl,
-  };
+  }
 
   const { data } = await httpRequest<C2BRegisterUrlResponse>(
     `${baseUrl}/mpesa/c2b/${version}/registerurl`,
     {
-      method: "POST",
+      method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body: payload,
     },
-  );
+  )
 
-  return data;
+  return data
 }

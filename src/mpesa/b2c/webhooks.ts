@@ -1,3 +1,5 @@
+// src/mpesa/b2c/webhooks.ts
+
 /**
  * B2C Webhook / Result Helpers
  *
@@ -16,7 +18,7 @@
  * Ref: B2C Account Top Up — Daraja Developer Portal (Result Body section)
  */
 
-import type { B2CResult, B2CResultParameter } from "./types";
+import type { B2CResult, B2CResultParameter } from './types'
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
@@ -24,25 +26,28 @@ import type { B2CResult, B2CResultParameter } from "./types";
  * Runtime type guard — checks if a body looks like a B2C result callback.
  */
 export function isB2CResult(body: unknown): body is B2CResult {
-  if (!body || typeof body !== "object") return false;
-  const b = body as Record<string, unknown>;
-  if (!b["Result"] || typeof b["Result"] !== "object") return false;
-  const result = b["Result"] as Record<string, unknown>;
-  return typeof result["ResultCode"] === "number" && typeof result["ConversationID"] === "string";
+  if (!body || typeof body !== 'object') return false
+  const b = body as Record<string, unknown>
+  if (!b['Result'] || typeof b['Result'] !== 'object') return false
+  const result = b['Result'] as Record<string, unknown>
+  return (
+    typeof result['ResultCode'] === 'number' &&
+    typeof result['ConversationID'] === 'string'
+  )
 }
 
 /**
  * Returns true if the B2C result represents a successful transaction.
  */
 export function isB2CSuccess(result: B2CResult): boolean {
-  return result.Result.ResultCode === 0;
+  return result.Result.ResultCode === 0
 }
 
 /**
  * Returns true if the B2C result represents a failure.
  */
 export function isB2CFailure(result: B2CResult): boolean {
-  return result.Result.ResultCode !== 0;
+  return result.Result.ResultCode !== 0
 }
 
 // ── Convenience extractors ────────────────────────────────────────────────────
@@ -52,14 +57,14 @@ export function isB2CFailure(result: B2CResult): boolean {
  * Returns null if not present.
  */
 export function getB2CTransactionId(result: B2CResult): string | null {
-  return result.Result.TransactionID ?? null;
+  return result.Result.TransactionID ?? null
 }
 
 /**
  * Extracts the ConversationID from a B2C result.
  */
 export function getB2CConversationId(result: B2CResult): string {
-  return result.Result.ConversationID;
+  return result.Result.ConversationID
 }
 
 /**
@@ -67,14 +72,14 @@ export function getB2CConversationId(result: B2CResult): string {
  * Use this to correlate with the original API call response.
  */
 export function getB2COriginatorConversationId(result: B2CResult): string {
-  return result.Result.OriginatorConversationID;
+  return result.Result.OriginatorConversationID
 }
 
 /**
  * Extracts the result description (human-readable status).
  */
 export function getB2CResultDesc(result: B2CResult): string {
-  return result.Result.ResultDesc;
+  return result.Result.ResultDesc
 }
 
 /**
@@ -82,9 +87,9 @@ export function getB2CResultDesc(result: B2CResult): string {
  * Returns null if not present (e.g. on failure).
  */
 export function getB2CAmount(result: B2CResult): number | null {
-  const value = getB2CResultParam(result, "Amount");
-  if (value === undefined) return null;
-  return Number(value);
+  const value = getB2CResultParam(result, 'Amount')
+  if (value === undefined) return null
+  return Number(value)
 }
 
 /**
@@ -92,10 +97,12 @@ export function getB2CAmount(result: B2CResult): number | null {
  * Format: YYYYMMDDHHmmss
  * Returns null if not present.
  */
-export function getB2CTransactionCompletedTime(result: B2CResult): string | null {
-  const value = getB2CResultParam(result, "TransCompletedTime");
-  if (value === undefined) return null;
-  return String(value);
+export function getB2CTransactionCompletedTime(
+  result: B2CResult,
+): string | null {
+  const value = getB2CResultParam(result, 'TransCompletedTime')
+  if (value === undefined) return null
+  return String(value)
 }
 
 /**
@@ -103,9 +110,9 @@ export function getB2CTransactionCompletedTime(result: B2CResult): string | null
  * Returns null if not present or empty.
  */
 export function getB2CDebitPartyCharges(result: B2CResult): string | null {
-  const value = getB2CResultParam(result, "DebitPartyCharges");
-  if (value === undefined || value === "") return null;
-  return String(value);
+  const value = getB2CResultParam(result, 'DebitPartyCharges')
+  if (value === undefined || value === '') return null
+  return String(value)
 }
 
 /**
@@ -113,9 +120,9 @@ export function getB2CDebitPartyCharges(result: B2CResult): string | null {
  * Returns null if not present.
  */
 export function getB2CReceiverPublicName(result: B2CResult): string | null {
-  const value = getB2CResultParam(result, "ReceiverPartyPublicName");
-  if (value === undefined) return null;
-  return String(value);
+  const value = getB2CResultParam(result, 'ReceiverPartyPublicName')
+  if (value === undefined) return null
+  return String(value)
 }
 
 /**
@@ -123,9 +130,9 @@ export function getB2CReceiverPublicName(result: B2CResult): string | null {
  * Returns "KES" as default if not present.
  */
 export function getB2CCurrency(result: B2CResult): string {
-  const value = getB2CResultParam(result, "Currency");
-  if (value === undefined) return "KES";
-  return String(value);
+  const value = getB2CResultParam(result, 'Currency')
+  if (value === undefined) return 'KES'
+  return String(value)
 }
 
 /**
@@ -133,19 +140,21 @@ export function getB2CCurrency(result: B2CResult): string {
  * Returns null if not present.
  */
 export function getB2CDebitAccountBalance(result: B2CResult): string | null {
-  const value = getB2CResultParam(result, "DebitAccountBalance");
-  if (value === undefined) return null;
-  return String(value);
+  const value = getB2CResultParam(result, 'DebitAccountBalance')
+  if (value === undefined) return null
+  return String(value)
 }
 
 /**
  * Extracts the initiator account current balance from B2C result parameters.
  * Returns null if not present.
  */
-export function getB2CInitiatorAccountBalance(result: B2CResult): string | null {
-  const value = getB2CResultParam(result, "InitiatorAccountCurrentBalance");
-  if (value === undefined) return null;
-  return String(value);
+export function getB2CInitiatorAccountBalance(
+  result: B2CResult,
+): string | null {
+  const value = getB2CResultParam(result, 'InitiatorAccountCurrentBalance')
+  if (value === undefined) return null
+  return String(value)
 }
 
 // ── Internal helper ───────────────────────────────────────────────────────────
@@ -155,12 +164,15 @@ export function getB2CInitiatorAccountBalance(result: B2CResult): string | null 
  * Handles both single-object and array forms of ResultParameter.
  * Returns undefined if key is absent.
  */
-export function getB2CResultParam(result: B2CResult, key: string): string | number | undefined {
-  const params = result.Result.ResultParameters?.ResultParameter;
-  if (!params) return undefined;
+export function getB2CResultParam(
+  result: B2CResult,
+  key: string,
+): string | number | undefined {
+  const params = result.Result.ResultParameters?.ResultParameter
+  if (!params) return undefined
 
   // ResultParameter can be a single object or an array (Daraja inconsistency)
-  const paramArray = Array.isArray(params) ? params : [params];
-  const item = (paramArray as B2CResultParameter[]).find((p) => p.Key === key);
-  return item?.Value;
+  const paramArray = Array.isArray(params) ? params : [params]
+  const item = (paramArray as B2CResultParameter[]).find((p) => p.Key === key)
+  return item?.Value
 }

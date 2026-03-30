@@ -36,88 +36,132 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/levos-snr/pesafy.git"
+    "url": "git+https://github.com/levos-snr/pesafy.git"
   },
-  "bin": {
-    "pesafy": "./dist/cli/index.cjs"
-  },
-  "files": [
-    "dist",
-    "src/components/vue",
-    "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
-  ],
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "pesafy": "./dist/cli.js"
+  },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
-    "./express": {
-      "types": "./dist/express/index.d.ts",
-      "import": "./dist/express/index.js",
-      "require": "./dist/express/index.cjs"
+    "./adapters/express": {
+      "import": {
+        "types": "./dist/adapters/express.d.ts",
+        "default": "./dist/adapters/express.js"
+      },
+      "require": {
+        "types": "./dist/adapters/express.d.cts",
+        "default": "./dist/adapters/express.cjs"
+      }
     },
     "./adapters/hono": {
-      "types": "./dist/adapters/hono.d.ts",
-      "import": "./dist/adapters/hono.js",
-      "require": "./dist/adapters/hono.cjs"
+      "import": {
+        "types": "./dist/adapters/hono.d.ts",
+        "default": "./dist/adapters/hono.js"
+      },
+      "require": {
+        "types": "./dist/adapters/hono.d.cts",
+        "default": "./dist/adapters/hono.cjs"
+      }
     },
     "./adapters/nextjs": {
-      "types": "./dist/adapters/nextjs.d.ts",
-      "import": "./dist/adapters/nextjs.js",
-      "require": "./dist/adapters/nextjs.cjs"
+      "import": {
+        "types": "./dist/adapters/nextjs.d.ts",
+        "default": "./dist/adapters/nextjs.js"
+      },
+      "require": {
+        "types": "./dist/adapters/nextjs.d.cts",
+        "default": "./dist/adapters/nextjs.cjs"
+      }
     },
     "./adapters/fastify": {
-      "types": "./dist/adapters/fastify.d.ts",
-      "import": "./dist/adapters/fastify.js",
-      "require": "./dist/adapters/fastify.cjs"
+      "import": {
+        "types": "./dist/adapters/fastify.d.ts",
+        "default": "./dist/adapters/fastify.js"
+      },
+      "require": {
+        "types": "./dist/adapters/fastify.d.cts",
+        "default": "./dist/adapters/fastify.cjs"
+      }
     },
-    "./components/react": {
-      "types": "./dist/components/react/index.d.ts",
-      "import": "./dist/components/react/index.js",
-      "require": "./dist/components/react/index.cjs"
+    "./react": {
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      }
     },
-    "./components/react/styles.css": "./dist/components/react/styles.css",
-    "./components/vue": "./src/components/vue/index.ts",
-    "./components/vue/*": "./src/components/vue/*"
+    "./cli": {
+      "import": "./dist/cli.js"
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
   "scripts": {
-    "build": "vp pack",
-    "build:watch": "vp pack --watch",
-    "test": "vp test",
-    "test:watch": "vp test watch",
-    "lint": "vp lint",
-    "lint:fix": "vp lint --fix",
-    "format": "vp fmt",
-    "format:check": "vp fmt --check",
-    "check": "vp check",
-    "check:fix": "vp check --fix",
-    "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
-    "prepublishOnly": "vp pack && node --max-old-space-size=4096 node_modules/typescript/bin/tsc --noEmit",
+    "prepare": "simple-git-hooks",
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
+    "prepublishOnly": "pnpm typecheck && pnpm build",
     "changeset": "changeset",
-    "release": "changeset publish --access public",
     "version-bump": "changeset version",
-    "prepare": "vp config",
-    "cli": "node dist/cli/index.cjs"
+    "release": "changeset publish --access public",
+    "cli": "node dist/cli.js"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "oxlint",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
+    "@vitest/coverage-v8": "^4.1.2",
     "express": "^5.2.1",
-    "tsx": "^4.19.4",
+    "lint-staged": "^16.4.0",
+    "oxlint": "latest",
+    "prettier": "^3.5.3",
+    "publint": "^0.3.12",
+    "simple-git-hooks": "^2.13.0",
+    "tsdown": "^0.21.7",
     "typescript": "^5.7.2",
-    "vite-plus": "latest"
+    "vitest": "^4.1.2"
   },
   "peerDependencies": {
     "express": ">=4.0.0",
@@ -147,11 +191,5 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "overrides": {
-      "vite": "npm:@voidzero-dev/vite-plus-core@latest",
-      "vitest": "npm:@voidzero-dev/vite-plus-test@latest"
-    }
-  }
+  "packageManager": "pnpm@10.33.0"
 }

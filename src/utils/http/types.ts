@@ -1,16 +1,18 @@
+// src/utils/http/types.ts
+
 /**
  * HTTP client types
  */
 
 export interface HttpRequestOptions {
-  method?: "GET" | "POST";
-  headers?: Record<string, string>;
-  body?: unknown;
-  timeout?: number;
+  method?: 'GET' | 'POST'
+  headers?: Record<string, string>
+  body?: unknown
+  timeout?: number
 }
 
 export interface HttpResponse<T = unknown> {
-  data: T;
-  status: number;
-  headers: Headers;
+  data: T
+  status: number
+  headers: Headers
 }

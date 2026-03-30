@@ -1,3 +1,5 @@
+// src/mpesa/stk-push/stk-query.ts
+
 /**
  * STK Push Query — checks the status of a Lipa Na M-Pesa Online Payment.
  *
@@ -19,9 +21,9 @@
  *   (and more — see STK Push docs result code table)
  */
 
-import { httpRequest } from "../../utils/http";
-import type { StkQueryRequest, StkQueryResponse } from "./types";
-import { getStkPushPassword, getTimestamp } from "./utils";
+import { httpRequest } from '../../utils/http'
+import type { StkQueryRequest, StkQueryResponse } from './types'
+import { getStkPushPassword, getTimestamp } from './utils'
 
 export async function queryStkPush(
   baseUrl: string,
@@ -29,20 +31,23 @@ export async function queryStkPush(
   request: StkQueryRequest,
 ): Promise<StkQueryResponse> {
   // Generate timestamp ONCE — Password and Timestamp field MUST match.
-  const timestamp = getTimestamp();
+  const timestamp = getTimestamp()
 
   const body = {
     BusinessShortCode: request.shortCode,
     Password: getStkPushPassword(request.shortCode, request.passKey, timestamp),
     Timestamp: timestamp,
     CheckoutRequestID: request.checkoutRequestId,
-  };
+  }
 
-  const { data } = await httpRequest<StkQueryResponse>(`${baseUrl}/mpesa/stkpushquery/v1/query`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body,
-  });
+  const { data } = await httpRequest<StkQueryResponse>(
+    `${baseUrl}/mpesa/stkpushquery/v1/query`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body,
+    },
+  )
 
-  return data;
+  return data
 }

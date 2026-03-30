@@ -24,13 +24,13 @@ export interface ReversalRequest {
    * The M-PESA transaction ID to reverse (e.g. "OEI2AK4XXXX").
    * Daraja field: TransactionID
    */
-  transactionId: string;
+  transactionId: string
 
   /**
    * Your business shortcode requesting the reversal.
    * Daraja field: ReceiverParty
    */
-  receiverParty: string;
+  receiverParty: string
 
   /**
    * Identifier type for ReceiverParty.
@@ -39,73 +39,77 @@ export interface ReversalRequest {
    *   "4" = Organisation ShortCode
    * Daraja field: RecieverIdentifierType
    */
-  receiverIdentifierType: "1" | "2" | "4";
+  receiverIdentifierType: '1' | '2' | '4'
 
   /**
    * URL where Safaricom POSTs the reversal result.
    * Daraja field: ResultURL
    */
-  resultUrl: string;
+  resultUrl: string
 
   /**
    * URL called when the request times out in the queue.
    * Daraja field: QueueTimeOutURL
    */
-  queueTimeOutUrl: string;
+  queueTimeOutUrl: string
 
   /**
    * Amount to reverse. Must equal the original transaction amount.
    * Daraja field: Amount
    */
-  amount: number;
+  amount: number
 
   /** Short remarks (up to 100 characters) */
-  remarks?: string;
+  remarks?: string
 
   /** Additional occasion string */
-  occasion?: string;
+  occasion?: string
 }
 
 // ── Synchronous acknowledgement ───────────────────────────────────────────────
 
 export interface ReversalResponse {
-  OriginatorConversationID: string;
-  ConversationID: string;
+  OriginatorConversationID: string
+  ConversationID: string
   /** "0" = request accepted */
-  ResponseCode: string;
-  ResponseDescription: string;
+  ResponseCode: string
+  ResponseDescription: string
 }
 
 // ── Async result (POSTed to ResultURL) ───────────────────────────────────────
 
 export interface ReversalResult {
   Result: {
-    ResultType: string;
+    ResultType: string
     /** 0 = success */
-    ResultCode: number;
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
+    ResultCode: number
+    ResultDesc: string
+    OriginatorConversationID: string
+    ConversationID: string
+    TransactionID: string
     ResultParameters?: {
-      ResultParameter: Array<{ Key: string; Value: string | number }>;
-    };
+      ResultParameter: Array<{ Key: string; Value: string | number }>
+    }
     ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>;
-    };
-  };
+      ReferenceItem:
+        | { Key: string; Value: string }
+        | Array<{ Key: string; Value: string }>
+    }
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 export function isReversalSuccess(result: ReversalResult): boolean {
-  return result.Result.ResultCode === 0;
+  return result.Result.ResultCode === 0
 }
 
-export function getReversalTransactionId(result: ReversalResult): string | null {
-  return result.Result.TransactionID ?? null;
+export function getReversalTransactionId(
+  result: ReversalResult,
+): string | null {
+  return result.Result.TransactionID ?? null
 }
 
 export function getReversalConversationId(result: ReversalResult): string {
-  return result.Result.ConversationID;
+  return result.Result.ConversationID
 }

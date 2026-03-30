@@ -1,3 +1,5 @@
+# .gitignore
+
 # dependencies
 node_modules
 
@@ -35,3 +37,4 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # vite-plus / tsdown
 .vite-plus
+pnpm-workspace.yaml
