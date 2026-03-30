@@ -11,9 +11,9 @@
  * Required org portal role: "Account Balance ORG API initiator"
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { AccountBalanceRequest, AccountBalanceResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type { AccountBalanceRequest, AccountBalanceResponse } from './types'
 
 /**
  * Queries the balance of an M-PESA shortcode.
@@ -32,36 +32,50 @@ export async function queryAccountBalance(
   request: AccountBalanceRequest,
 ): Promise<AccountBalanceResponse> {
   if (!request.partyA?.trim()) {
-    throw createError({ code: "VALIDATION_ERROR", message: "partyA is required." });
-  }
-  if (!["1", "2", "4"].includes(request.identifierType)) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: 'identifierType must be "1" (MSISDN), "2" (Till), or "4" (ShortCode).',
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'partyA is required.',
+    })
+  }
+  if (!['1', '2', '4'].includes(request.identifierType)) {
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message:
+        'identifierType must be "1" (MSISDN), "2" (Till), or "4" (ShortCode).',
+    })
   }
   if (!request.resultUrl?.trim()) {
-    throw createError({ code: "VALIDATION_ERROR", message: "resultUrl is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'resultUrl is required.',
+    })
   }
   if (!request.queueTimeOutUrl?.trim()) {
-    throw createError({ code: "VALIDATION_ERROR", message: "queueTimeOutUrl is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'queueTimeOutUrl is required.',
+    })
   }
 
   const payload = {
     Initiator: initiatorName,
     SecurityCredential: securityCredential,
-    CommandID: "AccountBalance",
+    CommandID: 'AccountBalance',
     PartyA: String(request.partyA),
     IdentifierType: request.identifierType,
     ResultURL: request.resultUrl,
     QueueTimeOutURL: request.queueTimeOutUrl,
-    Remarks: request.remarks ?? "Account Balance Query",
-  };
+    Remarks: request.remarks ?? 'Account Balance Query',
+  }
 
   const { data } = await httpRequest<AccountBalanceResponse>(
     `${baseUrl}/mpesa/accountbalance/v1/query`,
-    { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: payload },
-  );
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: payload,
+    },
+  )
 
-  return data;
+  return data
 }

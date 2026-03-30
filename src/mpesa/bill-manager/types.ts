@@ -20,79 +20,79 @@
 
 export interface BillManagerOptInRequest {
   /** Your M-PESA Paybill shortcode */
-  shortcode: string;
+  shortcode: string
   /** Email address to receive bill manager notifications */
-  email: string;
+  email: string
   /** Your logo URL (public HTTPS link) */
-  officialContact: string;
+  officialContact: string
   /** Sender name shown on push notifications */
-  sendReminders: "1" | "0";
+  sendReminders: '1' | '0'
   /** Logo URL */
-  logo?: string;
+  logo?: string
   /** Callback URL for payment confirmations */
-  callbackUrl: string;
+  callbackUrl: string
 }
 
 export interface BillManagerOptInResponse {
-  rescode: string;
-  resmsg: string;
+  rescode: string
+  resmsg: string
 }
 
 // ── Single Invoice ────────────────────────────────────────────────────────────
 
 export interface BillManagerInvoiceItem {
   /** Item description */
-  itemName: string;
+  itemName: string
   /** Item amount */
-  amount: number;
+  amount: number
 }
 
 export interface BillManagerSingleInvoiceRequest {
   /** External reference/invoice number from your system */
-  externalReference: string;
+  externalReference: string
   /** Billing period (e.g. "2024-01") */
-  billingPeriod: string;
+  billingPeriod: string
   /** Invoice name/description */
-  invoiceName: string;
+  invoiceName: string
   /** Due date: YYYY-MM-DD HH:MM:SS */
-  dueDate: string;
+  dueDate: string
   /** Account reference (customer account number) */
-  accountReference: string;
+  accountReference: string
   /** Total amount */
-  amount: number;
+  amount: number
   /** Customer MSISDN (will receive push notification) */
-  partyA: string;
+  partyA: string
   /** Line items making up the invoice */
-  invoiceItems?: BillManagerInvoiceItem[];
+  invoiceItems?: BillManagerInvoiceItem[]
 }
 
 export interface BillManagerSingleInvoiceResponse {
-  rescode: string;
-  resmsg: string;
+  rescode: string
+  resmsg: string
 }
 
 // ── Bulk Invoicing ────────────────────────────────────────────────────────────
 
 export interface BillManagerBulkInvoiceRequest {
   /** Array of invoices (max 1000 per request) */
-  invoices: BillManagerSingleInvoiceRequest[];
+  invoices: BillManagerSingleInvoiceRequest[]
 }
 
 export interface BillManagerBulkInvoiceResponse {
-  rescode: string;
-  resmsg: string;
+  rescode: string
+  resmsg: string
 }
 
 // ── Cancel Invoice ────────────────────────────────────────────────────────────
 
 export interface BillManagerCancelInvoiceRequest {
   /** External reference to cancel */
-  externalReference: string;
+  externalReference: string
 }
 
 export interface BillManagerCancelInvoiceResponse {
-  rescode: string;
-  resmsg: string;
+  rescode: string
+  resmsg: string
 }
 
 // ── Reconciliation callback ───────────────────────────────────────────────────
@@ -101,13 +101,13 @@ export interface BillManagerCancelInvoiceResponse {
  * Payload POSTed to your callbackUrl when a Bill Manager invoice is paid.
  */
 export interface BillManagerPaymentNotification {
-  paymentDate: string;
-  paidAmount: string;
-  accountReference: string;
-  transactionId: string;
-  phoneNumber: string;
-  billRefNumber: string;
-  externalReference: string;
-  billerId: string;
-  currency: string;
+  paymentDate: string
+  paidAmount: string
+  accountReference: string
+  transactionId: string
+  phoneNumber: string
+  billRefNumber: string
+  externalReference: string
+  billerId: string
+  currency: string
 }

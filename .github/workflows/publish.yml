@@ -1,5 +1,4 @@
 # 📁 PATH: .github/workflows/publish.yml
-
 name: Publish to npm
 
 on:
@@ -13,7 +12,6 @@ jobs:
   publish:
     name: Release
     runs-on: ubuntu-latest
-
     permissions:
       contents: write # create releases / tags
       pull-requests: write # open version-bump PRs
@@ -38,8 +36,6 @@ jobs:
 
       - name: Build package
         run: pnpm build
-        env:
-          NODE_OPTIONS: --import tsx/esm
 
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1

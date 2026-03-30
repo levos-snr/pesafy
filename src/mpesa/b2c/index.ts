@@ -1,3 +1,4 @@
+// src/mpesa/b2c/index.ts
 /**
  * Business to Customer (B2C) module exports
  *
@@ -37,7 +38,7 @@
  *   400.002.05   — Invalid Request Payload → check request body for typos
  */
 
-export { initiateB2CPayment } from "./payment";
+export { initiateB2CPayment } from './payment'
 export type {
   B2CCommandID,
   B2CErrorResponse,
@@ -45,7 +46,7 @@ export type {
   B2CResponse,
   B2CResult,
   B2CResultParameter,
-} from "./types";
+} from './types'
 export {
   getB2CAmount,
   getB2CConversationId,
@@ -62,4 +63,4 @@ export {
   isB2CFailure,
   isB2CResult,
   isB2CSuccess,
-} from "./webhooks";
+} from './webhooks'

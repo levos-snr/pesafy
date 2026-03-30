@@ -1,16 +1,14 @@
-/**
- * Auth module types
- */
+// src/core/auth/types.ts
 
 export interface TokenResponse {
   /** The OAuth bearer token */
-  access_token: string;
+  access_token: string
   /** Seconds until expiry — Daraja returns 3599 */
-  expires_in: number;
+  expires_in: number
 }
 
 export interface TokenCacheEntry {
-  token: string;
+  token: string
   /** Unix timestamp (seconds) after which token is considered expired */
-  expiresAt: number;
+  expiresAt: number
 }

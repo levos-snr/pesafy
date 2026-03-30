@@ -1,3 +1,5 @@
+// src/mpesa/b2c/types.ts
+
 /**
  * Business to Customer (B2C) types
  *
@@ -26,10 +28,10 @@
  *   BusinessPayToBulk    — Load funds to a B2C shortcode for bulk disbursement
  */
 export type B2CCommandID =
-  | "BusinessPayment"
-  | "SalaryPayment"
-  | "PromotionPayment"
-  | "BusinessPayToBulk";
+  | 'BusinessPayment'
+  | 'SalaryPayment'
+  | 'PromotionPayment'
+  | 'BusinessPayToBulk'
 
 // ── Request ───────────────────────────────────────────────────────────────────
 
@@ -40,20 +42,20 @@ export interface B2CRequest {
    * or "PromotionPayment".
    * Daraja field: CommandID
    */
-  commandId: B2CCommandID;
+  commandId: B2CCommandID
 
   /**
    * The transaction amount. Must be a whole number ≥ 1.
    * Daraja field: Amount
    */
-  amount: number;
+  amount: number
 
   /**
    * Your business shortcode from which money is deducted.
    * This is the PartyA (debit party).
    * Daraja field: PartyA
    */
-  partyA: string;
+  partyA: string
 
   /**
    * The recipient shortcode or MSISDN (credit party).
@@ -66,7 +68,7 @@ export interface B2CRequest {
    *
    * Daraja field: PartyB
    */
-  partyB: string;
+  partyB: string
 
   /**
    * Type of the sender (PartyA) identifier.
@@ -74,7 +76,7 @@ export interface B2CRequest {
    * Daraja field: SenderIdentifierType
    * Default: "4"
    */
-  senderIdentifierType?: "4";
+  senderIdentifierType?: '4'
 
   /**
    * Type of the receiver (PartyB) identifier.
@@ -82,53 +84,53 @@ export interface B2CRequest {
    * Daraja field: RecieverIdentifierType
    * Default: "4"
    */
-  receiverIdentifierType?: "4";
+  receiverIdentifierType?: '4'
 
   /**
    * A reference for this transaction (e.g. invoice number, batch reference).
    * Daraja field: AccountReference
    */
-  accountReference: string;
+  accountReference: string
 
   /**
    * Optional. The consumer's mobile number on behalf of whom you are paying.
    * Format: 254XXXXXXXXX
    * Daraja field: Requester
    */
-  requester?: string;
+  requester?: string
 
   /**
    * Additional remarks for the transaction. Up to 100 characters.
    * Daraja field: Remarks
    */
-  remarks?: string;
+  remarks?: string
 
   /**
    * URL where Safaricom POSTs the final result after processing.
    * Must be publicly accessible. HTTPS required in production.
    * Daraja field: ResultURL
    */
-  resultUrl: string;
+  resultUrl: string
 
   /**
    * URL Safaricom calls when the request times out in the queue.
    * Must be publicly accessible. HTTPS required in production.
    * Daraja field: QueueTimeOutURL
    */
-  queueTimeOutUrl: string;
+  queueTimeOutUrl: string
 }
 
 // ── Synchronous acknowledgement response ──────────────────────────────────────
 
 export interface B2CResponse {
   /** Unique request identifier assigned by Daraja upon successful submission */
-  OriginatorConversationID: string;
+  OriginatorConversationID: string
   /** Unique request identifier assigned by M-Pesa upon successful submission */
-  ConversationID: string;
+  ConversationID: string
   /** "0" = successful submission */
-  ResponseCode: string;
+  ResponseCode: string
   /** Human-readable status, e.g. "Accept the service request successfully." */
-  ResponseDescription: string;
+  ResponseDescription: string
 }
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
@@ -142,52 +144,54 @@ export interface B2CResponse {
  *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
  */
 export type B2CResultParameterKey =
-  | "DebitAccountBalance"
-  | "Amount"
-  | "DebitPartyAffectedAccountBalance"
-  | "TransCompletedTime"
-  | "DebitPartyCharges"
-  | "ReceiverPartyPublicName"
-  | "Currency"
-  | "InitiatorAccountCurrentBalance"
-  | "B2CRecipientIsRegisteredCustomer"
-  | "B2CChargesPaidAccountAvailableFunds"
-  | "B2CWorkingAccountAvailableFunds"
-  | "B2CUtilityAccountAvailableFunds"
-  | (string & {});
+  | 'DebitAccountBalance'
+  | 'Amount'
+  | 'DebitPartyAffectedAccountBalance'
+  | 'TransCompletedTime'
+  | 'DebitPartyCharges'
+  | 'ReceiverPartyPublicName'
+  | 'Currency'
+  | 'InitiatorAccountCurrentBalance'
+  | 'B2CRecipientIsRegisteredCustomer'
+  | 'B2CChargesPaidAccountAvailableFunds'
+  | 'B2CWorkingAccountAvailableFunds'
+  | 'B2CUtilityAccountAvailableFunds'
+  | (string & {})
 
 export interface B2CResultParameter {
-  Key: B2CResultParameterKey;
-  Value: string | number;
+  Key: B2CResultParameterKey
+  Value: string | number
 }
 
 export interface B2CResult {
   Result: {
     /** Usually "0" */
-    ResultType: string | number;
+    ResultType: string | number
     /** 0 = success */
-    ResultCode: number;
+    ResultCode: number
     /** Human-readable result description */
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
+    ResultDesc: string
+    OriginatorConversationID: string
+    ConversationID: string
+    TransactionID: string
     ResultParameters?: {
-      ResultParameter: B2CResultParameter | B2CResultParameter[];
-    };
+      ResultParameter: B2CResultParameter | B2CResultParameter[]
+    }
     ReferenceData?: {
-      ReferenceItem: { Key: string; Value?: string } | Array<{ Key: string; Value?: string }>;
-    };
-  };
+      ReferenceItem:
+        | { Key: string; Value?: string }
+        | Array<{ Key: string; Value?: string }>
+    }
+  }
 }
 
 // ── Error response (synchronous, on bad request) ──────────────────────────────
 
 export interface B2CErrorResponse {
   /** Unique request ID assigned by the API gateway */
-  requestId: string;
+  requestId: string
   /** Daraja error code, e.g. "400.003.01" */
-  errorCode: string;
+  errorCode: string
   /** Human-readable error message */
-  errorMessage: string;
+  errorMessage: string
 }

@@ -20,7 +20,7 @@ export interface AccountBalanceRequest {
    * Your business shortcode from which balance is queried.
    * Daraja field: PartyA
    */
-  partyA: string;
+  partyA: string
 
   /**
    * Type of the PartyA identifier.
@@ -29,36 +29,36 @@ export interface AccountBalanceRequest {
    *   "4" = Organisation ShortCode (most common — Paybill/B2C)
    * Daraja field: IdentifierType
    */
-  identifierType: "1" | "2" | "4";
+  identifierType: '1' | '2' | '4'
 
   /**
    * URL where Safaricom POSTs the balance result.
    * Must be publicly accessible. HTTPS required in production.
    * Daraja field: ResultURL
    */
-  resultUrl: string;
+  resultUrl: string
 
   /**
    * URL Safaricom calls when the request times out.
    * Daraja field: QueueTimeOutURL
    */
-  queueTimeOutUrl: string;
+  queueTimeOutUrl: string
 
   /**
    * Short remarks (up to 100 characters).
    * Daraja field: Remarks
    */
-  remarks?: string;
+  remarks?: string
 }
 
 // ── Synchronous acknowledgement ───────────────────────────────────────────────
 
 export interface AccountBalanceResponse {
-  OriginatorConversationID: string;
-  ConversationID: string;
+  OriginatorConversationID: string
+  ConversationID: string
   /** "0" = request accepted */
-  ResponseCode: string;
-  ResponseDescription: string;
+  ResponseCode: string
+  ResponseDescription: string
 }
 
 // ── Async result (POSTed to ResultURL) ───────────────────────────────────────
@@ -72,34 +72,36 @@ export interface AccountBalanceResponse {
  */
 export interface AccountBalanceData {
   /** Raw pipe-delimited string from Daraja */
-  rawBalance: string;
+  rawBalance: string
   /** Parsed accounts */
-  accounts: ParsedAccount[];
+  accounts: ParsedAccount[]
 }
 
 export interface ParsedAccount {
-  name: string;
-  currency: string;
+  name: string
+  currency: string
   /** Amount as a string (Daraja sends decimals) */
-  amount: string;
+  amount: string
 }
 
 export interface AccountBalanceResult {
   Result: {
-    ResultType: string;
+    ResultType: string
     /** 0 = success */
-    ResultCode: number;
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
+    ResultCode: number
+    ResultDesc: string
+    OriginatorConversationID: string
+    ConversationID: string
+    TransactionID: string
     ResultParameters?: {
-      ResultParameter: Array<{ Key: string; Value: string | number }>;
-    };
+      ResultParameter: Array<{ Key: string; Value: string | number }>
+    }
     ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>;
-    };
-  };
+      ReferenceItem:
+        | { Key: string; Value: string }
+        | Array<{ Key: string; Value: string }>
+    }
+  }
 }
 
 // ── Parser ────────────────────────────────────────────────────────────────────
@@ -111,18 +113,18 @@ export interface AccountBalanceResult {
  * (each account is 3 pipe-separated fields repeated).
  */
 export function parseAccountBalance(raw: string): ParsedAccount[] {
-  const parts = raw.split("|");
-  const accounts: ParsedAccount[] = [];
+  const parts = raw.split('|')
+  const accounts: ParsedAccount[] = []
 
   for (let i = 0; i + 2 < parts.length; i += 3) {
-    const name = parts[i]?.trim();
-    const currency = parts[i + 1]?.trim();
-    const amount = parts[i + 2]?.trim();
+    const name = parts[i]?.trim()
+    const currency = parts[i + 1]?.trim()
+    const amount = parts[i + 2]?.trim()
     if (name && currency && amount !== undefined) {
-      accounts.push({ name, currency, amount });
+      accounts.push({ name, currency, amount })
     }
   }
-  return accounts;
+  return accounts
 }
 
 /**
@@ -132,15 +134,15 @@ export function getAccountBalanceParam(
   result: AccountBalanceResult,
   key: string,
 ): string | number | undefined {
-  const params = result.Result.ResultParameters?.ResultParameter;
-  if (!params) return undefined;
-  const arr = Array.isArray(params) ? params : [params];
-  return arr.find((p) => p.Key === key)?.Value;
+  const params = result.Result.ResultParameters?.ResultParameter
+  if (!params) return undefined
+  const arr = Array.isArray(params) ? params : [params]
+  return arr.find((p) => p.Key === key)?.Value
 }
 
 /**
  * Returns true if the Account Balance result is successful.
  */
 export function isAccountBalanceSuccess(result: AccountBalanceResult): boolean {
-  return result.Result.ResultCode === 0;
+  return result.Result.ResultCode === 0
 }

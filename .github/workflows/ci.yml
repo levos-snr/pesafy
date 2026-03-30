@@ -1,5 +1,4 @@
 # 📁 PATH: .github/workflows/ci.yml
-
 name: CI
 
 on:
@@ -18,7 +17,6 @@ jobs:
   ci:
     name: Lint · Type-check · Test · Build
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [20, 22]
@@ -36,27 +34,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # tsc runs directly via node — no loader needed.
-      # --max-old-space-size=4096 prevents the silent heap-exhaustion
-      # "operation was canceled" failure seen on multi-entry library projects.
       - name: Type check
         run: pnpm typecheck
 
-      # vp commands load vite.config.ts via Node's native ESM import().
-      # On Node 20/22 that fails with ERR_UNKNOWN_FILE_EXTENSION for .ts files
-      # unless a loader is registered. tsx/esm is the minimal, zero-config fix.
-      # See: https://github.com/voidzero-dev/vite-plus/issues/930
-      - name: Check (lint + format + type-aware rules)
-        run: pnpm check
-        env:
-          NODE_OPTIONS: --import tsx/esm
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
 
       - name: Test
         run: pnpm test
-        env:
-          NODE_OPTIONS: --import tsx/esm
 
       - name: Build
         run: pnpm build
-        env:
-          NODE_OPTIONS: --import tsx/esm

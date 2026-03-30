@@ -6,8 +6,8 @@
  * Ref: Bill Manager — Daraja Developer Portal
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
 import type {
   BillManagerBulkInvoiceRequest,
   BillManagerBulkInvoiceResponse,
@@ -17,7 +17,7 @@ import type {
   BillManagerOptInResponse,
   BillManagerSingleInvoiceRequest,
   BillManagerSingleInvoiceResponse,
-} from "./types";
+} from './types'
 
 /** Opt-in a shortcode for Bill Manager */
 export async function billManagerOptIn(
@@ -26,26 +26,39 @@ export async function billManagerOptIn(
   request: BillManagerOptInRequest,
 ): Promise<BillManagerOptInResponse> {
   if (!request.shortcode?.trim())
-    throw createError({ code: "VALIDATION_ERROR", message: "shortcode is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'shortcode is required.',
+    })
   if (!request.email?.trim())
-    throw createError({ code: "VALIDATION_ERROR", message: "email is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'email is required.',
+    })
   if (!request.callbackUrl?.trim())
-    throw createError({ code: "VALIDATION_ERROR", message: "callbackUrl is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'callbackUrl is required.',
+    })
 
   const payload = {
     shortcode: request.shortcode,
     email: request.email,
     officialContact: request.officialContact,
     sendReminders: request.sendReminders,
-    logo: request.logo ?? "",
+    logo: request.logo ?? '',
     callbackUrl: request.callbackUrl,
-  };
+  }
 
   const { data } = await httpRequest<BillManagerOptInResponse>(
     `${baseUrl}/v1/billmanager-invoice/optin`,
-    { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: payload },
-  );
-  return data;
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: payload,
+    },
+  )
+  return data
 }
 
 /** Send a single invoice */
@@ -55,19 +68,22 @@ export async function sendSingleInvoice(
   request: BillManagerSingleInvoiceRequest,
 ): Promise<BillManagerSingleInvoiceResponse> {
   if (!request.externalReference?.trim())
-    throw createError({ code: "VALIDATION_ERROR", message: "externalReference is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'externalReference is required.',
+    })
   if (!request.partyA?.trim())
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "partyA (customer MSISDN) is required.",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'partyA (customer MSISDN) is required.',
+    })
 
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1)
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `amount must be ≥ 1 (got ${request.amount}).`,
-    });
+    })
 
   const payload = {
     externalReference: request.externalReference,
@@ -82,13 +98,17 @@ export async function sendSingleInvoice(
         itemName: i.itemName,
         amount: String(Math.round(i.amount)),
       })) ?? [],
-  };
+  }
 
   const { data } = await httpRequest<BillManagerSingleInvoiceResponse>(
     `${baseUrl}/v1/billmanager-invoice/single-invoicing`,
-    { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: payload },
-  );
-  return data;
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: payload,
+    },
+  )
+  return data
 }
 
 /** Send up to 1 000 invoices in a single request */
@@ -98,18 +118,25 @@ export async function sendBulkInvoices(
   request: BillManagerBulkInvoiceRequest,
 ): Promise<BillManagerBulkInvoiceResponse> {
   if (!request.invoices?.length)
-    throw createError({ code: "VALIDATION_ERROR", message: "invoices array must not be empty." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'invoices array must not be empty.',
+    })
   if (request.invoices.length > 1000)
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "Maximum 1 000 invoices per bulk request.",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'Maximum 1 000 invoices per bulk request.',
+    })
 
   const { data } = await httpRequest<BillManagerBulkInvoiceResponse>(
     `${baseUrl}/v1/billmanager-invoice/bulk-invoicing`,
-    { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: request.invoices },
-  );
-  return data;
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: request.invoices,
+    },
+  )
+  return data
 }
 
 /** Cancel a previously issued invoice */
@@ -119,15 +146,18 @@ export async function cancelInvoice(
   request: BillManagerCancelInvoiceRequest,
 ): Promise<BillManagerCancelInvoiceResponse> {
   if (!request.externalReference?.trim())
-    throw createError({ code: "VALIDATION_ERROR", message: "externalReference is required." });
+    throw createError({
+      code: 'VALIDATION_ERROR',
+      message: 'externalReference is required.',
+    })
 
   const { data } = await httpRequest<BillManagerCancelInvoiceResponse>(
     `${baseUrl}/v1/billmanager-invoice/cancel-single-invoice`,
     {
-      method: "POST",
+      method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body: [{ externalReference: request.externalReference }],
     },
-  );
-  return data;
+  )
+  return data
 }

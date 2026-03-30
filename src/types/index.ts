@@ -1,3 +1,3 @@
 // 📁 PATH: src/types/index.ts
 
-export * from "./branded";
+export * from './branded'

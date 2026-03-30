@@ -1,2 +1,2 @@
-// Stub — React components not included in this package version.
-export {};
+// src/components/react/index.tsx
+export {}

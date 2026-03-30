@@ -1,3 +1,5 @@
+// src/mpesa/c2b/index.ts
+
 /**
  * Customer to Business (C2B) module exports
  *
@@ -9,8 +11,8 @@
  *   - Typed payload shapes for both callback types
  */
 
-export { registerC2BUrls } from "./register-url";
-export { simulateC2B } from "./simulate";
+export { registerC2BUrls } from './register-url'
+export { simulateC2B } from './simulate'
 export type {
   C2BApiVersion,
   C2BCommandID,
@@ -24,7 +26,7 @@ export type {
   C2BValidationPayload,
   C2BValidationResponse,
   C2BValidationResultCode,
-} from "./types";
+} from './types'
 export {
   acceptC2BValidation,
   acknowledgeC2BConfirmation,
@@ -36,4 +38,4 @@ export {
   isC2BPayload,
   isPaybillPayment,
   rejectC2BValidation,
-} from "./webhooks";
+} from './webhooks'

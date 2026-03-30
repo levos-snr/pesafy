@@ -1,3 +1,5 @@
+// src/mpesa/dynamic-qr/generate.ts
+
 /**
  * Dynamic QR Code generation
  *
@@ -12,9 +14,9 @@
  *   400.003.01 — Invalid Access Token (expired or incorrect)
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { DynamicQRRequest, DynamicQRResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type { DynamicQRRequest, DynamicQRResponse } from './types'
 
 /**
  * Generates a Dynamic M-PESA QR Code.
@@ -33,46 +35,48 @@ export async function generateDynamicQR(
 
   if (!request.merchantName?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "merchantName is required",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'merchantName is required',
+    })
   }
 
   if (!request.refNo?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "refNo (transaction reference) is required",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'refNo (transaction reference) is required',
+    })
   }
 
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `Amount must be at least 1 (got ${request.amount} which rounds to ${amount}).`,
-    });
+    })
   }
 
   if (!request.trxCode) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: 'trxCode is required. Supported values: "BG" | "WA" | "PB" | "SM" | "SB"',
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'trxCode is required. Supported values: "BG" | "WA" | "PB" | "SM" | "SB"',
+    })
   }
 
   if (!request.cpi?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "cpi (Credit Party Identifier) is required — e.g. till number, paybill, or MSISDN",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'cpi (Credit Party Identifier) is required — e.g. till number, paybill, or MSISDN',
+    })
   }
 
-  const size = request.size ?? 300;
+  const size = request.size ?? 300
   if (size < 1) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "size must be a positive number of pixels",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'size must be a positive number of pixels',
+    })
   }
 
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
@@ -84,13 +88,16 @@ export async function generateDynamicQR(
     TrxCode: request.trxCode,
     CPI: request.cpi,
     Size: String(size),
-  };
+  }
 
-  const { data } = await httpRequest<DynamicQRResponse>(`${baseUrl}/mpesa/qrcode/v1/generate`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: payload,
-  });
+  const { data } = await httpRequest<DynamicQRResponse>(
+    `${baseUrl}/mpesa/qrcode/v1/generate`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: payload,
+    },
+  )
 
-  return data;
+  return data
 }

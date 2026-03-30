@@ -1,3 +1,5 @@
+// src/mpesa/c2b/simulate.ts
+
 /**
  * C2B Simulate Transaction — SANDBOX ONLY
  *
@@ -36,9 +38,13 @@
  *   CustomerBuyGoodsOnline → Daraja test Till shortcode: 600000
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type {
+  C2BApiVersion,
+  C2BSimulateRequest,
+  C2BSimulateResponse,
+} from './types'
 
 /**
  * Simulates a C2B customer payment. SANDBOX ONLY.
@@ -54,54 +60,54 @@ export async function simulateC2B(
   request: C2BSimulateRequest,
 ): Promise<C2BSimulateResponse> {
   // ── Sandbox guard ───────────────────────────────────────────────────────────
-  if (!baseUrl.includes("sandbox")) {
+  if (!baseUrl.includes('sandbox')) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
-        "C2B simulate is only available in the Sandbox environment. " +
-        "In production, customers initiate payments via M-PESA App, USSD, or SIM Toolkit.",
-    });
+        'C2B simulate is only available in the Sandbox environment. ' +
+        'In production, customers initiate payments via M-PESA App, USSD, or SIM Toolkit.',
+    })
   }
 
   // ── Input validation ────────────────────────────────────────────────────────
 
   if (!request.shortCode) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "shortCode is required.",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'shortCode is required.',
+    })
   }
 
   if (
-    request.commandId !== "CustomerPayBillOnline" &&
-    request.commandId !== "CustomerBuyGoodsOnline"
+    request.commandId !== 'CustomerPayBillOnline' &&
+    request.commandId !== 'CustomerBuyGoodsOnline'
   ) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
         `commandId must be "CustomerPayBillOnline" or "CustomerBuyGoodsOnline". ` +
         `Got: "${String(request.commandId)}"`,
-    });
+    })
   }
 
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `amount must be a whole number ≥ 1 (got ${request.amount}).`,
-    });
+    })
   }
 
   if (!request.msisdn) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "msisdn is required. Sandbox test MSISDN: 254708374149.",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'msisdn is required. Sandbox test MSISDN: 254708374149.',
+    })
   }
 
   // ── Determine transaction type ──────────────────────────────────────────────
-  const isBuyGoods = request.commandId === "CustomerBuyGoodsOnline";
-  const version: C2BApiVersion = request.apiVersion ?? "v2";
+  const isBuyGoods = request.commandId === 'CustomerBuyGoodsOnline'
+  const version: C2BApiVersion = request.apiVersion ?? 'v2'
 
   // ── Build payload ───────────────────────────────────────────────────────────
   //
@@ -127,35 +133,38 @@ export async function simulateC2B(
     Amount: amount,
     Msisdn: Number(request.msisdn),
     // BillRefNumber is NOT here — added conditionally below for Paybill only
-  };
+  }
 
   if (!isBuyGoods) {
     // Paybill: include BillRefNumber (the account/invoice ref for this payment).
     // Empty string is acceptable when no specific account ref is needed.
-    payload["BillRefNumber"] = request.billRefNumber ?? "";
+    payload['BillRefNumber'] = request.billRefNumber ?? ''
   }
 
   // ── Defensive check — should never trigger given the logic above ─────────────
   // Acts as a compile-time-visible safety net for future refactors.
-  if (isBuyGoods && Object.prototype.hasOwnProperty.call(payload, "BillRefNumber")) {
+  if (
+    isBuyGoods &&
+    Object.prototype.hasOwnProperty.call(payload, 'BillRefNumber')
+  ) {
     // This branch must never execute. If it does, remove the key to prevent
     // the "AccountReference is invalid" error from Daraja.
-    delete payload["BillRefNumber"];
+    delete payload['BillRefNumber']
     console.warn(
-      "[pesafy/simulateC2B] BillRefNumber leaked into Buy Goods payload — removed. " +
-        "This is a library bug; please report it.",
-    );
+      '[pesafy/simulateC2B] BillRefNumber leaked into Buy Goods payload — removed. ' +
+        'This is a library bug; please report it.',
+    )
   }
 
   // ── Call Daraja ─────────────────────────────────────────────────────────────
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/${version}/simulate`,
     {
-      method: "POST",
+      method: 'POST',
       headers: { Authorization: `Bearer ${accessToken}` },
       body: payload,
     },
-  );
+  )
 
-  return data;
+  return data
 }

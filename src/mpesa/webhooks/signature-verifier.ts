@@ -1,3 +1,5 @@
+// src/mpesa/webhooks/signature-verifier.ts
+
 /**
  * Webhook verification utilities
  *
@@ -19,23 +21,23 @@
  *   196.201.212.69
  */
 
-import type { StkPushWebhook } from "./types";
+import type { StkPushWebhook } from './types'
 
 /** Official Safaricom API Gateway IP addresses */
 export const SAFARICOM_IPS: readonly string[] = [
-  "196.201.214.200",
-  "196.201.214.206",
-  "196.201.213.114",
-  "196.201.214.207",
-  "196.201.214.208",
-  "196.201.213.44",
-  "196.201.212.127",
-  "196.201.212.138",
-  "196.201.212.129",
-  "196.201.212.136",
-  "196.201.212.74",
-  "196.201.212.69",
-] as const;
+  '196.201.214.200',
+  '196.201.214.206',
+  '196.201.213.114',
+  '196.201.214.207',
+  '196.201.214.208',
+  '196.201.213.44',
+  '196.201.212.127',
+  '196.201.212.138',
+  '196.201.212.129',
+  '196.201.212.136',
+  '196.201.212.74',
+  '196.201.212.69',
+] as const
 
 /**
  * Returns true if requestIP is in the allowed list.
@@ -45,7 +47,7 @@ export function verifyWebhookIP(
   requestIP: string,
   allowedIPs: readonly string[] = SAFARICOM_IPS,
 ): boolean {
-  return allowedIPs.includes(requestIP);
+  return allowedIPs.includes(requestIP)
 }
 
 /**
@@ -54,10 +56,10 @@ export function verifyWebhookIP(
  */
 export function parseStkPushWebhook(body: unknown): StkPushWebhook | null {
   try {
-    const parsed = body as StkPushWebhook;
-    if (parsed?.Body?.stkCallback) return parsed;
-    return null;
+    const parsed = body as StkPushWebhook
+    if (parsed?.Body?.stkCallback) return parsed
+    return null
   } catch {
-    return null;
+    return null
   }
 }

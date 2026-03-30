@@ -1,3 +1,5 @@
+// src/mpesa/b2c/payment.ts
+
 /**
  * B2C Payment (Business to Customer)
  *
@@ -38,9 +40,9 @@
  *   400.002.05   — Invalid Request Payload
  */
 
-import { createError } from "../../utils/errors";
-import { httpRequest } from "../../utils/http";
-import type { B2CRequest, B2CResponse } from "./types";
+import { createError } from '../../utils/errors'
+import { httpRequest } from '../../utils/http'
+import type { B2CRequest, B2CResponse } from './types'
 
 /**
  * Initiates a B2C payment (Business to Customer).
@@ -63,67 +65,70 @@ export async function initiateB2CPayment(
 
   if (!request.commandId) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
         'commandId is required: "BusinessPayToBulk" | "BusinessPayment" | "SalaryPayment" | "PromotionPayment"',
-    });
+    })
   }
 
   const validCommandIds = [
-    "BusinessPayToBulk",
-    "BusinessPayment",
-    "SalaryPayment",
-    "PromotionPayment",
-  ];
+    'BusinessPayToBulk',
+    'BusinessPayment',
+    'SalaryPayment',
+    'PromotionPayment',
+  ]
   if (!validCommandIds.includes(request.commandId)) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: `commandId must be one of: ${validCommandIds.join(", ")}. Got: "${request.commandId}"`,
-    });
+      code: 'VALIDATION_ERROR',
+      message: `commandId must be one of: ${validCommandIds.join(', ')}. Got: "${request.commandId}"`,
+    })
   }
 
-  const amount = Math.round(request.amount);
+  const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message: `amount must be a whole number ≥ 1 (got ${request.amount} which rounds to ${amount}).`,
-    });
+    })
   }
 
   if (!request.partyA?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "partyA is required — your business shortcode from which money is deducted.",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'partyA is required — your business shortcode from which money is deducted.',
+    })
   }
 
   if (!request.partyB?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
+      code: 'VALIDATION_ERROR',
       message:
-        "partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN (other commands).",
-    });
+        'partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN (other commands).',
+    })
   }
 
   if (!request.accountReference?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "accountReference is required — a reference for this transaction.",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'accountReference is required — a reference for this transaction.',
+    })
   }
 
   if (!request.resultUrl?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "resultUrl is required — Safaricom POSTs the B2C result here.",
-    });
+      code: 'VALIDATION_ERROR',
+      message: 'resultUrl is required — Safaricom POSTs the B2C result here.',
+    })
   }
 
   if (!request.queueTimeOutUrl?.trim()) {
     throw createError({
-      code: "VALIDATION_ERROR",
-      message: "queueTimeOutUrl is required — Safaricom calls this on request timeout.",
-    });
+      code: 'VALIDATION_ERROR',
+      message:
+        'queueTimeOutUrl is required — Safaricom calls this on request timeout.',
+    })
   }
 
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
@@ -138,27 +143,30 @@ export async function initiateB2CPayment(
     Initiator: initiatorName,
     SecurityCredential: securityCredential,
     CommandID: request.commandId,
-    SenderIdentifierType: request.senderIdentifierType ?? "4",
-    RecieverIdentifierType: request.receiverIdentifierType ?? "4",
+    SenderIdentifierType: request.senderIdentifierType ?? '4',
+    RecieverIdentifierType: request.receiverIdentifierType ?? '4',
     Amount: String(amount),
     PartyA: String(request.partyA),
     PartyB: String(request.partyB),
     AccountReference: request.accountReference,
-    Remarks: request.remarks ?? "B2C Payment",
+    Remarks: request.remarks ?? 'B2C Payment',
     QueueTimeOutURL: request.queueTimeOutUrl,
     ResultURL: request.resultUrl,
-  };
+  }
 
   // Requester is optional — only include when explicitly provided
   if (request.requester?.trim()) {
-    payload["Requester"] = String(request.requester);
+    payload['Requester'] = String(request.requester)
   }
 
-  const { data } = await httpRequest<B2CResponse>(`${baseUrl}/mpesa/b2b/v1/paymentrequest`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: payload,
-  });
+  const { data } = await httpRequest<B2CResponse>(
+    `${baseUrl}/mpesa/b2b/v1/paymentrequest`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+      body: payload,
+    },
+  )
 
-  return data;
+  return data
 }

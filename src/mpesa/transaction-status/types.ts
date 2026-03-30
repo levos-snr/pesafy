@@ -1,3 +1,5 @@
+// src/mpesa/transaction-status/types.ts
+
 /**
  * Transaction Status Query types
  *
@@ -24,14 +26,14 @@
 
 export interface TransactionStatusRequest {
   /** M-Pesa transaction ID to look up (e.g. "OEI2AK4XXXX") */
-  transactionId: string;
+  transactionId: string
 
   /**
    * The shortcode / MSISDN / Till receiving the query.
    * Usually your business shortcode.
    * Daraja field: PartyA
    */
-  partyA: string;
+  partyA: string
 
   /**
    * Type of the partyA identifier.
@@ -40,63 +42,65 @@ export interface TransactionStatusRequest {
    *   "4" = Organisation ShortCode (Paybill / B2C) ← most common
    * Daraja field: IdentifierType
    */
-  identifierType: "1" | "2" | "4";
+  identifierType: '1' | '2' | '4'
 
   /**
    * URL where Safaricom POSTs the final result.
    * Must be publicly accessible.
    * Daraja field: ResultURL
    */
-  resultUrl: string;
+  resultUrl: string
 
   /**
    * URL Safaricom calls when the request times out in the queue.
    * Must be publicly accessible.
    * Daraja field: QueueTimeOutURL
    */
-  queueTimeOutUrl: string;
+  queueTimeOutUrl: string
 
   /**
    * CommandID — always "TransactionStatusQuery".
    * Defaults to "TransactionStatusQuery" if omitted.
    */
-  commandId?: string;
+  commandId?: string
 
   /** Optional remarks (up to 100 characters) */
-  remarks?: string;
+  remarks?: string
 
   /** Optional occasion / reference */
-  occasion?: string;
+  occasion?: string
 }
 
 export interface TransactionStatusResponse {
-  ResponseCode: string;
-  ResponseDescription: string;
-  ConversationID?: string;
-  OriginatorConversationID?: string;
+  ResponseCode: string
+  ResponseDescription: string
+  ConversationID?: string
+  OriginatorConversationID?: string
 }
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
 
 export interface TransactionStatusResultParameter {
-  Key: string;
-  Value: string | number;
+  Key: string
+  Value: string | number
 }
 
 export interface TransactionStatusResult {
   Result: {
-    ResultType: string;
+    ResultType: string
     /** "0" = success */
-    ResultCode: number;
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
+    ResultCode: number
+    ResultDesc: string
+    OriginatorConversationID: string
+    ConversationID: string
+    TransactionID: string
     ResultParameters?: {
-      ResultParameter: TransactionStatusResultParameter[];
-    };
+      ResultParameter: TransactionStatusResultParameter[]
+    }
     ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>;
-    };
-  };
+      ReferenceItem:
+        | { Key: string; Value: string }
+        | Array<{ Key: string; Value: string }>
+    }
+  }
 }

@@ -1,3 +1,5 @@
+// src/mpesa/tax-remittance/types.ts
+
 /**
  * Tax Remittance types
  *
@@ -18,13 +20,13 @@ export interface TaxRemittanceRequest {
    * Must be a whole number ≥ 1.
    * Daraja field: Amount
    */
-  amount: number;
+  amount: number
 
   /**
    * Your own M-PESA business shortcode from which the money is deducted.
    * Daraja field: PartyA
    */
-  partyA: string;
+  partyA: string
 
   /**
    * The KRA account to which money is credited.
@@ -32,47 +34,47 @@ export interface TaxRemittanceRequest {
    * Defaults to "572572" if omitted.
    * Daraja field: PartyB
    */
-  partyB?: string;
+  partyB?: string
 
   /**
    * The Payment Registration Number (PRN) issued by KRA.
    * This is your tax declaration reference from KRA.
    * Daraja field: AccountReference
    */
-  accountReference: string;
+  accountReference: string
 
   /**
    * URL where Safaricom POSTs the final result after processing.
    * Must be publicly accessible.
    * Daraja field: ResultURL
    */
-  resultUrl: string;
+  resultUrl: string
 
   /**
    * URL Safaricom calls when the request times out in the queue.
    * Must be publicly accessible.
    * Daraja field: QueueTimeOutURL
    */
-  queueTimeOutUrl: string;
+  queueTimeOutUrl: string
 
   /**
    * Optional remarks (up to 100 characters).
    * Daraja field: Remarks
    */
-  remarks?: string;
+  remarks?: string
 }
 
 // ── Synchronous response (request acknowledgement) ────────────────────────────
 
 export interface TaxRemittanceResponse {
   /** Unique request identifier assigned by Daraja upon successful submission */
-  OriginatorConversationID: string;
+  OriginatorConversationID: string
   /** Unique request identifier assigned by M-Pesa upon successful submission */
-  ConversationID: string;
+  ConversationID: string
   /** "0" = successful submission */
-  ResponseCode: string;
+  ResponseCode: string
   /** Human-readable status description */
-  ResponseDescription: string;
+  ResponseDescription: string
 }
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
@@ -86,48 +88,50 @@ export interface TaxRemittanceResponse {
  *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
  */
 export type TaxRemittanceResultParameterKey =
-  | "DebitAccountBalance"
-  | "Amount"
-  | "DebitPartyAffectedAccountBalance"
-  | "TransCompletedTime"
-  | "DebitPartyCharges"
-  | "ReceiverPartyPublicName"
-  | "Currency"
-  | "InitiatorAccountCurrentBalance"
-  | (string & {});
+  | 'DebitAccountBalance'
+  | 'Amount'
+  | 'DebitPartyAffectedAccountBalance'
+  | 'TransCompletedTime'
+  | 'DebitPartyCharges'
+  | 'ReceiverPartyPublicName'
+  | 'Currency'
+  | 'InitiatorAccountCurrentBalance'
+  | (string & {})
 
 export interface TaxRemittanceResultParameter {
-  Key: TaxRemittanceResultParameterKey;
-  Value: string | number;
+  Key: TaxRemittanceResultParameterKey
+  Value: string | number
 }
 
 export interface TaxRemittanceResult {
   Result: {
     /** Usually "0" */
-    ResultType: string;
+    ResultType: string
     /** 0 = success */
-    ResultCode: number;
+    ResultCode: number
     /** Human-readable result description */
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
+    ResultDesc: string
+    OriginatorConversationID: string
+    ConversationID: string
+    TransactionID: string
     ResultParameters?: {
-      ResultParameter: TaxRemittanceResultParameter[];
-    };
+      ResultParameter: TaxRemittanceResultParameter[]
+    }
     ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>;
-    };
-  };
+      ReferenceItem:
+        | { Key: string; Value: string }
+        | Array<{ Key: string; Value: string }>
+    }
+  }
 }
 
 // ── Error response (synchronous, on bad request) ──────────────────────────────
 
 export interface TaxRemittanceErrorResponse {
   /** Unique request ID assigned by the API gateway */
-  requestId: string;
+  requestId: string
   /** Daraja error code, e.g. "404.001.04" */
-  errorCode: string;
+  errorCode: string
   /** Human-readable error message, e.g. "Invalid Access Token" */
-  errorMessage: string;
+  errorMessage: string
 }

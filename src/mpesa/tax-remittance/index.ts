@@ -1,3 +1,5 @@
+// src/mpesa/tax-remittance/index.ts
+
 /**
  * Tax Remittance module exports
  *
@@ -13,11 +15,11 @@
  *   - Valid SecurityCredential encrypted with the correct environment certificate.
  */
 
-export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from "./remit-tax";
+export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from './remit-tax'
 export type {
   TaxRemittanceErrorResponse,
   TaxRemittanceRequest,
   TaxRemittanceResponse,
   TaxRemittanceResult,
   TaxRemittanceResultParameter,
-} from "./types";
+} from './types'

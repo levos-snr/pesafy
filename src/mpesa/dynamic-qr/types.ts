@@ -1,3 +1,5 @@
+// src/mpesa/dynamic-qr/types.ts
+
 /**
  * Dynamic QR Code types
  *
@@ -25,26 +27,26 @@
  *   SM: Send Money (Mobile number)
  *   SB: Sent to Business (Business number CPI in MSISDN format)
  */
-export type QRTransactionCode = "BG" | "WA" | "PB" | "SM" | "SB";
+export type QRTransactionCode = 'BG' | 'WA' | 'PB' | 'SM' | 'SB'
 
 export interface DynamicQRRequest {
   /**
    * Name of the Company / M-Pesa Merchant Name.
    * Daraja field: MerchantName
    */
-  merchantName: string;
+  merchantName: string
 
   /**
    * Transaction reference shown to the customer.
    * Daraja field: RefNo
    */
-  refNo: string;
+  refNo: string
 
   /**
    * Total amount for the sale / transaction.
    * Daraja field: Amount
    */
-  amount: number;
+  amount: number
 
   /**
    * Transaction type code.
@@ -55,7 +57,7 @@ export interface DynamicQRRequest {
    *   "SB" — Sent to Business (MSISDN format CPI)
    * Daraja field: TrxCode
    */
-  trxCode: QRTransactionCode;
+  trxCode: QRTransactionCode
 
   /**
    * Credit Party Identifier.
@@ -63,26 +65,26 @@ export interface DynamicQRRequest {
    * Paybill / Business number, or Merchant Buy Goods number.
    * Daraja field: CPI
    */
-  cpi: string;
+  cpi: string
 
   /**
    * Size of the QR code image in pixels (always square).
    * Defaults to "300" if omitted.
    * Daraja field: Size
    */
-  size?: number;
+  size?: number
 }
 
 export interface DynamicQRResponse {
   /** Transaction type identifier returned by Daraja */
-  ResponseCode: string;
+  ResponseCode: string
   /** Unique request identifier */
-  RequestID: string;
+  RequestID: string
   /** Human-readable status description */
-  ResponseDescription: string;
+  ResponseDescription: string
   /**
    * Base64-encoded PNG of the QR code image.
    * Decode and render as an <img> or write to a .png file.
    */
-  QRCode: string;
+  QRCode: string
 }
