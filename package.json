@@ -112,7 +112,7 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=20.0.0",
+    "node": "24.x",
     "pnpm": ">=9.0.0"
   },
   "publishConfig": {
@@ -200,8 +200,8 @@
       "pesafy"
     ],
     "catalog": {
-      "vitepress": "^1.6.3",
-      "vue": "^3.5.13"
+      "vitepress": "next",
+      "vue": "^3.5.31"
     }
   }
 }

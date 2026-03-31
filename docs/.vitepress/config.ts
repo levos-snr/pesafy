@@ -9,6 +9,17 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
 
+  // Prevent dead-link errors from blocking the build.
+  // Remove entries once all pages exist.
+  ignoreDeadLinks: [
+    '/api',
+    '/api/',
+    '/guide',
+    '/guide/',
+    '/adapters',
+    '/adapters/',
+  ],
+
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#f59e0b' }],
