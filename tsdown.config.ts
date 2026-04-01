@@ -28,9 +28,10 @@ const NODE_BUILTINS = [
 
 export default defineConfig([
   // ── 1. CORE ────────────────────────────────────────────────────────────────
-  // ESM-only. CJS dropped: Node ≥18, Bun, Deno, and edge runtimes all support
-  // native ESM. Shipping CJS alongside ESM doubled the dist size for no gain
-  // in 2026.
+  // ESM-only. "neutral" platform keeps the bundle usable in edge runtimes
+  // (Cloudflare Workers, Vercel Edge, Deno Deploy). outputExtension forces
+  // .js which is correct because package.json has "type":"module" — Node
+  // treats .js as ESM in that context.
   {
     entry: { index: 'src/index.ts' },
     format: ['esm'],
@@ -41,10 +42,7 @@ export default defineConfig([
     hash: false,
     treeshake: true,
     minify: true,
-    target: 'es2020',
-    // "neutral" instead of "node" keeps the bundle usable in edge runtimes
-    // (Cloudflare Workers, Vercel Edge, Deno Deploy) which all support ESM
-    // but not Node-specific globals. Node builtins are kept external via deps.
+    target: 'esnext',
     platform: 'neutral',
     outputExtension: () => ({ js: '.js' }),
     deps: { neverBundle: [...NODE_BUILTINS] },
@@ -52,10 +50,12 @@ export default defineConfig([
   },
 
   // ── 2. CLI ─────────────────────────────────────────────────────────────────
-  // CLI targets Node specifically and is never imported as a module, so:
-  //   • platform: "node" (resolves process, __dirname shims, etc.)
-  //   • minify: false (readable stack traces for developers)
-  //   • dts: false (no type declarations needed for a binary)
+  // tsdown with platform:"node" + format:"esm" always emits .mjs regardless
+  // of outputExtension — this is intentional rolldown behaviour. We accept
+  // .mjs here and align package.json bin + exports["./cli"] to match.
+  // Switching to platform:"neutral" would suppress the .mjs emission but
+  // would also lose Node-specific shims (process, __dirname, etc.) that the
+  // CLI relies on, so we keep "node" and live with .mjs.
   {
     entry: { cli: 'src/cli/index.ts' },
     format: ['esm'],
@@ -67,9 +67,8 @@ export default defineConfig([
     minify: false,
     target: 'node18',
     platform: 'node',
-    // Force .js extension so package.json bin/exports ("./dist/cli.js") matches.
-    // Without this, tsdown emits .mjs when platform is "node" + format is "esm".
-    outputExtension: () => ({ js: '.js' }),
+    // No outputExtension override — let tsdown emit its natural .mjs so
+    // the filename matches what package.json bin/exports declare.
     deps: { neverBundle: [...NODE_BUILTINS] },
   },
 
@@ -91,7 +90,7 @@ export default defineConfig([
     hash: false,
     treeshake: true,
     minify: true,
-    target: 'es2020',
+    target: 'esnext',
     platform: 'neutral',
     outputExtension: () => ({ js: '.js' }),
     deps: {
@@ -100,7 +99,7 @@ export default defineConfig([
   },
 
   // ── 4. REACT ───────────────────────────────────────────────────────────────
-  // Browser/React components. platform: "browser" ensures no Node shims bleed
+  // Browser/React components. platform:"browser" ensures no Node shims bleed
   // in. react and react-dom stay external (peer deps).
   {
     entry: { 'react/index': 'src/components/react/index.tsx' },
@@ -112,7 +111,7 @@ export default defineConfig([
     hash: false,
     treeshake: true,
     minify: true,
-    target: 'es2020',
+    target: 'esnext',
     platform: 'browser',
     outputExtension: () => ({ js: '.js' }),
     deps: { neverBundle: ['react', 'react-dom', ...NODE_BUILTINS] },
