@@ -109,48 +109,6 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
-  "size-limit": [
-    {
-      "name": "Core (ESM)",
-      "path": "dist/index.js",
-      "limit": "25 kB",
-      "esbuildOptions": {
-        "platform": "node"
-      }
-    },
-    {
-      "name": "Express adapter",
-      "path": "dist/adapters/express.js",
-      "limit": "15 kB",
-      "esbuildOptions": {
-        "platform": "node"
-      }
-    },
-    {
-      "name": "Hono adapter",
-      "path": "dist/adapters/hono.js",
-      "limit": "10 kB",
-      "esbuildOptions": {
-        "platform": "node"
-      }
-    },
-    {
-      "name": "Next.js adapter",
-      "path": "dist/adapters/nextjs.js",
-      "limit": "10 kB",
-      "esbuildOptions": {
-        "platform": "node"
-      }
-    },
-    {
-      "name": "Fastify adapter",
-      "path": "dist/adapters/fastify.js",
-      "limit": "10 kB",
-      "esbuildOptions": {
-        "platform": "node"
-      }
-    }
-  ],
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
   },
@@ -175,7 +133,6 @@
     "prettier": "^3.5.3",
     "publint": "^0.3.12",
     "simple-git-hooks": "^2.13.0",
-    "size-limit": "^12.0.1",
     "tsdown": "^0.21.7",
     "typescript": "^5.7.2",
     "vitepress": "next",
