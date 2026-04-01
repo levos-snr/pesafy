@@ -1,6 +1,16 @@
 {
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
   "semi": false,
   "singleQuote": true,
+  "quoteProps": "as-needed",
+  "jsxSingleQuote": false,
+  "trailingComma": "all",
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "always",
+  "endOfLine": "lf",
   "overrides": [
     {
       "files": ["**/*.json5"],
@@ -10,9 +20,17 @@
       }
     },
     {
-      "files": ["**/*.yml"],
+      "files": ["**/*.yml", "**/*.yaml"],
       "options": {
-        "singleQuote": false
+        "singleQuote": false,
+        "tabWidth": 2
+      }
+    },
+    {
+      "files": ["**/*.md"],
+      "options": {
+        "printWidth": 80,
+        "proseWrap": "always"
       }
     }
   ]

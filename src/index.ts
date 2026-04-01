@@ -184,11 +184,7 @@ export {
 } from './mpesa/account-balance'
 
 // ── Reversal ──────────────────────────────────────────────────────────────────
-export type {
-  ReversalRequest,
-  ReversalResponse,
-  ReversalResult,
-} from './mpesa/reversal'
+export type { ReversalRequest, ReversalResponse, ReversalResult } from './mpesa/reversal'
 export {
   getReversalConversationId,
   getReversalTransactionId,
@@ -210,11 +206,7 @@ export type {
 } from './mpesa/bill-manager'
 
 // ── Dynamic QR ────────────────────────────────────────────────────────────────
-export type {
-  DynamicQRRequest,
-  DynamicQRResponse,
-  QRTransactionCode,
-} from './mpesa/dynamic-qr'
+export type { DynamicQRRequest, DynamicQRResponse, QRTransactionCode } from './mpesa/dynamic-qr'
 
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 export type {

@@ -178,9 +178,7 @@ export interface B2CResult {
       ResultParameter: B2CResultParameter | B2CResultParameter[]
     }
     ReferenceData?: {
-      ReferenceItem:
-        | { Key: string; Value?: string }
-        | Array<{ Key: string; Value?: string }>
+      ReferenceItem: { Key: string; Value?: string } | Array<{ Key: string; Value?: string }>
     }
   }
 }

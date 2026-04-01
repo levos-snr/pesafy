@@ -89,9 +89,7 @@ export async function httpRequest<T = unknown>(
   const init: RequestInit = {
     method: options.method,
     headers,
-    ...(options.body !== undefined
-      ? { body: JSON.stringify(options.body) }
-      : {}),
+    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
   }
 
   let lastError: PesafyError | null = null
@@ -154,19 +152,13 @@ export async function httpRequest<T = unknown>(
     })
 
     if (response.ok) {
-      return {
-        data: data as T,
-        status: response.status,
-        headers: responseHeaders,
-      }
+      return { data: data as T, status: response.status, headers: responseHeaders }
     }
 
     // ── Error path ───────────────────────────────────────────────────────────
     const isTransient = RETRYABLE_STATUSES.has(response.status)
     const daraja =
-      typeof data === 'object' && data !== null
-        ? (data as Record<string, unknown>)
-        : {}
+      typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
 
     const message =
       (daraja['errorMessage'] as string | undefined) ??
@@ -175,13 +167,15 @@ export async function httpRequest<T = unknown>(
       rawText ??
       `HTTP ${response.status}`
 
+    // exactOptionalPropertyTypes: only include requestId when it is actually
+    // a string — never pass `undefined` for an optional property at a call-site.
     lastError = new PesafyError({
       code: isTransient ? 'REQUEST_FAILED' : 'API_ERROR',
       message,
       statusCode: response.status,
       response: data,
-      requestId: daraja['requestId'] as string | undefined,
       retryable: isTransient,
+      ...(typeof daraja['requestId'] === 'string' ? { requestId: daraja['requestId'] } : {}),
     })
 
     if (isTransient && attempt < maxRetries) continue

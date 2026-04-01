@@ -6,19 +6,44 @@ export default defineConfig({
     exclude: ['node_modules', 'dist'],
     environment: 'node',
 
+    // "threads" (worker_threads) is faster than "forks" for CPU-bound unit
+    // tests. Switch to "forks" only if a test uses native addons or needs
+    // separate process isolation.
     pool: 'threads',
     isolate: true,
 
-    testTimeout: 8000,
-    hookTimeout: 8000,
+    testTimeout: 8_000,
+    hookTimeout: 8_000,
 
     clearMocks: true,
     restoreMocks: true,
+    mockReset: true,
+
+    // Explicit reporter list: "default" gives the interactive terminal UI;
+    // "github-actions" annotates PRs inline when running in CI.
+    reporters: process.env.CI ? ['github-actions', 'verbose'] : ['default'],
 
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'html'],
       reportsDirectory: './coverage',
+      // Fail CI if coverage drops below these thresholds.
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
+      // Exclude build artefacts, config files, and pure-type modules.
+      exclude: [
+        'node_modules',
+        'dist',
+        'coverage',
+        '**/*.d.ts',
+        '**/*.config.{ts,js}',
+        '**/types/**',
+        'src/components/**',
+      ],
     },
   },
 })

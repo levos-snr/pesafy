@@ -61,8 +61,7 @@ export async function remitTax(
   if (!request.partyA) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'partyA is required — your M-PESA business shortcode from which tax is deducted.',
+      message: 'partyA is required — your M-PESA business shortcode from which tax is deducted.',
     })
   }
 
@@ -77,16 +76,14 @@ export async function remitTax(
   if (!request.resultUrl?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'resultUrl is required — Safaricom POSTs the tax remittance result here.',
+      message: 'resultUrl is required — Safaricom POSTs the tax remittance result here.',
     })
   }
 
   if (!request.queueTimeOutUrl?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'queueTimeOutUrl is required — Safaricom calls this on request timeout.',
+      message: 'queueTimeOutUrl is required — Safaricom calls this on request timeout.',
     })
   }
 
@@ -113,14 +110,11 @@ export async function remitTax(
     ResultURL: request.resultUrl,
   }
 
-  const { data } = await httpRequest<TaxRemittanceResponse>(
-    `${baseUrl}/mpesa/b2b/v1/remittax`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: payload,
-    },
-  )
+  const { data } = await httpRequest<TaxRemittanceResponse>(`${baseUrl}/mpesa/b2b/v1/remittax`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: payload,
+  })
 
   return data
 }

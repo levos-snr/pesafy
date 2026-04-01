@@ -123,12 +123,7 @@ export interface StkQueryResponse {
 
 /** Single metadata item in a successful STK callback */
 export interface StkCallbackMetadataItem {
-  Name:
-    | 'Amount'
-    | 'MpesaReceiptNumber'
-    | 'TransactionDate'
-    | 'PhoneNumber'
-    | 'Balance'
+  Name: 'Amount' | 'MpesaReceiptNumber' | 'TransactionDate' | 'PhoneNumber' | 'Balance'
   /** Present on successful transactions; absent on failure */
   Value?: number | string
 }
@@ -173,9 +168,7 @@ export interface StkPushCallback {
  *   const receipt = getCallbackValue(callback, "MpesaReceiptNumber");
  * }
  */
-export function isStkCallbackSuccess(
-  cb: StkCallbackInner,
-): cb is StkCallbackSuccess {
+export function isStkCallbackSuccess(cb: StkCallbackInner): cb is StkCallbackSuccess {
   return cb.ResultCode === 0
 }
 

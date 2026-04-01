@@ -27,10 +27,7 @@ export interface MpesaHonoConfig extends MpesaConfig {
     amount: number | null
     phone: string | null
   }) => Promise<void> | void
-  onStkFailure?: (data: {
-    resultCode: number
-    resultDesc: string
-  }) => Promise<void> | void
+  onStkFailure?: (data: { resultCode: number; resultDesc: string }) => Promise<void> | void
   onAccountBalanceResult?: (body: unknown) => Promise<void> | void
   onReversalResult?: (body: unknown) => Promise<void> | void
 }
@@ -49,19 +46,13 @@ function sendErr(c: Context, error: unknown): Response {
     const status = (error.statusCode ?? 400) as Parameters<typeof c.json>[1]
     return c.json({ error: error.code, message: error.message }, status)
   }
-  return c.json(
-    { error: 'INTERNAL_ERROR', message: 'An unexpected error occurred' },
-    500,
-  )
+  return c.json({ error: 'INTERNAL_ERROR', message: 'An unexpected error occurred' }, 500)
 }
 
 /**
  * Mounts M-PESA routes onto a Hono app instance.
  */
-export function createMpesaHonoRouter(
-  app: Hono,
-  config: MpesaHonoConfig,
-): void {
+export function createMpesaHonoRouter(app: Hono, config: MpesaHonoConfig): void {
   const mpesa = new Mpesa(config)
 
   // ── STK Push ────────────────────────────────────────────────────────────────
@@ -76,25 +67,20 @@ export function createMpesaHonoRouter(
       }>()
 
       if (!body.amount || body.amount <= 0)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'amount must be > 0',
-        })
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'amount must be > 0' })
       if (!body.phoneNumber)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'phoneNumber is required',
-        })
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'phoneNumber is required' })
 
+      // exactOptionalPropertyTypes: only spread partyB when it is defined.
+      // Passing `undefined` for a `?: string` property is a type error with
+      // exactOptionalPropertyTypes — the key must be absent, not set to undefined.
       const result = await mpesa.stkPush({
         amount: body.amount,
         phoneNumber: body.phoneNumber,
         callbackUrl: config.callbackUrl,
-        accountReference:
-          body.accountReference ??
-          `REF-${Date.now().toString(36).toUpperCase()}`,
+        accountReference: body.accountReference ?? `REF-${Date.now().toString(36).toUpperCase()}`,
         transactionDesc: body.transactionDesc ?? 'Payment',
-        partyB: body.partyB,
+        ...(body.partyB !== undefined ? { partyB: body.partyB } : {}),
       })
 
       return c.json(result)
@@ -106,9 +92,7 @@ export function createMpesaHonoRouter(
   // ── STK Query ───────────────────────────────────────────────────────────────
   app.post('/mpesa/express/stk-query', async (c) => {
     try {
-      const { checkoutRequestId } = await c.req.json<{
-        checkoutRequestId: string
-      }>()
+      const { checkoutRequestId } = await c.req.json<{ checkoutRequestId: string }>()
       if (!checkoutRequestId)
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
@@ -144,10 +128,7 @@ export function createMpesaHonoRouter(
         Promise.resolve(config.onStkSuccess(data)).catch(console.error)
       }
     } else {
-      const data = {
-        resultCode: cb.ResultCode as number,
-        resultDesc: cb.ResultDesc as string,
-      }
+      const data = { resultCode: cb.ResultCode as number, resultDesc: cb.ResultDesc as string }
       console.warn('[pesafy/hono] STK failed:', data)
       if (config.onStkFailure) {
         Promise.resolve(config.onStkFailure(data)).catch(console.error)
@@ -163,14 +144,10 @@ export function createMpesaHonoRouter(
       if (!config.resultUrl || !config.queueTimeOutUrl)
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
-          message:
-            'resultUrl and queueTimeOutUrl are required in config for balance queries',
+          message: 'resultUrl and queueTimeOutUrl are required in config for balance queries',
         })
 
-      const body =
-        await c.req.json<
-          Omit<AccountBalanceRequest, 'resultUrl' | 'queueTimeOutUrl'>
-        >()
+      const body = await c.req.json<Omit<AccountBalanceRequest, 'resultUrl' | 'queueTimeOutUrl'>>()
       return c.json(
         await mpesa.accountBalance({
           ...body,
@@ -188,10 +165,7 @@ export function createMpesaHonoRouter(
     if (config.onAccountBalanceResult) {
       Promise.resolve(config.onAccountBalanceResult(body)).catch(console.error)
     }
-    console.info(
-      '[pesafy/hono] Account balance result:',
-      JSON.stringify(body).slice(0, 300),
-    )
+    console.info('[pesafy/hono] Account balance result:', JSON.stringify(body).slice(0, 300))
     return c.json({ ResultCode: 0, ResultDesc: 'Accepted' })
   })
 
@@ -201,14 +175,10 @@ export function createMpesaHonoRouter(
       if (!config.resultUrl || !config.queueTimeOutUrl)
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
-          message:
-            'resultUrl and queueTimeOutUrl are required in config for reversals',
+          message: 'resultUrl and queueTimeOutUrl are required in config for reversals',
         })
 
-      const body = (await c.req.json()) as Omit<
-        ReversalRequest,
-        'resultUrl' | 'queueTimeOutUrl'
-      >
+      const body = (await c.req.json()) as Omit<ReversalRequest, 'resultUrl' | 'queueTimeOutUrl'>
       const fullRequest: ReversalRequest = {
         ...body,
         resultUrl: config.resultUrl,
@@ -225,10 +195,7 @@ export function createMpesaHonoRouter(
     if (config.onReversalResult) {
       Promise.resolve(config.onReversalResult(body)).catch(console.error)
     }
-    console.info(
-      '[pesafy/hono] Reversal result:',
-      JSON.stringify(body).slice(0, 300),
-    )
+    console.info('[pesafy/hono] Reversal result:', JSON.stringify(body).slice(0, 300))
     return c.json({ ResultCode: 0, ResultDesc: 'Accepted' })
   })
 }

@@ -44,11 +44,7 @@ import {
   type B2BExpressCheckoutRequest,
   type B2BExpressCheckoutResponse,
 } from './b2b-express-checkout'
-import {
-  initiateB2CPayment as _initiateB2CPayment,
-  type B2CRequest,
-  type B2CResponse,
-} from './b2c'
+import { initiateB2CPayment as _initiateB2CPayment, type B2CRequest, type B2CResponse } from './b2c'
 import {
   billManagerOptIn as _billManagerOptIn,
   cancelInvoice as _cancelInvoice,
@@ -76,26 +72,14 @@ import {
   type DynamicQRRequest,
   type DynamicQRResponse,
 } from './dynamic-qr'
-import {
-  requestReversal,
-  type ReversalRequest,
-  type ReversalResponse,
-} from './reversal'
-import {
-  processStkPush,
-  queryStkPush,
-  type StkPushRequest,
-  type StkQueryRequest,
-} from './stk-push'
+import { requestReversal, type ReversalRequest, type ReversalResponse } from './reversal'
+import { processStkPush, queryStkPush, type StkPushRequest, type StkQueryRequest } from './stk-push'
 import {
   remitTax as _remitTax,
   type TaxRemittanceRequest,
   type TaxRemittanceResponse,
 } from './tax-remittance'
-import {
-  queryTransactionStatus,
-  type TransactionStatusRequest,
-} from './transaction-status'
+import { queryTransactionStatus, type TransactionStatusRequest } from './transaction-status'
 import { DARAJA_BASE_URLS, type MpesaConfig } from './types'
 
 export class Mpesa {
@@ -112,11 +96,7 @@ export class Mpesa {
     }
     this.config = config
     this.baseUrl = DARAJA_BASE_URLS[config.environment]
-    this.tokenManager = new TokenManager(
-      config.consumerKey,
-      config.consumerSecret,
-      this.baseUrl,
-    )
+    this.tokenManager = new TokenManager(config.consumerKey, config.consumerSecret, this.baseUrl)
   }
 
   // ── Internal helpers ────────────────────────────────────────────────────────
@@ -145,8 +125,7 @@ export class Mpesa {
     } else {
       throw new PesafyError({
         code: 'INVALID_CREDENTIALS',
-        message:
-          'certificatePath or certificatePem is required to encrypt the initiator password.',
+        message: 'certificatePath or certificatePem is required to encrypt the initiator password.',
       })
     }
     return encryptSecurityCredential(this.config.initiatorPassword, cert)
@@ -188,8 +167,7 @@ export class Mpesa {
     if (!shortCode || !passKey) {
       throw new PesafyError({
         code: 'VALIDATION_ERROR',
-        message:
-          'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Push.',
+        message: 'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Push.',
       })
     }
 
@@ -208,8 +186,7 @@ export class Mpesa {
     if (!shortCode || !passKey) {
       throw new PesafyError({
         code: 'VALIDATION_ERROR',
-        message:
-          'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Query.',
+        message: 'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Query.',
       })
     }
 
@@ -221,10 +198,7 @@ export class Mpesa {
 
   async transactionStatus(request: TransactionStatusRequest) {
     const initiator = this.requireInitiator('Transaction Status')
-    const [token, cred] = await Promise.all([
-      this.getToken(),
-      this.buildSecurityCredential(),
-    ])
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return queryTransactionStatus(this.baseUrl, token, cred, initiator, request)
   }
 
@@ -244,14 +218,9 @@ export class Mpesa {
    *   queueTimeOutUrl: "https://yourdomain.com/mpesa/balance/timeout",
    * });
    */
-  async accountBalance(
-    request: AccountBalanceRequest,
-  ): Promise<AccountBalanceResponse> {
+  async accountBalance(request: AccountBalanceRequest): Promise<AccountBalanceResponse> {
     const initiator = this.requireInitiator('Account Balance')
-    const [token, cred] = await Promise.all([
-      this.getToken(),
-      this.buildSecurityCredential(),
-    ])
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return queryAccountBalance(this.baseUrl, token, cred, initiator, request)
   }
 
@@ -272,31 +241,22 @@ export class Mpesa {
    *   queueTimeOutUrl:        "https://yourdomain.com/mpesa/reversal/timeout",
    * });
    */
-  async reverseTransaction(
-    request: ReversalRequest,
-  ): Promise<ReversalResponse> {
+  async reverseTransaction(request: ReversalRequest): Promise<ReversalResponse> {
     const initiator = this.requireInitiator('Reversal')
-    const [token, cred] = await Promise.all([
-      this.getToken(),
-      this.buildSecurityCredential(),
-    ])
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return requestReversal(this.baseUrl, token, cred, initiator, request)
   }
 
   // ── Dynamic QR ─────────────────────────────────────────────────────────────
 
-  async generateDynamicQR(
-    request: DynamicQRRequest,
-  ): Promise<DynamicQRResponse> {
+  async generateDynamicQR(request: DynamicQRRequest): Promise<DynamicQRResponse> {
     const token = await this.getToken()
     return _generateDynamicQR(this.baseUrl, token, request)
   }
 
   // ── C2B ────────────────────────────────────────────────────────────────────
 
-  async registerC2BUrls(
-    request: C2BRegisterUrlRequest,
-  ): Promise<C2BRegisterUrlResponse> {
+  async registerC2BUrls(request: C2BRegisterUrlRequest): Promise<C2BRegisterUrlResponse> {
     const token = await this.getToken()
     return _registerC2BUrls(this.baseUrl, token, request)
   }
@@ -308,14 +268,9 @@ export class Mpesa {
 
   // ── Tax Remittance ─────────────────────────────────────────────────────────
 
-  async remitTax(
-    request: TaxRemittanceRequest,
-  ): Promise<TaxRemittanceResponse> {
+  async remitTax(request: TaxRemittanceRequest): Promise<TaxRemittanceResponse> {
     const initiator = this.requireInitiator('Tax Remittance')
-    const [token, cred] = await Promise.all([
-      this.getToken(),
-      this.buildSecurityCredential(),
-    ])
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return _remitTax(this.baseUrl, token, cred, initiator, request)
   }
 
@@ -332,10 +287,7 @@ export class Mpesa {
 
   async b2cPayment(request: B2CRequest): Promise<B2CResponse> {
     const initiator = this.requireInitiator('B2C Payment')
-    const [token, cred] = await Promise.all([
-      this.getToken(),
-      this.buildSecurityCredential(),
-    ])
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return _initiateB2CPayment(this.baseUrl, token, cred, initiator, request)
   }
 
@@ -353,9 +305,7 @@ export class Mpesa {
    *   callbackUrl:      "https://yourdomain.com/mpesa/bills/callback",
    * });
    */
-  async billManagerOptIn(
-    request: BillManagerOptInRequest,
-  ): Promise<BillManagerOptInResponse> {
+  async billManagerOptIn(request: BillManagerOptInRequest): Promise<BillManagerOptInResponse> {
     const token = await this.getToken()
     return _billManagerOptIn(this.baseUrl, token, request)
   }

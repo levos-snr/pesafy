@@ -1,9 +1,10 @@
 {
   "name": "pesafy",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": false,
   "description": "Type-safe M-PESA Daraja SDK for Node.js, Bun, Deno, Cloudflare Workers, and all JS frameworks",
   "keywords": [
+    "africa",
     "b2b",
     "b2c",
     "c2b",
@@ -14,13 +15,15 @@
     "gateway",
     "hono",
     "kenya",
+    "kra",
     "mpesa",
     "nextjs",
     "payment",
     "pesafy",
     "safaricom",
     "stk-push",
-    "tax-remittance"
+    "tax-remittance",
+    "typescript"
   ],
   "homepage": "https://pesafy.vercel.app",
   "bugs": {
@@ -36,71 +39,37 @@
     "url": "git+https://github.com/levos-snr/pesafy.git"
   },
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "pesafy": "./dist/cli.js"
+    "pesafy": "./dist/cli.mjs"
   },
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./adapters/express": {
-      "import": {
-        "types": "./dist/adapters/express.d.ts",
-        "default": "./dist/adapters/express.js"
-      },
-      "require": {
-        "types": "./dist/adapters/express.d.cts",
-        "default": "./dist/adapters/express.cjs"
-      }
+      "types": "./dist/adapters/express.d.ts",
+      "default": "./dist/adapters/express.js"
     },
     "./adapters/hono": {
-      "import": {
-        "types": "./dist/adapters/hono.d.ts",
-        "default": "./dist/adapters/hono.js"
-      },
-      "require": {
-        "types": "./dist/adapters/hono.d.cts",
-        "default": "./dist/adapters/hono.cjs"
-      }
+      "types": "./dist/adapters/hono.d.ts",
+      "default": "./dist/adapters/hono.js"
     },
     "./adapters/nextjs": {
-      "import": {
-        "types": "./dist/adapters/nextjs.d.ts",
-        "default": "./dist/adapters/nextjs.js"
-      },
-      "require": {
-        "types": "./dist/adapters/nextjs.d.cts",
-        "default": "./dist/adapters/nextjs.cjs"
-      }
+      "types": "./dist/adapters/nextjs.d.ts",
+      "default": "./dist/adapters/nextjs.js"
     },
     "./adapters/fastify": {
-      "import": {
-        "types": "./dist/adapters/fastify.d.ts",
-        "default": "./dist/adapters/fastify.js"
-      },
-      "require": {
-        "types": "./dist/adapters/fastify.d.cts",
-        "default": "./dist/adapters/fastify.cjs"
-      }
+      "types": "./dist/adapters/fastify.d.ts",
+      "default": "./dist/adapters/fastify.js"
     },
     "./react": {
-      "import": {
-        "types": "./dist/react/index.d.ts",
-        "default": "./dist/react/index.js"
-      }
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
     },
     "./cli": {
-      "import": "./dist/cli.js"
+      "default": "./dist/cli.mjs"
     },
     "./package.json": "./package.json"
   },
@@ -112,7 +81,7 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": "24.x",
+    "node": ">=18.0.0",
     "pnpm": ">=9.0.0"
   },
   "publishConfig": {
@@ -135,11 +104,53 @@
     "changeset": "changeset",
     "version-bump": "changeset version",
     "release": "changeset publish --access public",
-    "cli": "node dist/cli.js",
+    "cli": "node dist/cli.mjs",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
+  "size-limit": [
+    {
+      "name": "Core (ESM)",
+      "path": "dist/index.js",
+      "limit": "25 kB",
+      "esbuildOptions": {
+        "platform": "node"
+      }
+    },
+    {
+      "name": "Express adapter",
+      "path": "dist/adapters/express.js",
+      "limit": "15 kB",
+      "esbuildOptions": {
+        "platform": "node"
+      }
+    },
+    {
+      "name": "Hono adapter",
+      "path": "dist/adapters/hono.js",
+      "limit": "10 kB",
+      "esbuildOptions": {
+        "platform": "node"
+      }
+    },
+    {
+      "name": "Next.js adapter",
+      "path": "dist/adapters/nextjs.js",
+      "limit": "10 kB",
+      "esbuildOptions": {
+        "platform": "node"
+      }
+    },
+    {
+      "name": "Fastify adapter",
+      "path": "dist/adapters/fastify.js",
+      "limit": "10 kB",
+      "esbuildOptions": {
+        "platform": "node"
+      }
+    }
+  ],
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
   },
@@ -154,6 +165,7 @@
   },
   "devDependencies": {
     "@changesets/cli": "2.29.8",
+    "@size-limit/preset-small-lib": "^12.0.1",
     "@types/express": "^5.0.6",
     "@types/react": "^19.2.14",
     "@vitest/coverage-v8": "^4.1.2",
@@ -163,6 +175,7 @@
     "prettier": "^3.5.3",
     "publint": "^0.3.12",
     "simple-git-hooks": "^2.13.0",
+    "size-limit": "^12.0.1",
     "tsdown": "^0.21.7",
     "typescript": "^5.7.2",
     "vitepress": "next",
@@ -197,7 +210,7 @@
   "packageManager": "pnpm@10.33.0",
   "workspaces": {
     "packages": [
-      "pesafy"
+      "."
     ],
     "catalog": {
       "vitepress": "next",

@@ -74,14 +74,11 @@ export async function requestReversal(
     Occasion: request.occasion ?? '',
   }
 
-  const { data } = await httpRequest<ReversalResponse>(
-    `${baseUrl}/mpesa/reversal/v1/request`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: payload,
-    },
-  )
+  const { data } = await httpRequest<ReversalResponse>(`${baseUrl}/mpesa/reversal/v1/request`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: payload,
+  })
 
   return data
 }

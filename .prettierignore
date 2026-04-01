@@ -1,7 +1,29 @@
-# Ignore artifacts:
-build
-coverage
+# Build artefacts
 dist/
-LICENSE.md
-pnpm-lock.yaml
+build/
+out/
+coverage/
 
+# Generated declaration files — tsdown owns these
+**/*.d.ts
+**/*.d.cts
+**/*.d.mts
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Lock files — never format these
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# VitePress output
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# Misc
+LICENSE
+LICENSE.md
+CHANGELOG.md
+*.log
+.cache/

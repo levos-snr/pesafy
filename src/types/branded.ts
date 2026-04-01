@@ -65,9 +65,7 @@ export function toMsisdn(phone: string): MsisdnKE {
   }
 
   if (normalised.length !== 12) {
-    throw new TypeError(
-      `Phone "${phone}" normalised to "${normalised}" — expected 12 digits.`,
-    )
+    throw new TypeError(`Phone "${phone}" normalised to "${normalised}" — expected 12 digits.`)
   }
   return normalised as MsisdnKE
 }

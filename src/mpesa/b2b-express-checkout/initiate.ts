@@ -30,10 +30,7 @@
 
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
-import type {
-  B2BExpressCheckoutRequest,
-  B2BExpressCheckoutResponse,
-} from './types'
+import type { B2BExpressCheckoutRequest, B2BExpressCheckoutResponse } from './types'
 
 /**
  * Generates a random UUID v4-style string for RequestRefID.
@@ -73,16 +70,14 @@ export async function initiateB2BExpressCheckout(
   if (!request.primaryShortCode?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        "primaryShortCode is required — the merchant's till number (debit party).",
+      message: "primaryShortCode is required — the merchant's till number (debit party).",
     })
   }
 
   if (!request.receiverShortCode?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        "receiverShortCode is required — the vendor's Paybill account (credit party).",
+      message: "receiverShortCode is required — the vendor's Paybill account (credit party).",
     })
   }
 
@@ -105,16 +100,14 @@ export async function initiateB2BExpressCheckout(
   if (!request.callbackUrl?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'callbackUrl is required — Safaricom POSTs the transaction result here.',
+      message: 'callbackUrl is required — Safaricom POSTs the transaction result here.',
     })
   }
 
   if (!request.partnerName?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        "partnerName is required — your friendly name shown in the merchant's USSD prompt.",
+      message: "partnerName is required — your friendly name shown in the merchant's USSD prompt.",
     })
   }
 

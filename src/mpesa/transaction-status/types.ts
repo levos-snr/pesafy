@@ -98,9 +98,7 @@ export interface TransactionStatusResult {
       ResultParameter: TransactionStatusResultParameter[]
     }
     ReferenceData?: {
-      ReferenceItem:
-        | { Key: string; Value: string }
-        | Array<{ Key: string; Value: string }>
+      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>
     }
   }
 }

@@ -24,22 +24,10 @@
 
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
-import type {
-  C2BApiVersion,
-  C2BRegisterUrlRequest,
-  C2BRegisterUrlResponse,
-} from './types'
+import type { C2BApiVersion, C2BRegisterUrlRequest, C2BRegisterUrlResponse } from './types'
 
 /** Forbidden URL keywords per Daraja docs */
-const FORBIDDEN_URL_KEYWORDS = [
-  'mpesa',
-  'safaricom',
-  '.exe',
-  '.exec',
-  'cmd',
-  'sql',
-  'query',
-]
+const FORBIDDEN_URL_KEYWORDS = ['mpesa', 'safaricom', '.exe', '.exec', 'cmd', 'sql', 'query']
 
 /**
  * Validates a callback URL against Daraja's URL requirements.
@@ -97,10 +85,7 @@ export async function registerC2BUrls(
     })
   }
 
-  if (
-    request.responseType !== 'Completed' &&
-    request.responseType !== 'Cancelled'
-  ) {
+  if (request.responseType !== 'Completed' && request.responseType !== 'Cancelled') {
     throw createError({
       code: 'VALIDATION_ERROR',
       message:

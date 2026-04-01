@@ -8,8 +8,7 @@ export function formatSafaricomPhone(phone: string): string {
   let n: string
 
   if (digits.startsWith('254') && digits.length === 12) n = digits
-  else if (digits.startsWith('0') && digits.length === 10)
-    n = `254${digits.slice(1)}`
+  else if (digits.startsWith('0') && digits.length === 10) n = `254${digits.slice(1)}`
   else if (digits.length === 9) n = `254${digits}`
   else {
     throw new PesafyError({

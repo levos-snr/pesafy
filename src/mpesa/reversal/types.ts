@@ -91,9 +91,7 @@ export interface ReversalResult {
       ResultParameter: Array<{ Key: string; Value: string | number }>
     }
     ReferenceData?: {
-      ReferenceItem:
-        | { Key: string; Value: string }
-        | Array<{ Key: string; Value: string }>
+      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>
     }
   }
 }
@@ -104,9 +102,7 @@ export function isReversalSuccess(result: ReversalResult): boolean {
   return result.Result.ResultCode === 0
 }
 
-export function getReversalTransactionId(
-  result: ReversalResult,
-): string | null {
+export function getReversalTransactionId(result: ReversalResult): string | null {
   return result.Result.TransactionID ?? null
 }
 

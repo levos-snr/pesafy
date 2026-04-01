@@ -40,8 +40,7 @@ export async function queryAccountBalance(
   if (!['1', '2', '4'].includes(request.identifierType)) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'identifierType must be "1" (MSISDN), "2" (Till), or "4" (ShortCode).',
+      message: 'identifierType must be "1" (MSISDN), "2" (Till), or "4" (ShortCode).',
     })
   }
   if (!request.resultUrl?.trim()) {

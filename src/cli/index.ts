@@ -50,9 +50,7 @@ const dim = (s: string) => `${C.dim}${s}${C.reset}`
 // ── Package version ───────────────────────────────────────────────────────────
 function getPkgVersion(): string {
   try {
-    const pkgPath = resolve(
-      new URL('../../package.json', import.meta.url).pathname,
-    )
+    const pkgPath = resolve(new URL('../../package.json', import.meta.url).pathname)
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as {
       version: string
     }
@@ -133,9 +131,7 @@ async function getToken(
   consumerSecret: string,
   baseUrl: string,
 ): Promise<string> {
-  const creds = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
-    'base64',
-  )
+  const creds = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')
   const data = await fetchJson<{ access_token: string }>(
     `${baseUrl}/oauth/v1/generate?grant_type=client_credentials`,
     'GET',
@@ -204,18 +200,13 @@ async function cmdInit() {
   const env = await prompt('Environment (sandbox/production)', 'sandbox')
   const consumerKey = await prompt('Consumer Key')
   const consumerSecret = await prompt('Consumer Secret')
-  const shortcode = await prompt(
-    'Lipa Na M-PESA Shortcode (for STK Push)',
-    '174379',
-  )
+  const shortcode = await prompt('Lipa Na M-PESA Shortcode (for STK Push)', '174379')
   const passkey = await prompt('Lipa Na M-PESA Passkey')
   const callbackUrl = await prompt(
     'STK Push Callback URL',
     'https://yourdomain.com/api/mpesa/callback',
   )
-  const initiatorName = await prompt(
-    'Initiator Name (leave blank if not using B2C/Reversal)',
-  )
+  const initiatorName = await prompt('Initiator Name (leave blank if not using B2C/Reversal)')
   const initiatorPassword = await prompt(
     'Initiator Password (leave blank if not using B2C/Reversal)',
   )
@@ -256,10 +247,7 @@ MPESA_QUEUE_TIMEOUT_URL=${queueTimeoutUrl}
 
   const envPath = resolve(process.cwd(), '.env')
   if (existsSync(envPath)) {
-    const overwrite = await prompt(
-      '.env already exists — overwrite? (y/N)',
-      'N',
-    )
+    const overwrite = await prompt('.env already exists — overwrite? (y/N)', 'N')
     if (overwrite.toLowerCase() !== 'y') {
       console.log(y('⚠  Skipped — existing .env preserved.'))
       return
@@ -267,9 +255,7 @@ MPESA_QUEUE_TIMEOUT_URL=${queueTimeoutUrl}
   }
 
   writeFileSync(envPath, content)
-  console.log(
-    `\n${g('✔  .env created')} — run ${c('npx pesafy doctor')} to validate.\n`,
-  )
+  console.log(`\n${g('✔  .env created')} — run ${c('npx pesafy doctor')} to validate.\n`)
 }
 
 async function cmdDoctor() {
@@ -293,21 +279,14 @@ async function cmdDoctor() {
 
   const envVal = env['MPESA_ENVIRONMENT'] ?? ''
   if (envVal && envVal !== 'sandbox' && envVal !== 'production') {
-    console.log(
-      r(
-        `  ✖  MPESA_ENVIRONMENT must be "sandbox" or "production", got "${envVal}"`,
-      ),
-    )
+    console.log(r(`  ✖  MPESA_ENVIRONMENT must be "sandbox" or "production", got "${envVal}"`))
     ok = false
   }
 
   console.log(`\n${b('STK Push:')}`)
   check('MPESA_SHORTCODE')
   check('MPESA_PASSKEY')
-  check(
-    'MPESA_CALLBACK_URL',
-    'Must be a publicly accessible HTTPS URL in production',
-  )
+  check('MPESA_CALLBACK_URL', 'Must be a publicly accessible HTTPS URL in production')
 
   const cb = env['MPESA_CALLBACK_URL'] ?? ''
   if (cb && envVal === 'production' && !cb.startsWith('https://')) {
@@ -316,26 +295,16 @@ async function cmdDoctor() {
   }
   if (
     cb &&
-    ['mpesa', 'safaricom', '.exe', 'cmd', 'sql'].some((kw) =>
-      cb.toLowerCase().includes(kw),
-    )
+    ['mpesa', 'safaricom', '.exe', 'cmd', 'sql'].some((kw) => cb.toLowerCase().includes(kw))
   ) {
-    console.log(
-      r(
-        '  ✖  MPESA_CALLBACK_URL contains a forbidden keyword (mpesa/safaricom/etc.)',
-      ),
-    )
+    console.log(r('  ✖  MPESA_CALLBACK_URL contains a forbidden keyword (mpesa/safaricom/etc.)'))
     ok = false
   }
 
   console.log(`\n${b('Initiator (B2C / Reversal / Balance — optional):')}`)
-  const hasInitiator = !!(
-    env['MPESA_INITIATOR_NAME'] && env['MPESA_INITIATOR_PASSWORD']
-  )
+  const hasInitiator = !!(env['MPESA_INITIATOR_NAME'] && env['MPESA_INITIATOR_PASSWORD'])
   if (!hasInitiator) {
-    console.log(
-      dim('  — Not configured (only required for B2C, Reversal, Balance, Tax)'),
-    )
+    console.log(dim('  — Not configured (only required for B2C, Reversal, Balance, Tax)'))
   } else {
     check('MPESA_INITIATOR_NAME')
     check('MPESA_INITIATOR_PASSWORD')
@@ -345,17 +314,11 @@ async function cmdDoctor() {
       if (existsSync(fullPath)) {
         console.log(`${g('✔')}  MPESA_CERTIFICATE_PATH ${dim(`(${fullPath})`)}`)
       } else {
-        console.log(
-          `${r('✖')}  MPESA_CERTIFICATE_PATH — file not found: ${fullPath}`,
-        )
+        console.log(`${r('✖')}  MPESA_CERTIFICATE_PATH — file not found: ${fullPath}`)
         ok = false
       }
     } else {
-      console.log(
-        y(
-          '⚠  MPESA_CERTIFICATE_PATH not set — download from Safaricom Daraja portal',
-        ),
-      )
+      console.log(y('⚠  MPESA_CERTIFICATE_PATH not set — download from Safaricom Daraja portal'))
     }
   }
 
@@ -379,12 +342,7 @@ async function cmdDoctor() {
 
 async function cmdToken() {
   const env = loadEnv()
-  requireEnv(
-    env,
-    'MPESA_CONSUMER_KEY',
-    'MPESA_CONSUMER_SECRET',
-    'MPESA_ENVIRONMENT',
-  )
+  requireEnv(env, 'MPESA_CONSUMER_KEY', 'MPESA_CONSUMER_SECRET', 'MPESA_ENVIRONMENT')
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
       ? 'https://api.safaricom.co.ke'
@@ -392,11 +350,7 @@ async function cmdToken() {
 
   process.stdout.write(dim('Fetching token…'))
   try {
-    const token = await getToken(
-      env['MPESA_CONSUMER_KEY']!,
-      env['MPESA_CONSUMER_SECRET']!,
-      baseUrl,
-    )
+    const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
     process.stdout.write('\r')
     console.log(`\n${b('Access Token:')}\n\n${c(token)}\n`)
     console.log(dim('Token is valid for 3600 seconds (1 hour).'))
@@ -414,8 +368,7 @@ async function cmdEncrypt(args: string[]) {
   let certPath = args[1] ?? env['MPESA_CERTIFICATE_PATH']
 
   if (!password) password = await prompt('Initiator password to encrypt')
-  if (!certPath)
-    certPath = await prompt('Certificate path', './SandboxCertificate.cer')
+  if (!certPath) certPath = await prompt('Certificate path', './SandboxCertificate.cer')
 
   if (!existsSync(resolve(process.cwd(), certPath))) {
     console.error(r(`✖  Certificate not found: ${certPath}`))
@@ -423,17 +376,12 @@ async function cmdEncrypt(args: string[]) {
   }
 
   try {
-    const { encryptSecurityCredential } =
-      await import('../core/encryption/index.js')
+    const { encryptSecurityCredential } = await import('../core/encryption/index.js')
     const { readFile } = await import('node:fs/promises')
     const pem = await readFile(resolve(process.cwd(), certPath), 'utf-8')
     const credential = encryptSecurityCredential(password, pem)
     console.log(`\n${b('SecurityCredential (base64):')}\n\n${c(credential)}\n`)
-    console.log(
-      dim(
-        'Copy this value into MPESA_SECURITY_CREDENTIAL in your .env or config.',
-      ),
-    )
+    console.log(dim('Copy this value into MPESA_SECURITY_CREDENTIAL in your .env or config.'))
   } catch (e) {
     console.error(r(`✖  Encryption failed: ${(e as Error).message}`))
     process.exit(1)
@@ -480,10 +428,7 @@ async function cmdStkPush(args: string[]) {
   if (!amount) amount = Number(await prompt('Amount (KES)'))
   if (!phone) phone = await prompt('Phone number (e.g. 0712345678)')
   if (!accountRef)
-    accountRef = await prompt(
-      'Account reference',
-      `CLI-${Date.now().toString(36).toUpperCase()}`,
-    )
+    accountRef = await prompt('Account reference', `CLI-${Date.now().toString(36).toUpperCase()}`)
 
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
@@ -491,25 +436,16 @@ async function cmdStkPush(args: string[]) {
       : 'https://sandbox.safaricom.co.ke'
 
   console.log(dim('\nFetching token…'))
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
   // Format phone
   const { formatSafaricomPhone } = await import('../utils/phone/index.js')
   const msisdn = formatSafaricomPhone(phone)
 
   // Build password
-  const { getStkPushPassword, getTimestamp } =
-    await import('../mpesa/stk-push/utils.js')
+  const { getStkPushPassword, getTimestamp } = await import('../mpesa/stk-push/utils.js')
   const timestamp = getTimestamp()
-  const password = getStkPushPassword(
-    env['MPESA_SHORTCODE']!,
-    env['MPESA_PASSKEY']!,
-    timestamp,
-  )
+  const password = getStkPushPassword(env['MPESA_SHORTCODE']!, env['MPESA_PASSKEY']!, timestamp)
 
   console.log(dim('Sending STK Push…\n'))
 
@@ -535,18 +471,10 @@ async function cmdStkPush(args: string[]) {
 
     if (result['ResponseCode'] === '0') {
       console.log(`${g('✔  STK Push sent successfully!')}\n`)
-      console.log(
-        `  ${b('CheckoutRequestID:')} ${c(result['CheckoutRequestID'] ?? '')}`,
-      )
-      console.log(
-        `  ${b('MerchantRequestID:')} ${result['MerchantRequestID'] ?? ''}`,
-      )
-      console.log(
-        `  ${b('CustomerMessage:')}   ${result['CustomerMessage'] ?? ''}`,
-      )
-      console.log(
-        `\n${dim('  Use `npx pesafy stk-query <CheckoutRequestID>` to check status.')}\n`,
-      )
+      console.log(`  ${b('CheckoutRequestID:')} ${c(result['CheckoutRequestID'] ?? '')}`)
+      console.log(`  ${b('MerchantRequestID:')} ${result['MerchantRequestID'] ?? ''}`)
+      console.log(`  ${b('CustomerMessage:')}   ${result['CustomerMessage'] ?? ''}`)
+      console.log(`\n${dim('  Use `npx pesafy stk-query <CheckoutRequestID>` to check status.')}\n`)
     } else {
       console.log(`${r('✖  STK Push failed:')}\n`)
       console.log(JSON.stringify(result, null, 2))
@@ -576,19 +504,10 @@ async function cmdStkQuery(args: string[]) {
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox.safaricom.co.ke'
 
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
-  const { getStkPushPassword, getTimestamp } =
-    await import('../mpesa/stk-push/utils.js')
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
+  const { getStkPushPassword, getTimestamp } = await import('../mpesa/stk-push/utils.js')
   const timestamp = getTimestamp()
-  const password = getStkPushPassword(
-    env['MPESA_SHORTCODE']!,
-    env['MPESA_PASSKEY']!,
-    timestamp,
-  )
+  const password = getStkPushPassword(env['MPESA_SHORTCODE']!, env['MPESA_PASSKEY']!, timestamp)
 
   try {
     const result = (await fetchJson(
@@ -609,9 +528,7 @@ async function cmdStkQuery(args: string[]) {
     if (code === 0) {
       console.log(`\n${g('✔  Payment confirmed!')} — ${desc}\n`)
     } else {
-      console.log(
-        `\n${y('⚠  Payment not complete')} (code ${code}) — ${desc}\n`,
-      )
+      console.log(`\n${y('⚠  Payment not complete')} (code ${code}) — ${desc}\n`)
     }
     console.log(JSON.stringify(result, null, 2))
   } catch (e) {
@@ -631,11 +548,9 @@ async function cmdBalance(args: string[]) {
     'MPESA_INITIATOR_PASSWORD',
   )
 
-  const partyA =
-    args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode to query'))
+  const partyA = args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode to query'))
   const resultUrl = env['MPESA_RESULT_URL'] ?? (await prompt('Result URL'))
-  const queueTimeoutUrl =
-    env['MPESA_QUEUE_TIMEOUT_URL'] ?? (await prompt('Queue Timeout URL'))
+  const queueTimeoutUrl = env['MPESA_QUEUE_TIMEOUT_URL'] ?? (await prompt('Queue Timeout URL'))
 
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
@@ -643,14 +558,9 @@ async function cmdBalance(args: string[]) {
       : 'https://sandbox.safaricom.co.ke'
 
   console.log(dim('\nFetching token…'))
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
-  const { encryptSecurityCredential } =
-    await import('../core/encryption/index.js')
+  const { encryptSecurityCredential } = await import('../core/encryption/index.js')
   const { readFile } = await import('node:fs/promises')
   const certPath = env['MPESA_CERTIFICATE_PATH'] ?? './SandboxCertificate.cer'
   const pem = await readFile(resolve(process.cwd(), certPath), 'utf-8')
@@ -691,32 +601,20 @@ async function cmdBalance(args: string[]) {
 
 async function cmdRegisterC2BUrls(args: string[]) {
   const env = loadEnv()
-  requireEnv(
-    env,
-    'MPESA_CONSUMER_KEY',
-    'MPESA_CONSUMER_SECRET',
-    'MPESA_ENVIRONMENT',
-  )
+  requireEnv(env, 'MPESA_CONSUMER_KEY', 'MPESA_CONSUMER_SECRET', 'MPESA_ENVIRONMENT')
 
-  const shortCode =
-    args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode'))
+  const shortCode = args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode'))
   const confirmationUrl = args[1] ?? (await prompt('Confirmation URL'))
   const validationUrl = args[2] ?? (await prompt('Validation URL'))
   const responseType = (args[3] ??
-    (await prompt('Response type (Completed/Cancelled)', 'Completed'))) as
-    | 'Completed'
-    | 'Cancelled'
+    (await prompt('Response type (Completed/Cancelled)', 'Completed'))) as 'Completed' | 'Cancelled'
 
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox.safaricom.co.ke'
 
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
   try {
     const result = (await fetchJson(
@@ -751,8 +649,7 @@ async function cmdSimulateC2B(args: string[]) {
     process.exit(1)
   }
 
-  const shortCode =
-    args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode'))
+  const shortCode = args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode'))
   const amount = Number(args[1] ?? (await prompt('Amount (KES)')))
   const msisdn = args[2] ?? (await prompt('MSISDN', '254708374149'))
   const commandId = (args[3] ??
@@ -766,11 +663,7 @@ async function cmdSimulateC2B(args: string[]) {
       : (args[4] ?? (await prompt('BillRefNumber (account ref)', '')))
 
   const baseUrl = 'https://sandbox.safaricom.co.ke'
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
   const payload: Record<string, unknown> = {
     ShortCode: Number(shortCode),
@@ -778,8 +671,7 @@ async function cmdSimulateC2B(args: string[]) {
     Amount: Math.round(amount),
     Msisdn: Number(msisdn),
   }
-  if (commandId !== 'CustomerBuyGoodsOnline')
-    payload['BillRefNumber'] = billRef ?? ''
+  if (commandId !== 'CustomerBuyGoodsOnline') payload['BillRefNumber'] = billRef ?? ''
 
   try {
     const result = (await fetchJson(
@@ -813,27 +705,19 @@ async function cmdReversal(args: string[]) {
 
   const transactionId = args[0] ?? (await prompt('Transaction ID to reverse'))
   const receiverParty =
-    args[1] ??
-    env['MPESA_SHORTCODE'] ??
-    (await prompt('Receiver Party (shortcode)'))
+    args[1] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Receiver Party (shortcode)'))
   const amount = Number(args[2] ?? (await prompt('Amount to reverse')))
   const resultUrl = env['MPESA_RESULT_URL'] ?? (await prompt('Result URL'))
-  const queueTimeoutUrl =
-    env['MPESA_QUEUE_TIMEOUT_URL'] ?? (await prompt('Queue Timeout URL'))
+  const queueTimeoutUrl = env['MPESA_QUEUE_TIMEOUT_URL'] ?? (await prompt('Queue Timeout URL'))
 
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
       ? 'https://api.safaricom.co.ke'
       : 'https://sandbox.safaricom.co.ke'
 
-  const token = await getToken(
-    env['MPESA_CONSUMER_KEY']!,
-    env['MPESA_CONSUMER_SECRET']!,
-    baseUrl,
-  )
+  const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
-  const { encryptSecurityCredential } =
-    await import('../core/encryption/index.js')
+  const { encryptSecurityCredential } = await import('../core/encryption/index.js')
   const { readFile } = await import('node:fs/promises')
   const certPath = env['MPESA_CERTIFICATE_PATH'] ?? './SandboxCertificate.cer'
   const pem = await readFile(resolve(process.cwd(), certPath), 'utf-8')
@@ -860,9 +744,7 @@ async function cmdReversal(args: string[]) {
     )) as Record<string, string>
 
     if (result['ResponseCode'] === '0') {
-      console.log(
-        `\n${g('✔  Reversal submitted!')} Result will be POSTed to:\n  ${c(resultUrl)}\n`,
-      )
+      console.log(`\n${g('✔  Reversal submitted!')} Result will be POSTed to:\n  ${c(resultUrl)}\n`)
     } else {
       console.log(r('✖  Reversal failed:'))
       console.log(JSON.stringify(result, null, 2))

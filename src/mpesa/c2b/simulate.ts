@@ -40,11 +40,7 @@
 
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
-import type {
-  C2BApiVersion,
-  C2BSimulateRequest,
-  C2BSimulateResponse,
-} from './types'
+import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from './types'
 
 /**
  * Simulates a C2B customer payment. SANDBOX ONLY.
@@ -143,10 +139,7 @@ export async function simulateC2B(
 
   // ── Defensive check — should never trigger given the logic above ─────────────
   // Acts as a compile-time-visible safety net for future refactors.
-  if (
-    isBuyGoods &&
-    Object.prototype.hasOwnProperty.call(payload, 'BillRefNumber')
-  ) {
+  if (isBuyGoods && Object.prototype.hasOwnProperty.call(payload, 'BillRefNumber')) {
     // This branch must never execute. If it does, remove the key to prevent
     // the "AccountReference is invalid" error from Daraja.
     delete payload['BillRefNumber']

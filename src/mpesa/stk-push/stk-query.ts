@@ -40,14 +40,11 @@ export async function queryStkPush(
     CheckoutRequestID: request.checkoutRequestId,
   }
 
-  const { data } = await httpRequest<StkQueryResponse>(
-    `${baseUrl}/mpesa/stkpushquery/v1/query`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body,
-    },
-  )
+  const { data } = await httpRequest<StkQueryResponse>(`${baseUrl}/mpesa/stkpushquery/v1/query`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body,
+  })
 
   return data
 }

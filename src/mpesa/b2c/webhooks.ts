@@ -30,10 +30,7 @@ export function isB2CResult(body: unknown): body is B2CResult {
   const b = body as Record<string, unknown>
   if (!b['Result'] || typeof b['Result'] !== 'object') return false
   const result = b['Result'] as Record<string, unknown>
-  return (
-    typeof result['ResultCode'] === 'number' &&
-    typeof result['ConversationID'] === 'string'
-  )
+  return typeof result['ResultCode'] === 'number' && typeof result['ConversationID'] === 'string'
 }
 
 /**
@@ -97,9 +94,7 @@ export function getB2CAmount(result: B2CResult): number | null {
  * Format: YYYYMMDDHHmmss
  * Returns null if not present.
  */
-export function getB2CTransactionCompletedTime(
-  result: B2CResult,
-): string | null {
+export function getB2CTransactionCompletedTime(result: B2CResult): string | null {
   const value = getB2CResultParam(result, 'TransCompletedTime')
   if (value === undefined) return null
   return String(value)
@@ -149,9 +144,7 @@ export function getB2CDebitAccountBalance(result: B2CResult): string | null {
  * Extracts the initiator account current balance from B2C result parameters.
  * Returns null if not present.
  */
-export function getB2CInitiatorAccountBalance(
-  result: B2CResult,
-): string | null {
+export function getB2CInitiatorAccountBalance(result: B2CResult): string | null {
   const value = getB2CResultParam(result, 'InitiatorAccountCurrentBalance')
   if (value === undefined) return null
   return String(value)
@@ -164,10 +157,7 @@ export function getB2CInitiatorAccountBalance(
  * Handles both single-object and array forms of ResultParameter.
  * Returns undefined if key is absent.
  */
-export function getB2CResultParam(
-  result: B2CResult,
-  key: string,
-): string | number | undefined {
+export function getB2CResultParam(result: B2CResult, key: string): string | number | undefined {
   const params = result.Result.ResultParameters?.ResultParameter
   if (!params) return undefined
 

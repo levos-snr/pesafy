@@ -28,9 +28,7 @@ function jsonResponse(data: unknown, status = 200): Response {
 
 function getIP(req: NextRequest): string {
   return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    req.headers.get('x-real-ip') ??
-    ''
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? req.headers.get('x-real-ip') ?? ''
   )
 }
 
@@ -51,39 +49,28 @@ export function createStkPushHandler(config: MpesaNextConfig) {
       }
 
       if (!body.amount || body.amount <= 0)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'amount must be > 0',
-        })
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'amount must be > 0' })
       if (!body.phoneNumber)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'phoneNumber is required',
-        })
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'phoneNumber is required' })
 
+      // exactOptionalPropertyTypes: only spread partyB when it is defined.
+      // Passing `undefined` for a `?: string` property is a type error —
+      // the key must be absent, not present-but-undefined.
       const result = await mpesa.stkPush({
         amount: body.amount,
         phoneNumber: body.phoneNumber,
         callbackUrl: config.callbackUrl,
-        accountReference:
-          body.accountReference ??
-          `REF-${Date.now().toString(36).toUpperCase()}`,
+        accountReference: body.accountReference ?? `REF-${Date.now().toString(36).toUpperCase()}`,
         transactionDesc: body.transactionDesc ?? 'Payment',
-        partyB: body.partyB,
+        ...(body.partyB !== undefined ? { partyB: body.partyB } : {}),
       })
 
       return jsonResponse(result)
     } catch (e) {
       if (e instanceof PesafyError) {
-        return jsonResponse(
-          { error: e.code, message: e.message },
-          e.statusCode ?? 400,
-        )
+        return jsonResponse({ error: e.code, message: e.message }, e.statusCode ?? 400)
       }
-      return jsonResponse(
-        { error: 'INTERNAL_ERROR', message: 'Unexpected error' },
-        500,
-      )
+      return jsonResponse({ error: 'INTERNAL_ERROR', message: 'Unexpected error' }, 500)
     }
   }
 }
@@ -96,9 +83,7 @@ export function createStkQueryHandler(config: MpesaNextConfig) {
   const mpesa = new Mpesa(config)
   return async function POST(req: NextRequest): Promise<Response> {
     try {
-      const { checkoutRequestId } = (await req.json()) as {
-        checkoutRequestId: string
-      }
+      const { checkoutRequestId } = (await req.json()) as { checkoutRequestId: string }
       if (!checkoutRequestId)
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
@@ -107,10 +92,7 @@ export function createStkQueryHandler(config: MpesaNextConfig) {
       return jsonResponse(await mpesa.stkQuery({ checkoutRequestId }))
     } catch (e) {
       if (e instanceof PesafyError)
-        return jsonResponse(
-          { error: e.code, message: e.message },
-          e.statusCode ?? 400,
-        )
+        return jsonResponse({ error: e.code, message: e.message }, e.statusCode ?? 400)
       return jsonResponse({ error: 'INTERNAL_ERROR' }, 500)
     }
   }
@@ -127,10 +109,7 @@ export function createStkCallbackHandler(
       amount: number | null
       phone: string | null
     }) => Promise<void> | void
-    onFailure?: (data: {
-      resultCode: number
-      resultDesc: string
-    }) => Promise<void> | void
+    onFailure?: (data: { resultCode: number; resultDesc: string }) => Promise<void> | void
   },
 ) {
   return async function POST(req: NextRequest): Promise<Response> {
@@ -151,8 +130,7 @@ export function createStkCallbackHandler(
     const metadata = (cb.CallbackMetadata as Record<string, unknown>)?.Item as
       | Array<Record<string, unknown>>
       | undefined
-    const findItem = (name: string) =>
-      metadata?.find((i) => i.Name === name)?.Value
+    const findItem = (name: string) => metadata?.find((i) => i.Name === name)?.Value
 
     if (isSuccess && config.onSuccess) {
       Promise.resolve(
@@ -196,10 +174,7 @@ export function createMpesaNextHandlers(config: MpesaNextConfig) {
 
       if (pathname.endsWith('balance')) {
         try {
-          const body = (await req.json()) as {
-            partyA: string
-            identifierType: '1' | '2' | '4'
-          }
+          const body = (await req.json()) as { partyA: string; identifierType: '1' | '2' | '4' }
           return jsonResponse(
             await mpesa.accountBalance({
               ...body,
@@ -214,10 +189,7 @@ export function createMpesaNextHandlers(config: MpesaNextConfig) {
         }
       }
 
-      return jsonResponse(
-        { error: 'NOT_FOUND', message: `No handler for ${pathname}` },
-        404,
-      )
+      return jsonResponse({ error: 'NOT_FOUND', message: `No handler for ${pathname}` }, 404)
     },
   }
 }

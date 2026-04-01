@@ -15,10 +15,7 @@
  * Ref: B2B Express CheckOut — Daraja Developer Portal (USSD Callback Response)
  */
 
-import type {
-  B2BExpressCheckoutCallback,
-  B2BExpressCheckoutCallbackSuccess,
-} from './types'
+import type { B2BExpressCheckoutCallback, B2BExpressCheckoutCallbackSuccess } from './types'
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
@@ -36,9 +33,7 @@ export function isB2BCheckoutSuccess(
  * Returns true if the merchant cancelled the USSD prompt.
  * resultCode "4001" = "User cancelled transaction"
  */
-export function isB2BCheckoutCancelled(
-  callback: B2BExpressCheckoutCallback,
-): boolean {
+export function isB2BCheckoutCancelled(callback: B2BExpressCheckoutCallback): boolean {
   return callback.resultCode === '4001'
 }
 
@@ -46,9 +41,7 @@ export function isB2BCheckoutCancelled(
  * Runtime type guard — checks if a body looks like a B2B Express Checkout callback.
  * Use this in your callback route before casting the body.
  */
-export function isB2BCheckoutCallback(
-  body: unknown,
-): body is B2BExpressCheckoutCallback {
+export function isB2BCheckoutCallback(body: unknown): body is B2BExpressCheckoutCallback {
   if (!body || typeof body !== 'object') return false
   const b = body as Record<string, unknown>
   return (
@@ -64,9 +57,7 @@ export function isB2BCheckoutCallback(
  * Extracts the M-PESA receipt number from a successful callback.
  * Returns null if the callback is not a success.
  */
-export function getB2BTransactionId(
-  callback: B2BExpressCheckoutCallback,
-): string | null {
+export function getB2BTransactionId(callback: B2BExpressCheckoutCallback): string | null {
   if (!isB2BCheckoutSuccess(callback)) return null
   return callback.transactionId ?? null
 }
@@ -90,9 +81,7 @@ export function getB2BRequestId(callback: B2BExpressCheckoutCallback): string {
  * Extracts the conversationID from a successful callback.
  * Returns null if the callback is not a success.
  */
-export function getB2BConversationId(
-  callback: B2BExpressCheckoutCallback,
-): string | null {
+export function getB2BConversationId(callback: B2BExpressCheckoutCallback): string | null {
   if (!isB2BCheckoutSuccess(callback)) return null
   return callback.conversationID ?? null
 }

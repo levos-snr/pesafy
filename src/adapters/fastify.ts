@@ -26,9 +26,7 @@ function getIP(req: FastifyRequest): string {
 
 function sendError(reply: FastifyReply, error: unknown): void {
   if (error instanceof PesafyError) {
-    void reply
-      .status(error.statusCode ?? 400)
-      .send({ error: error.code, message: error.message })
+    void reply.status(error.statusCode ?? 400).send({ error: error.code, message: error.message })
   } else {
     void reply.status(500).send({ error: 'INTERNAL_ERROR' })
   }
@@ -52,39 +50,40 @@ export async function registerMpesaRoutes(
       transactionDesc?: string
       partyB?: string
     }
-  }>('/mpesa/stk-push', async (req, reply) => {
-    try {
-      const body = req.body
-      if (!body.amount || body.amount <= 0)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'amount must be > 0',
-        })
-      if (!body.phoneNumber)
-        throw new PesafyError({
-          code: 'VALIDATION_ERROR',
-          message: 'phoneNumber is required',
-        })
+  }>(
+    '/mpesa/stk-push',
+    // Annotate Promise<unknown> so that the void return from the catch branch
+    // (after sendError) is a valid subtype. Without this, TypeScript sees
+    // try→StkPushResponse and catch→void as incompatible code paths (TS7030).
+    async (req, reply): Promise<unknown> => {
+      try {
+        const body = req.body
+        if (!body.amount || body.amount <= 0)
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'amount must be > 0' })
+        if (!body.phoneNumber)
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'phoneNumber is required' })
 
-      return await mpesa.stkPush({
-        amount: body.amount,
-        phoneNumber: body.phoneNumber,
-        callbackUrl: config.callbackUrl,
-        accountReference:
-          body.accountReference ??
-          `REF-${Date.now().toString(36).toUpperCase()}`,
-        transactionDesc: body.transactionDesc ?? 'Payment',
-        partyB: body.partyB,
-      })
-    } catch (e) {
-      sendError(reply, e)
-    }
-  })
+        // exactOptionalPropertyTypes: spread optional fields only when defined
+        // so we never pass `undefined` to a `?: string` property at a call-site.
+        return await mpesa.stkPush({
+          amount: body.amount,
+          phoneNumber: body.phoneNumber,
+          callbackUrl: config.callbackUrl,
+          accountReference: body.accountReference ?? `REF-${Date.now().toString(36).toUpperCase()}`,
+          transactionDesc: body.transactionDesc ?? 'Payment',
+          ...(body.partyB !== undefined ? { partyB: body.partyB } : {}),
+        })
+      } catch (e) {
+        sendError(reply, e)
+        return // explicit return — sendError already called reply.send()
+      }
+    },
+  )
 
   // ── STK Query ─────────────────────────────────────────────────────────────
   app.post<{ Body: { checkoutRequestId: string } }>(
     '/mpesa/stk-query',
-    async (req, reply) => {
+    async (req, reply): Promise<unknown> => {
       try {
         const { checkoutRequestId } = req.body
         if (!checkoutRequestId)
@@ -95,6 +94,7 @@ export async function registerMpesaRoutes(
         return await mpesa.stkQuery({ checkoutRequestId })
       } catch (e) {
         sendError(reply, e)
+        return
       }
     },
   )
@@ -109,17 +109,13 @@ export async function registerMpesaRoutes(
     }
 
     const body = req.body as Record<string, unknown>
-    const cb = (body?.Body as Record<string, unknown>)?.stkCallback as Record<
-      string,
-      unknown
-    >
+    const cb = (body?.Body as Record<string, unknown>)?.stkCallback as Record<string, unknown>
     if (cb && (cb.ResultCode as number) === 0) {
       const items =
         ((cb.CallbackMetadata as Record<string, unknown>)?.Item as Array<
           Record<string, unknown>
         >) ?? []
-      const find = (name: string) =>
-        items.find((i) => i.Name === name)?.Value ?? null
+      const find = (name: string) => items.find((i) => i.Name === name)?.Value ?? null
 
       if (config.onStkSuccess) {
         Promise.resolve(
@@ -138,7 +134,7 @@ export async function registerMpesaRoutes(
   // ── Account Balance ───────────────────────────────────────────────────────
   app.post<{
     Body: { partyA: string; identifierType: '1' | '2' | '4'; remarks?: string }
-  }>('/mpesa/balance', async (req, reply) => {
+  }>('/mpesa/balance', async (req, reply): Promise<unknown> => {
     try {
       if (!config.resultUrl || !config.queueTimeOutUrl)
         throw new PesafyError({
@@ -152,6 +148,7 @@ export async function registerMpesaRoutes(
       })
     } catch (e) {
       sendError(reply, e)
+      return
     }
   })
 
@@ -169,7 +166,7 @@ export async function registerMpesaRoutes(
       amount: number
       remarks?: string
     }
-  }>('/mpesa/reversal', async (req, reply) => {
+  }>('/mpesa/reversal', async (req, reply): Promise<unknown> => {
     try {
       if (!config.resultUrl || !config.queueTimeOutUrl)
         throw new PesafyError({
@@ -183,6 +180,7 @@ export async function registerMpesaRoutes(
       })
     } catch (e) {
       sendError(reply, e)
+      return
     }
   })
 

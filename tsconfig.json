@@ -1,41 +1,53 @@
 {
   "compilerOptions": {
-    // ── Target & module ─────────────────────────────────────────────────────
+    // ── Target & module ──────────────────────────────────────────────────────
+    // "Preserve" + "bundler" is the correct pairing for tsdown/esbuild in 2026.
+    // tsc never emits — tsdown owns compilation; tsc is type-check only.
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
 
-    // ── JSX ─────────────────────────────────────────────────────────────────
+    // ── JSX ──────────────────────────────────────────────────────────────────
     "jsx": "react-jsx",
 
-    // ── Strict mode (kept fully on — no regressions) ──────────────────────
+    // ── Strict mode ──────────────────────────────────────────────────────────
     "strict": true,
+    "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
+    "noImplicitReturns": true,
 
-    // ── Interop ─────────────────────────────────────────────────────────────
-    "verbatimModuleSyntax": true, // import type enforced at boundaries
-    "skipLibCheck": true, // faster CI; avoids third-party .d.ts issues
+    // ── Interop ──────────────────────────────────────────────────────────────
+    // verbatimModuleSyntax: enforces "import type" at every type-only boundary,
+    // which prevents tsdown from emitting unnecessary runtime imports.
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
 
     // ── Emit control ─────────────────────────────────────────────────────────
-    // tsdown handles compilation and DTS generation via oxc-transform.
-    // tsc is used only for type-checking (noEmit: true).
+    // noEmit: tsc is used only for type-checking; tsdown handles compilation.
+    // allowImportingTsExtensions: required when noEmit is true and source
+    // files import each other with explicit .ts extensions.
     "noEmit": true,
-    "allowImportingTsExtensions": true, // required when noEmit: true
+    "allowImportingTsExtensions": true,
 
     // ── Performance ──────────────────────────────────────────────────────────
+    // incremental + tsBuildInfoFile significantly speeds up repeated
+    // "tsc --noEmit" calls in CI and watch mode.
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
 
-    // ── Intentionally relaxed (not errors, just noise in an SDK) ─────────────
+    // ── Relaxed (SDK author choice, not mistakes) ─────────────────────────────
+    // noUnusedLocals/Parameters would fire on intentional re-exports and
+    // overloads that exist purely for the public type surface.
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
 
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "coverage", "tsdown.config.ts"]
+  "exclude": ["node_modules", "dist", "coverage", "tsdown.config.ts", "docs"]
 }

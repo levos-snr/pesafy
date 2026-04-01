@@ -58,16 +58,14 @@ export async function generateDynamicQR(
   if (!request.trxCode) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'trxCode is required. Supported values: "BG" | "WA" | "PB" | "SM" | "SB"',
+      message: 'trxCode is required. Supported values: "BG" | "WA" | "PB" | "SM" | "SB"',
     })
   }
 
   if (!request.cpi?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'cpi (Credit Party Identifier) is required — e.g. till number, paybill, or MSISDN',
+      message: 'cpi (Credit Party Identifier) is required — e.g. till number, paybill, or MSISDN',
     })
   }
 
@@ -90,14 +88,11 @@ export async function generateDynamicQR(
     Size: String(size),
   }
 
-  const { data } = await httpRequest<DynamicQRResponse>(
-    `${baseUrl}/mpesa/qrcode/v1/generate`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${accessToken}` },
-      body: payload,
-    },
-  )
+  const { data } = await httpRequest<DynamicQRResponse>(`${baseUrl}/mpesa/qrcode/v1/generate`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: payload,
+  })
 
   return data
 }

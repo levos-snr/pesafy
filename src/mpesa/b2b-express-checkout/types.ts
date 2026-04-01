@@ -139,13 +139,7 @@ export type B2BExpressCheckoutCallback =
  * `(string & {})` keeps these literals in IntelliSense while still
  * accepting unknown codes, without triggering no-redundant-type-constituents.
  */
-export type B2BExpressCheckoutErrorCode =
-  | '4001'
-  | '4102'
-  | '4104'
-  | '4201'
-  | '4203'
-  | (string & {})
+export type B2BExpressCheckoutErrorCode = '4001' | '4102' | '4104' | '4201' | '4203' | (string & {})
 
 // ── Synchronous error response ────────────────────────────────────────────────
 

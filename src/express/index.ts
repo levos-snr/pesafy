@@ -76,107 +76,35 @@ import { PesafyError } from '../utils/errors'
 // ── Config ────────────────────────────────────────────────────────────────────
 
 export interface MpesaExpressConfig extends MpesaConfig {
-  /**
-   * Full public URL Safaricom will POST STK Push callbacks to.
-   * @example "https://yourdomain.com/api/mpesa/express/callback"
-   */
   callbackUrl: string
-
-  /**
-   * Full public URL Safaricom will POST Transaction Status results to.
-   * Required when using transactionStatus routes.
-   */
   resultUrl?: string
-
-  /**
-   * Full public URL Safaricom calls on queue timeout.
-   */
   queueTimeOutUrl?: string
-
-  // ── C2B ────────────────────────────────────────────────────────────────────
-
   c2bShortCode?: string
   c2bConfirmationUrl?: string
   c2bValidationUrl?: string
   c2bResponseType?: 'Completed' | 'Cancelled'
   c2bApiVersion?: 'v1' | 'v2'
-
   onC2BValidation?: (
     payload: C2BValidationPayload,
   ) => Promise<C2BValidationResponse> | C2BValidationResponse
-
   onC2BConfirmation?: (payload: C2BConfirmationPayload) => Promise<void> | void
-
-  // ── Tax Remittance ─────────────────────────────────────────────────────────
-
   taxPartyA?: string
   taxResultUrl?: string
   taxQueueTimeOutUrl?: string
-
   onTaxRemittanceResult?: (result: TaxRemittanceResult) => Promise<void> | void
-
-  // ── B2B Express Checkout ───────────────────────────────────────────────────
-
   b2bReceiverShortCode?: string
   b2bCallbackUrl?: string
-
-  onB2BCheckoutCallback?: (
-    callback: B2BExpressCheckoutCallback,
-  ) => Promise<void> | void
-
-  // ── B2C Payment / Account Top Up ───────────────────────────────────────────
-
-  /**
-   * Your business shortcode from which B2C money is deducted.
-   * Used as the default partyA for B2C payments when not in the request body.
-   */
+  onB2BCheckoutCallback?: (callback: B2BExpressCheckoutCallback) => Promise<void> | void
   b2cPartyA?: string
-
-  /**
-   * Full public URL Safaricom POSTs B2C results to.
-   * Required when using B2C routes.
-   * @example "https://yourdomain.com/api/mpesa/b2c/result"
-   */
   b2cResultUrl?: string
-
-  /**
-   * Full public URL Safaricom calls on B2C queue timeout.
-   * Required when using B2C routes.
-   * @example "https://yourdomain.com/api/mpesa/b2c/timeout"
-   */
   b2cQueueTimeOutUrl?: string
-
-  /**
-   * Optional hook called when a B2C result arrives at the result URL.
-   * Called for BOTH successful and failed results.
-   *
-   * Fire-and-forget — 200 response to Safaricom is sent immediately.
-   * Errors in this hook are logged but do NOT affect the response.
-   *
-   * @example
-   * onB2CResult: async (result) => {
-   *   if (isB2CSuccess(result)) {
-   *     await db.disbursements.markCompleted({
-   *       transactionId: getB2CTransactionId(result),
-   *       amount:        getB2CAmount(result),
-   *     });
-   *   }
-   * }
-   */
   onB2CResult?: (result: B2CResult) => Promise<void> | void
-
-  /**
-   * Skip Safaricom IP verification on callback routes.
-   * ONLY set true in local development — never in production.
-   */
   skipIPCheck?: boolean
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────
 
-export function createMpesaExpressClient(config: MpesaExpressConfig): {
-  mpesa: Mpesa
-} {
+export function createMpesaExpressClient(config: MpesaExpressConfig): { mpesa: Mpesa } {
   if (!config.consumerKey || !config.consumerSecret) {
     throw new PesafyError({
       code: 'INVALID_CREDENTIALS',
@@ -186,8 +114,7 @@ export function createMpesaExpressClient(config: MpesaExpressConfig): {
   if (!config.lipaNaMpesaShortCode || !config.lipaNaMpesaPassKey) {
     throw new PesafyError({
       code: 'VALIDATION_ERROR',
-      message:
-        'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Push',
+      message: 'lipaNaMpesaShortCode and lipaNaMpesaPassKey are required for STK Push',
     })
   }
   if (!config.callbackUrl) {
@@ -248,36 +175,14 @@ interface B2BCheckoutBody {
 }
 
 interface B2CPaymentBody {
-  /**
-   * Transaction type:
-   *   "BusinessPayToBulk"  — load funds to a B2C shortcode
-   *   "BusinessPayment"    — direct payment to a customer
-   *   "SalaryPayment"      — salary disbursement
-   *   "PromotionPayment"   — promotion/bonus payment
-   */
-  commandId:
-    | 'BusinessPayToBulk'
-    | 'BusinessPayment'
-    | 'SalaryPayment'
-    | 'PromotionPayment'
-  /** Amount to disburse (whole number ≥ 1) */
+  commandId: 'BusinessPayToBulk' | 'BusinessPayment' | 'SalaryPayment' | 'PromotionPayment'
   amount: number
-  /** Override the default b2cPartyA from config */
   partyA?: string
-  /**
-   * Recipient shortcode (BusinessPayToBulk) or customer MSISDN (other commands).
-   * Format for MSISDN: 254XXXXXXXXX
-   */
   partyB: string
-  /** Transaction reference / batch reference */
   accountReference: string
-  /** Optional consumer mobile number on whose behalf you are paying */
   requester?: string
-  /** Optional remarks (up to 100 characters) */
   remarks?: string
-  /** Override the default b2cResultUrl from config */
   resultUrl?: string
-  /** Override the default b2cQueueTimeOutUrl from config */
   queueTimeOutUrl?: string
 }
 
@@ -286,11 +191,7 @@ interface B2CPaymentBody {
 function sendError(res: Response, error: unknown): void {
   if (error instanceof PesafyError) {
     const status = error.statusCode ?? 400
-    res.status(status).json({
-      error: error.code,
-      message: error.message,
-      statusCode: status,
-    })
+    res.status(status).json({ error: error.code, message: error.message, statusCode: status })
     return
   }
   res.status(500).json({
@@ -303,61 +204,13 @@ function sendError(res: Response, error: unknown): void {
 
 function extractRequestIP(req: Request): string {
   return (
-    (req.headers['x-forwarded-for'] as string | undefined)
-      ?.split(',')[0]
-      ?.trim() ??
-    req.ip ??
-    ''
+    (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? req.ip ?? ''
   )
 }
 
 // ── Router factory ────────────────────────────────────────────────────────────
 
-/**
- * Attaches all M-Pesa routes to the given Express Router.
- *
- * @example
- * import express from "express";
- * import {
- *   createMpesaExpressRouter,
- *   acceptC2BValidation,
- *   rejectC2BValidation,
- *   isB2CSuccess,
- *   getB2CTransactionId,
- *   getB2CAmount,
- * } from "pesafy/express";
- *
- * const router = express.Router();
- * createMpesaExpressRouter(router, {
- *   consumerKey:          process.env.MPESA_CONSUMER_KEY!,
- *   consumerSecret:       process.env.MPESA_CONSUMER_SECRET!,
- *   environment:          "sandbox",
- *   lipaNaMpesaShortCode: "174379",
- *   lipaNaMpesaPassKey:   "bfb279...",
- *   callbackUrl:          "https://yourdomain.com/mpesa/express/callback",
- *   initiatorName:        "testapi",
- *   initiatorPassword:    "Safaricom123!",
- *   certificatePath:      "./SandboxCertificate.cer",
- *   // B2C
- *   b2cPartyA:            "600979",
- *   b2cResultUrl:         "https://yourdomain.com/mpesa/b2c/result",
- *   b2cQueueTimeOutUrl:   "https://yourdomain.com/mpesa/b2c/timeout",
- *   onB2CResult: async (result) => {
- *     if (isB2CSuccess(result)) {
- *       await db.disbursements.markCompleted({
- *         transactionId: getB2CTransactionId(result),
- *         amount:        getB2CAmount(result),
- *       });
- *     }
- *   },
- *   skipIPCheck: true, // local dev only
- * });
- * app.use("/api", router);
- */
-export function createMpesaExpressRouter(
-  router: Router,
-  config: MpesaExpressConfig,
-): Router {
+export function createMpesaExpressRouter(router: Router, config: MpesaExpressConfig): Router {
   const { mpesa } = createMpesaExpressClient(config)
 
   // ── POST /mpesa/express/stk-push ──────────────────────────────────────────
@@ -374,22 +227,21 @@ export function createMpesaExpressRouter(
           })
         }
         if (!body.phoneNumber) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'phoneNumber is required',
-          })
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'phoneNumber is required' })
         }
 
+        // exactOptionalPropertyTypes: use conditional spreads for every optional
+        // field. Passing `T | undefined` directly to a `?: T` parameter is
+        // a compile error — the property must be absent, not set to undefined.
         const result = await mpesa.stkPush({
           amount: body.amount,
           phoneNumber: body.phoneNumber,
           callbackUrl: config.callbackUrl,
           accountReference:
-            body.accountReference ??
-            `PESAFY-${Date.now().toString(36).toUpperCase()}`,
+            body.accountReference ?? `PESAFY-${Date.now().toString(36).toUpperCase()}`,
           transactionDesc: body.transactionDesc ?? 'Payment',
-          transactionType: body.transactionType,
-          partyB: body.partyB,
+          ...(body.transactionType !== undefined ? { transactionType: body.transactionType } : {}),
+          ...(body.partyB !== undefined ? { partyB: body.partyB } : {}),
         })
 
         res.status(200).json(result)
@@ -406,18 +258,13 @@ export function createMpesaExpressRouter(
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const body = req.body as StkQueryBody
-
         if (!body?.checkoutRequestId) {
           throw new PesafyError({
             code: 'VALIDATION_ERROR',
             message: 'checkoutRequestId is required',
           })
         }
-
-        const result = await mpesa.stkQuery({
-          checkoutRequestId: body.checkoutRequestId,
-        })
-
+        const result = await mpesa.stkQuery({ checkoutRequestId: body.checkoutRequestId })
         res.status(200).json(result)
       } catch (error) {
         if (res.headersSent) return next(error)
@@ -427,12 +274,16 @@ export function createMpesaExpressRouter(
   )
 
   // ── POST /mpesa/express/callback ──────────────────────────────────────────
+  // noImplicitReturns: every branch of this non-async handler must explicitly
+  // return. We add `return` before every `res.json()` call.
   router.post('/mpesa/express/callback', (req: Request, res: Response) => {
     const requestIP = extractRequestIP(req)
 
+    // exactOptionalPropertyTypes: config.skipIPCheck is `?: boolean`.
+    // Spreading with a conditional omits the key entirely when undefined.
     const result = handleWebhook(req.body, {
       requestIP,
-      skipIPCheck: config.skipIPCheck,
+      ...(config.skipIPCheck !== undefined ? { skipIPCheck: config.skipIPCheck } : {}),
     })
 
     if (!result.success) {
@@ -456,7 +307,7 @@ export function createMpesaExpressRouter(
       })
     }
 
-    res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
+    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
   })
 
   // ── POST /mpesa/transaction-status/query ──────────────────────────────────
@@ -475,16 +326,10 @@ export function createMpesaExpressRouter(
         const body = req.body as TransactionStatusBody
 
         if (!body?.transactionId) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'transactionId is required',
-          })
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'transactionId is required' })
         }
         if (!body.partyA) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'partyA is required',
-          })
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'partyA is required' })
         }
         if (!body.identifierType) {
           throw new PesafyError({
@@ -499,8 +344,8 @@ export function createMpesaExpressRouter(
           identifierType: body.identifierType,
           resultUrl: config.resultUrl,
           queueTimeOutUrl: config.queueTimeOutUrl,
-          remarks: body.remarks,
-          occasion: body.occasion,
+          ...(body.remarks !== undefined ? { remarks: body.remarks } : {}),
+          ...(body.occasion !== undefined ? { occasion: body.occasion } : {}),
         })
 
         res.status(200).json(result)
@@ -512,32 +357,28 @@ export function createMpesaExpressRouter(
   )
 
   // ── POST /mpesa/transaction-status/result ─────────────────────────────────
-  router.post(
-    '/mpesa/transaction-status/result',
-    (req: Request, res: Response) => {
-      const body =
-        req.body as import('../mpesa/transaction-status').TransactionStatusResult
-      const result = body?.Result
+  router.post('/mpesa/transaction-status/result', (req: Request, res: Response) => {
+    const body = req.body as import('../mpesa/transaction-status').TransactionStatusResult
+    const result = body?.Result
 
-      if (result) {
-        if (result.ResultCode === 0) {
-          console.info('[pesafy] Transaction Status result (success):', {
-            transactionId: result.TransactionID,
-            conversationId: result.ConversationID,
-            resultDesc: result.ResultDesc,
-          })
-        } else {
-          console.warn('[pesafy] Transaction Status result (failed):', {
-            resultCode: result.ResultCode,
-            resultDesc: result.ResultDesc,
-            transactionId: result.TransactionID,
-          })
-        }
+    if (result) {
+      if (result.ResultCode === 0) {
+        console.info('[pesafy] Transaction Status result (success):', {
+          transactionId: result.TransactionID,
+          conversationId: result.ConversationID,
+          resultDesc: result.ResultDesc,
+        })
+      } else {
+        console.warn('[pesafy] Transaction Status result (failed):', {
+          resultCode: result.ResultCode,
+          resultDesc: result.ResultDesc,
+          transactionId: result.TransactionID,
+        })
       }
+    }
 
-      res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
-    },
-  )
+    res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  })
 
   // ── POST /mpesa/c2b/register-url ──────────────────────────────────────────
   router.post(
@@ -553,18 +394,13 @@ export function createMpesaExpressRouter(
         }
 
         const shortCode = body.shortCode ?? config.c2bShortCode
-        const confirmationUrl =
-          body.confirmationUrl ?? config.c2bConfirmationUrl
+        const confirmationUrl = body.confirmationUrl ?? config.c2bConfirmationUrl
         const validationUrl = body.validationUrl ?? config.c2bValidationUrl
-        const responseType =
-          body.responseType ?? config.c2bResponseType ?? 'Completed'
+        const responseType = body.responseType ?? config.c2bResponseType ?? 'Completed'
         const apiVersion = body.apiVersion ?? config.c2bApiVersion ?? 'v2'
 
         if (!shortCode) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'shortCode is required',
-          })
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'shortCode is required' })
         }
         if (!confirmationUrl) {
           throw new PesafyError({
@@ -573,10 +409,7 @@ export function createMpesaExpressRouter(
           })
         }
         if (!validationUrl) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'validationUrl is required',
-          })
+          throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'validationUrl is required' })
         }
 
         const result = await mpesa.registerC2BUrls({
@@ -596,48 +429,46 @@ export function createMpesaExpressRouter(
   )
 
   // ── POST /mpesa/c2b/simulate (SANDBOX ONLY) ───────────────────────────────
-  router.post(
-    '/mpesa/c2b/simulate',
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const body = req.body as C2BSimulateBody
+  router.post('/mpesa/c2b/simulate', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body as C2BSimulateBody
 
-        if (!body?.commandId) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'commandId is required: "CustomerPayBillOnline" | "CustomerBuyGoodsOnline"',
-          })
-        }
-        if (!body.amount || body.amount <= 0) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'amount must be a positive number',
-          })
-        }
-        if (!body.msisdn) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'msisdn is required',
-          })
-        }
-
-        const result = await mpesa.simulateC2B({
-          shortCode: body.shortCode ?? config.c2bShortCode ?? '',
-          commandId: body.commandId,
-          amount: body.amount,
-          msisdn: body.msisdn,
-          billRefNumber: body.billRefNumber,
-          apiVersion: config.c2bApiVersion ?? 'v2',
+      if (!body?.commandId) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'commandId is required: "CustomerPayBillOnline" | "CustomerBuyGoodsOnline"',
         })
-
-        res.status(200).json(result)
-      } catch (error) {
-        if (res.headersSent) return next(error)
-        sendError(res, error)
       }
-    },
-  )
+      if (!body.amount || body.amount <= 0) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'amount must be a positive number',
+        })
+      }
+      if (!body.msisdn) {
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'msisdn is required' })
+      }
+
+      // C2BSimulateRequest.billRefNumber is `?: string | null`.
+      // body.billRefNumber is `?: string` (undefined when absent from the request).
+      // With exactOptionalPropertyTypes, undefined ≠ string | null, so we
+      // spread it only when present — passing null explicitly for Buy Goods
+      // is handled inside simulateC2B itself.
+      const result = await mpesa.simulateC2B({
+        shortCode: body.shortCode ?? config.c2bShortCode ?? '',
+        commandId: body.commandId,
+        amount: body.amount,
+        msisdn: body.msisdn,
+        apiVersion: config.c2bApiVersion ?? 'v2',
+        ...(body.billRefNumber !== undefined ? { billRefNumber: body.billRefNumber } : {}),
+      })
+
+      res.status(200).json(result)
+    } catch (error) {
+      if (res.headersSent) return next(error)
+      sendError(res, error)
+    }
+  })
 
   // ── POST /mpesa/c2b/validation ────────────────────────────────────────────
   router.post('/mpesa/c2b/validation', async (req: Request, res: Response) => {
@@ -701,58 +532,54 @@ export function createMpesaExpressRouter(
   })
 
   // ── POST /mpesa/tax/remit ─────────────────────────────────────────────────
-  router.post(
-    '/mpesa/tax/remit',
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        if (!config.taxResultUrl || !config.taxQueueTimeOutUrl) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'taxResultUrl and taxQueueTimeOutUrl must be set in config to use tax remittance routes',
-          })
-        }
-
-        const body = req.body as TaxRemitBody
-
-        if (!body || typeof body.amount !== 'number' || body.amount <= 0) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'amount must be a positive number',
-          })
-        }
-        if (!body.accountReference) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'accountReference is required — the KRA PRN',
-          })
-        }
-
-        const partyA = body.partyA ?? config.taxPartyA ?? ''
-        if (!partyA) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'partyA is required — set taxPartyA in config or provide in request body',
-          })
-        }
-
-        const result = await mpesa.remitTax({
-          amount: body.amount,
-          partyA,
-          accountReference: body.accountReference,
-          resultUrl: config.taxResultUrl,
-          queueTimeOutUrl: config.taxQueueTimeOutUrl,
-          remarks: body.remarks,
+  router.post('/mpesa/tax/remit', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!config.taxResultUrl || !config.taxQueueTimeOutUrl) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message:
+            'taxResultUrl and taxQueueTimeOutUrl must be set in config to use tax remittance routes',
         })
-
-        res.status(200).json(result)
-      } catch (error) {
-        if (res.headersSent) return next(error)
-        sendError(res, error)
       }
-    },
-  )
+
+      const body = req.body as TaxRemitBody
+
+      if (!body || typeof body.amount !== 'number' || body.amount <= 0) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'amount must be a positive number',
+        })
+      }
+      if (!body.accountReference) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'accountReference is required — the KRA PRN',
+        })
+      }
+
+      const partyA = body.partyA ?? config.taxPartyA ?? ''
+      if (!partyA) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'partyA is required — set taxPartyA in config or provide in request body',
+        })
+      }
+
+      const result = await mpesa.remitTax({
+        amount: body.amount,
+        partyA,
+        accountReference: body.accountReference,
+        resultUrl: config.taxResultUrl,
+        queueTimeOutUrl: config.taxQueueTimeOutUrl,
+        ...(body.remarks !== undefined ? { remarks: body.remarks } : {}),
+      })
+
+      res.status(200).json(result)
+    } catch (error) {
+      if (res.headersSent) return next(error)
+      sendError(res, error)
+    }
+  })
 
   // ── POST /mpesa/tax/result ────────────────────────────────────────────────
   router.post('/mpesa/tax/result', (req: Request, res: Response) => {
@@ -785,75 +612,63 @@ export function createMpesaExpressRouter(
   })
 
   // ── POST /mpesa/b2b/checkout ───────────────────────────────────────────────
-  router.post(
-    '/mpesa/b2b/checkout',
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const body = req.body as B2BCheckoutBody
+  router.post('/mpesa/b2b/checkout', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const body = req.body as B2BCheckoutBody
 
-        if (!body?.primaryShortCode) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'primaryShortCode is required',
-          })
-        }
-        if (!body.amount || body.amount <= 0) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'amount must be a positive number',
-          })
-        }
-        if (!body.paymentRef) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'paymentRef is required',
-          })
-        }
-        if (!body.partnerName) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'partnerName is required',
-          })
-        }
-
-        const receiverShortCode =
-          body.receiverShortCode ?? config.b2bReceiverShortCode ?? ''
-        if (!receiverShortCode) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'receiverShortCode is required — set b2bReceiverShortCode in config or provide in request body',
-          })
-        }
-
-        const callbackUrl = body.callbackUrl ?? config.b2bCallbackUrl ?? ''
-        if (!callbackUrl) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'callbackUrl is required — set b2bCallbackUrl in config or provide in request body',
-          })
-        }
-
-        const result = await mpesa.b2bExpressCheckout({
-          primaryShortCode: body.primaryShortCode,
-          receiverShortCode,
-          amount: body.amount,
-          paymentRef: body.paymentRef,
-          callbackUrl,
-          partnerName: body.partnerName,
-          requestRefId: body.requestRefId,
-        })
-
-        res.status(200).json(result)
-      } catch (error) {
-        if (res.headersSent) return next(error)
-        sendError(res, error)
+      if (!body?.primaryShortCode) {
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'primaryShortCode is required' })
       }
-    },
-  )
+      if (!body.amount || body.amount <= 0) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'amount must be a positive number',
+        })
+      }
+      if (!body.paymentRef) {
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'paymentRef is required' })
+      }
+      if (!body.partnerName) {
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'partnerName is required' })
+      }
+
+      const receiverShortCode = body.receiverShortCode ?? config.b2bReceiverShortCode ?? ''
+      if (!receiverShortCode) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message:
+            'receiverShortCode is required — set b2bReceiverShortCode in config or provide in request body',
+        })
+      }
+
+      const callbackUrl = body.callbackUrl ?? config.b2bCallbackUrl ?? ''
+      if (!callbackUrl) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message:
+            'callbackUrl is required — set b2bCallbackUrl in config or provide in request body',
+        })
+      }
+
+      const result = await mpesa.b2bExpressCheckout({
+        primaryShortCode: body.primaryShortCode,
+        receiverShortCode,
+        amount: body.amount,
+        paymentRef: body.paymentRef,
+        callbackUrl,
+        partnerName: body.partnerName,
+        ...(body.requestRefId !== undefined ? { requestRefId: body.requestRefId } : {}),
+      })
+
+      res.status(200).json(result)
+    } catch (error) {
+      if (res.headersSent) return next(error)
+      sendError(res, error)
+    }
+  })
 
   // ── POST /mpesa/b2b/callback ───────────────────────────────────────────────
+  // noImplicitReturns: all branches must return.
   router.post('/mpesa/b2b/callback', (req: Request, res: Response) => {
     const body = req.body as unknown
 
@@ -895,98 +710,74 @@ export function createMpesaExpressRouter(
       })
     }
 
-    res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
+    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
   })
 
   // ── POST /mpesa/b2c/payment ────────────────────────────────────────────────
-  // Initiates a B2C payment or B2C account top-up (BusinessPayToBulk).
-  //
-  // CommandID determines the type of payment:
-  //   "BusinessPayToBulk"  — moves funds from MMF/Working account to a B2C shortcode
-  //   "BusinessPayment"    — direct unsecured payment to a customer's wallet
-  //   "SalaryPayment"      — salary disbursement to a customer
-  //   "PromotionPayment"   — promotion/bonus payment to a customer
-  //
-  // Requires initiatorName + SecurityCredential in config.
-  // Always responds 200 synchronously — the final result is POSTed to b2cResultUrl.
-  router.post(
-    '/mpesa/b2c/payment',
-    async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        if (!config.b2cResultUrl || !config.b2cQueueTimeOutUrl) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'b2cResultUrl and b2cQueueTimeOutUrl must be set in config to use B2C routes',
-          })
-        }
-
-        const body = req.body as B2CPaymentBody
-
-        if (!body?.commandId) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'commandId is required: "BusinessPayToBulk" | "BusinessPayment" | "SalaryPayment" | "PromotionPayment"',
-          })
-        }
-        if (!body.amount || body.amount <= 0) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'amount must be a positive number',
-          })
-        }
-        if (!body.partyB) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN',
-          })
-        }
-        if (!body.accountReference) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message: 'accountReference is required',
-          })
-        }
-
-        const partyA = body.partyA ?? config.b2cPartyA ?? ''
-        if (!partyA) {
-          throw new PesafyError({
-            code: 'VALIDATION_ERROR',
-            message:
-              'partyA is required — set b2cPartyA in config or provide in request body',
-          })
-        }
-
-        const result = await mpesa.b2cPayment({
-          commandId: body.commandId,
-          amount: body.amount,
-          partyA,
-          partyB: body.partyB,
-          accountReference: body.accountReference,
-          requester: body.requester,
-          remarks: body.remarks,
-          resultUrl: body.resultUrl ?? config.b2cResultUrl,
-          queueTimeOutUrl: body.queueTimeOutUrl ?? config.b2cQueueTimeOutUrl,
+  router.post('/mpesa/b2c/payment', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!config.b2cResultUrl || !config.b2cQueueTimeOutUrl) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'b2cResultUrl and b2cQueueTimeOutUrl must be set in config to use B2C routes',
         })
-
-        res.status(200).json(result)
-      } catch (error) {
-        if (res.headersSent) return next(error)
-        sendError(res, error)
       }
-    },
-  )
+
+      const body = req.body as B2CPaymentBody
+
+      if (!body?.commandId) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message:
+            'commandId is required: "BusinessPayToBulk" | "BusinessPayment" | "SalaryPayment" | "PromotionPayment"',
+        })
+      }
+      if (!body.amount || body.amount <= 0) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'amount must be a positive number',
+        })
+      }
+      if (!body.partyB) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message:
+            'partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN',
+        })
+      }
+      if (!body.accountReference) {
+        throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'accountReference is required' })
+      }
+
+      const partyA = body.partyA ?? config.b2cPartyA ?? ''
+      if (!partyA) {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
+          message: 'partyA is required — set b2cPartyA in config or provide in request body',
+        })
+      }
+
+      const result = await mpesa.b2cPayment({
+        commandId: body.commandId,
+        amount: body.amount,
+        partyA,
+        partyB: body.partyB,
+        accountReference: body.accountReference,
+        resultUrl: body.resultUrl ?? config.b2cResultUrl,
+        queueTimeOutUrl: body.queueTimeOutUrl ?? config.b2cQueueTimeOutUrl,
+        ...(body.requester !== undefined ? { requester: body.requester } : {}),
+        ...(body.remarks !== undefined ? { remarks: body.remarks } : {}),
+      })
+
+      res.status(200).json(result)
+    } catch (error) {
+      if (res.headersSent) return next(error)
+      sendError(res, error)
+    }
+  })
 
   // ── POST /mpesa/b2c/result ─────────────────────────────────────────────────
-  // Safaricom POSTs the B2C transaction result here after processing.
-  //
-  // Two scenarios:
-  //   - Successful payment → ResultCode 0, includes TransactionID + ResultParameters
-  //   - Failed payment     → ResultCode non-zero (e.g. 2001 = invalid initiator)
-  //
-  // Always respond HTTP 200 immediately — process result asynchronously.
+  // noImplicitReturns: all branches must return.
   router.post('/mpesa/b2c/result', (req: Request, res: Response) => {
     const body = req.body as unknown
 
@@ -1018,14 +809,13 @@ export function createMpesaExpressRouter(
       })
     }
 
-    // Call user hook fire-and-forget — never delay the 200 response
     if (config.onB2CResult) {
       Promise.resolve(config.onB2CResult(result)).catch((err) => {
         console.error('[pesafy] B2C result hook error:', err)
       })
     }
 
-    res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
+    return res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' })
   })
 
   return router
