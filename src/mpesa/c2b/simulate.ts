@@ -1,4 +1,14 @@
-// src/mpesa/c2b/simulate.ts
+/**
+ * src/mpesa/c2b/simulate.ts
+ *
+ * C2B Simulate implementation (Sandbox ONLY).
+ * Strictly aligned with Safaricom Daraja C2B API documentation.
+ *
+ * Endpoint (v2, sandbox only):
+ *   POST https://sandbox.safaricom.co.ke/mpesa/c2b/v2/simulate
+ *
+ * Per docs: "NB: Simulation is not supported on production."
+ */
 
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
@@ -7,17 +17,31 @@ import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from './t
 /**
  * Simulates a C2B customer payment. SANDBOX ONLY.
  *
- * @param baseUrl     - Must be the sandbox base URL (contains "sandbox").
- * @param accessToken - Valid OAuth bearer token from the Authorization API.
- * @param request     - Simulation parameters. Do NOT pass billRefNumber for Buy Goods.
- * @returns           - Daraja simulate response (ResponseCode "0" = accepted).
+ * Daraja payload shape:
+ * {
+ *   "ShortCode":      600984,                    ← numeric
+ *   "CommandID":      "CustomerPayBillOnline",
+ *   "Amount":         1,                         ← numeric, whole number ≥ 1
+ *   "Msisdn":         254708374149,              ← numeric
+ *   "BillRefNumber":  "AccountRef"               ← Paybill only; OMIT for BuyGoods
+ * }
+ *
+ * CRITICAL — BillRefNumber handling (per docs):
+ *   "Account reference for Customer paybills and null for customer buy goods"
+ *   We omit the key entirely for BuyGoods (not null, not "") because Daraja
+ *   validates field presence and rejects even null/empty values for Buy Goods.
+ *
+ * @param baseUrl     - Must be the sandbox base URL
+ * @param accessToken - Valid OAuth bearer token from Authorization API
+ * @param request     - Simulation parameters
+ * @returns           - Daraja simulate response (ResponseCode "0" = accepted)
  */
 export async function simulateC2B(
   baseUrl: string,
   accessToken: string,
   request: C2BSimulateRequest,
 ): Promise<C2BSimulateResponse> {
-  // ── Sandbox guard ───────────────────────────────────────────────────────────
+  // ── Sandbox guard (per docs: simulate not available in production) ──────────
   if (!baseUrl.includes('sandbox')) {
     throw createError({
       code: 'VALIDATION_ERROR',
@@ -27,15 +51,15 @@ export async function simulateC2B(
     })
   }
 
-  // ── Input validation ────────────────────────────────────────────────────────
-
-  if (!request.shortCode) {
+  // ── Validate shortCode ──────────────────────────────────────────────────────
+  if (!request.shortCode || !String(request.shortCode).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'shortCode is required.',
+      message: 'shortCode is required',
     })
   }
 
+  // ── Validate commandId ──────────────────────────────────────────────────────
   if (
     request.commandId !== 'CustomerPayBillOnline' &&
     request.commandId !== 'CustomerBuyGoodsOnline'
@@ -48,18 +72,20 @@ export async function simulateC2B(
     })
   }
 
+  // ── Validate amount (whole number ≥ 1 per docs) ─────────────────────────────
   const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: `amount must be a whole number ≥ 1 (got ${request.amount}).`,
+      message: `amount must be a whole number ≥ 1 (got ${request.amount})`,
     })
   }
 
-  if (!request.msisdn) {
+  // ── Validate msisdn ─────────────────────────────────────────────────────────
+  if (!request.msisdn || !String(request.msisdn).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'msisdn is required. Sandbox test MSISDN: 254708374149.',
+      message: 'msisdn is required. Sandbox test MSISDN: 254708374149',
     })
   }
 
@@ -69,46 +95,20 @@ export async function simulateC2B(
 
   // ── Build payload ───────────────────────────────────────────────────────────
   //
-  // CRITICAL — BillRefNumber MUST be omitted for CustomerBuyGoodsOnline.
+  // ShortCode and Msisdn are sent as numbers per Daraja docs.
+  // BillRefNumber is ONLY included for CustomerPayBillOnline.
+  // For CustomerBuyGoodsOnline the key must be absent from the payload.
   //
-  // We build the base object WITHOUT BillRefNumber and only conditionally
-  // add it for Paybill. This is the only safe pattern because:
-  //
-  //   • JSON.stringify({ BillRefNumber: null })  → includes "BillRefNumber":null  ✗
-  //   • JSON.stringify({ BillRefNumber: "" })    → includes "BillRefNumber":""    ✗
-  //   • building without the key at all          → field absent from JSON body    ✓
-  //
-  // Daraja validates field presence, not just value — even null/empty triggers:
-  // "The element AccountReference is invalid"
-  //
-  // Note: the caller (simulateC2BPayment in c2bActions.ts) must NOT pass
-  // billRefNumber at all for Buy Goods — pass undefined or omit the key.
-  // This function is defensive and will still correctly omit it regardless.
-
   const payload: Record<string, unknown> = {
     ShortCode: Number(request.shortCode),
     CommandID: request.commandId,
     Amount: amount,
     Msisdn: Number(request.msisdn),
-    // BillRefNumber is NOT here — added conditionally below for Paybill only
   }
 
   if (!isBuyGoods) {
-    // Paybill: include BillRefNumber (the account/invoice ref for this payment).
-    // Empty string is acceptable when no specific account ref is needed.
+    // Paybill: include BillRefNumber (empty string is acceptable when no ref needed)
     payload['BillRefNumber'] = request.billRefNumber ?? ''
-  }
-
-  // ── Defensive check — should never trigger given the logic above ─────────────
-  // Acts as a compile-time-visible safety net for future refactors.
-  if (isBuyGoods && Object.prototype.hasOwnProperty.call(payload, 'BillRefNumber')) {
-    // This branch must never execute. If it does, remove the key to prevent
-    // the "AccountReference is invalid" error from Daraja.
-    delete payload['BillRefNumber']
-    console.warn(
-      '[pesafy/simulateC2B] BillRefNumber leaked into Buy Goods payload — removed. ' +
-        'This is a library bug; please report it.',
-    )
   }
 
   // ── Call Daraja ─────────────────────────────────────────────────────────────
