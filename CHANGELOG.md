@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.5.3
+
+### Patch Changes
+
+- updated types,added test and updated the apis
+
 ## 0.5.2
 
 ### Patch Changes
