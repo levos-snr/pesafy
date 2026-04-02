@@ -1,53 +1,52 @@
-// src/mpesa/b2b-express-checkout/types.ts
-
 /**
- * B2B Express Checkout (USSD Push to Till) types
+ * src/mpesa/b2b-express-checkout/types.ts
  *
- * API: POST /v1/ussdpush/get-msisdn
+ * B2B Express Checkout (USSD Push to Till) type definitions.
+ * Strictly aligned with Safaricom Daraja B2B Express Checkout API documentation.
  *
- * Daraja request body (from official B2B Express Checkout docs):
- * {
- *   "primaryShortCode":  "000001",
- *   "receiverShortCode": "000002",
- *   "amount":            "100",
- *   "paymentRef":        "paymentRef",
- *   "callbackUrl":       "http://..../result",
- *   "partnerName":       "Vendor",
- *   "RequestRefID":      "{{random Unique Identifier For Each Request}}"
- * }
+ * Endpoint: POST https://sandbox.safaricom.co.ke/v1/ussdpush/get-msisdn
  *
  * Flow:
- *   1. Vendor (you) initiates a USSD Push via Daraja.
- *   2. Daraja sends a USSD prompt to the merchant's till.
- *   3. Merchant enters Operator ID and M-PESA PIN.
- *   4. M-PESA credits the vendor (receiverShortCode) and debits the merchant (primaryShortCode).
- *   5. Daraja POSTs a callback to the vendor's callbackUrl.
- *
- * Authentication:
- *   Standard OAuth bearer token only.
- *   No SecurityCredential / initiatorName required.
- *
- * Ref: B2B Express CheckOut — Daraja Developer Portal
+ *   1. Vendor initiates USSD push via Daraja
+ *   2. Merchant receives USSD prompt on their till
+ *   3. Merchant enters Operator ID + M-PESA PIN
+ *   4. M-PESA debits merchant, credits vendor
+ *   5. Daraja POSTs callback to your callbackUrl
  */
 
 // ── Request ───────────────────────────────────────────────────────────────────
 
+/**
+ * Request payload for B2B Express Checkout USSD Push.
+ *
+ * Daraja payload shape (all field names are camelCase except RequestRefID):
+ * {
+ *   "primaryShortCode": "000001",
+ *   "receiverShortCode": "000002",
+ *   "amount":            "100",          ← sent as string per Daraja spec
+ *   "paymentRef":        "paymentRef",
+ *   "callbackUrl":       "https://...",
+ *   "partnerName":       "Vendor",
+ *   "RequestRefID":      "uuid"          ← PascalCase per Daraja spec
+ * }
+ */
 export interface B2BExpressCheckoutRequest {
   /**
-   * Debit party — the merchant's till shortCode/tillNumber sending money.
+   * Debit party — the merchant's till number that will be charged.
    * Daraja field: primaryShortCode
    */
   primaryShortCode: string
 
   /**
-   * Credit party — the vendor's Paybill account receiving the money.
+   * Credit party — the vendor's Paybill account that will receive funds.
    * Daraja field: receiverShortCode
    */
   receiverShortCode: string
 
   /**
-   * Amount to send to the vendor. Must be a whole number ≥ 1.
-   * Daraja field: amount (sent as string per spec)
+   * Amount to send. Must be a whole number ≥ 1.
+   * Sent as a string in the Daraja payload (e.g. "100").
+   * Daraja field: amount
    */
   amount: number
 
@@ -58,31 +57,42 @@ export interface B2BExpressCheckoutRequest {
   paymentRef: string
 
   /**
-   * Your publicly accessible URL where Safaricom POSTs the transaction result.
+   * Publicly accessible URL where Daraja POSTs the transaction result.
    * Daraja field: callbackUrl
    */
   callbackUrl: string
 
   /**
-   * Vendor's friendly name as known by the merchant.
-   * Shown in the USSD prompt: "You are about to send Ksh X to {partnerName}..."
+   * Vendor's friendly name shown in the merchant's USSD prompt:
+   * "You are about to send Ksh {{amount}} to {{partnerName}}..."
    * Daraja field: partnerName
    */
   partnerName: string
 
   /**
-   * Random unique identifier for this request.
-   * Used to track the process across all components.
-   * Auto-generated (UUID v4) if omitted.
-   * Daraja field: RequestRefID
+   * Unique identifier for this request — used for idempotency.
+   * Auto-generated (UUID v4) if not provided.
+   * Daraja field: RequestRefID (PascalCase per Daraja spec)
    */
   requestRefId?: string
 }
 
-// ── Synchronous acknowledgement (returned immediately) ────────────────────────
+// ── Synchronous acknowledgement (returned immediately by Daraja) ─────────────
 
+/**
+ * Synchronous acknowledgement returned immediately by Daraja.
+ *
+ * Daraja response shape:
+ * {
+ *   "code":   "0",
+ *   "status": "USSD Initiated Successfully"
+ * }
+ *
+ * code "0" means the USSD push was initiated. The actual transaction result
+ * comes later via the callbackUrl.
+ */
 export interface B2BExpressCheckoutResponse {
-  /** "0" = USSD initiated successfully */
+  /** "0" = USSD push initiated successfully */
   code: string
   /** Human-readable status, e.g. "USSD Initiated Successfully" */
   status: string
@@ -92,29 +102,52 @@ export interface B2BExpressCheckoutResponse {
 
 /**
  * Callback when the merchant CANCELLED the USSD prompt.
- * resultCode "4001" = "User cancelled transaction"
+ *
+ * Daraja callback shape:
+ * {
+ *   "resultCode":       "4001",
+ *   "resultDesc":       "User cancelled transaction",
+ *   "requestId":        "c2a9ba32-9e11-4b90-892c-7bc54944609a",
+ *   "amount":           "71.0",
+ *   "paymentReference": "MAndbubry3hi"
+ * }
  */
 export interface B2BExpressCheckoutCallbackCancelled {
-  /** "4001" */
+  /** "4001" for user cancellation */
   resultCode: string
   resultDesc: string
   requestId: string
+  /** Amount as a string, e.g. "71.0" */
   amount: string
+  /** The payment reference from the original request */
   paymentReference: string
 }
 
 /**
  * Callback when the M-PESA transaction SUCCEEDED.
- * resultCode "0"
+ *
+ * Daraja callback shape:
+ * {
+ *   "resultCode":    "0",
+ *   "resultDesc":    "The service request is processed successfully.",
+ *   "amount":        "71.0",
+ *   "requestId":     "404e1aec-19e0-4ce3-973d-bd92e94c8021",
+ *   "resultType":    "0",
+ *   "conversationID":"AG_20230426_2010434680d9f5a73766",
+ *   "transactionId": "RDQ01NFT1Q",
+ *   "status":        "SUCCESS"
+ * }
  */
 export interface B2BExpressCheckoutCallbackSuccess {
   /** "0" */
   resultCode: string
   resultDesc: string
+  /** Amount as a string, e.g. "71.0" */
   amount: string
   requestId: string
   /** Usually "0" */
   resultType: string
+  /** M-PESA conversation ID, e.g. "AG_20230426_..." */
   conversationID: string
   /** M-PESA receipt number, e.g. "RDQ01NFT1Q" */
   transactionId: string
@@ -122,27 +155,71 @@ export interface B2BExpressCheckoutCallbackSuccess {
   status: string
 }
 
+/**
+ * Callback for any non-zero, non-cancelled failure
+ * (e.g. KYC failure, USSD network error, missing nominated number).
+ *
+ * Error codes documented by Daraja:
+ *   4102 — Merchant KYC failure
+ *   4104 — Missing nominated number
+ *   4201 — USSD network error
+ *   4203 — USSD exception error
+ */
+export interface B2BExpressCheckoutCallbackFailed {
+  resultCode: string
+  resultDesc: string
+  requestId: string
+  amount: string
+}
+
+/**
+ * Union of all possible callback payload shapes.
+ * Discriminate on `resultCode`:
+ *   "0"    → B2BExpressCheckoutCallbackSuccess
+ *   "4001" → B2BExpressCheckoutCallbackCancelled
+ *   other  → B2BExpressCheckoutCallbackFailed
+ */
 export type B2BExpressCheckoutCallback =
   | B2BExpressCheckoutCallbackSuccess
   | B2BExpressCheckoutCallbackCancelled
+  | B2BExpressCheckoutCallbackFailed
 
-// ── Error codes (from Daraja docs) ────────────────────────────────────────────
+// ── Error codes (documented by Daraja) ───────────────────────────────────────
 
 /**
- * B2B Express Checkout error codes:
- *   4104 — Missing Nominated Number → configure in M-PESA Web Portal
- *   4102 — Merchant KYC Fail        → provide valid KYC
- *   4201 — USSD Network Error       → retry on stable network
- *   4203 — USSD Exception Error     → retry on stable network
- *   4001 — User cancelled           → callback only, not a thrown error
+ * Known B2B Express Checkout result codes.
  *
- * `(string & {})` keeps these literals in IntelliSense while still
- * accepting unknown codes, without triggering no-redundant-type-constituents.
+ * SUCCESS  (0)    — Transaction completed successfully
+ * CANCELLED(4001) — Merchant cancelled the USSD prompt
+ * KYC_FAIL (4102) — Merchant KYC failure; provide valid KYC
+ * NO_NUMBER(4104) — Missing nominated number; configure in M-PESA portal
+ * NET_ERROR(4201) — USSD network error; retry on stable network
+ * USSD_ERR (4203) — USSD exception error; retry on stable network
  */
-export type B2BExpressCheckoutErrorCode = '4001' | '4102' | '4104' | '4201' | '4203' | (string & {})
+export const B2B_RESULT_CODES = {
+  SUCCESS: '0',
+  CANCELLED: '4001',
+  KYC_FAIL: '4102',
+  NO_NOMINATED_NUMBER: '4104',
+  USSD_NETWORK_ERROR: '4201',
+  USSD_EXCEPTION_ERROR: '4203',
+} as const
+
+export type B2BResultCode = (typeof B2B_RESULT_CODES)[keyof typeof B2B_RESULT_CODES]
+
+/**
+ * B2B Express Checkout error codes.
+ * `(string & {})` keeps these literals in IntelliSense while still accepting
+ * unknown codes without triggering no-redundant-type-constituents.
+ */
+export type B2BExpressCheckoutErrorCode = B2BResultCode | (string & {})
 
 // ── Synchronous error response ────────────────────────────────────────────────
 
+/**
+ * Synchronous error response from Daraja when the request itself fails
+ * (before the USSD is initiated).
+ */
 export interface B2BExpressCheckoutErrorResponse {
   requestId: string
   errorCode: B2BExpressCheckoutErrorCode

@@ -1,31 +1,12 @@
-// src/mpesa/b2b-express-checkout/initiate.ts
-
 /**
- * B2B Express Checkout — initiates a USSD Push to a merchant's till.
+ * src/mpesa/b2b-express-checkout/initiate.ts
  *
- * API: POST /v1/ussdpush/get-msisdn
+ * B2B Express Checkout USSD Push to Till implementation.
+ * Strictly aligned with Safaricom Daraja B2B Express Checkout API documentation.
  *
- * Flow:
- *   1. Vendor calls initiateB2BExpressCheckout().
- *   2. Daraja sends USSD Push to merchant's till (primaryShortCode).
- *   3. Merchant enters Operator ID + M-PESA PIN to authorise.
- *   4. M-PESA debits merchant (primaryShortCode) and credits vendor (receiverShortCode).
- *   5. Daraja POSTs the result to your callbackUrl.
- *
- * Authentication:
- *   Standard OAuth bearer token only — no initiator or SecurityCredential needed.
- *
- * Prerequisites (from Daraja docs):
- *   - The merchant's till (primaryShortCode) must have a Nominated Number
- *     configured in M-PESA Web Portal (Organization Details).
- *     Error 4104 means the Nominated Number is missing.
- *   - Merchant KYC must be valid (error 4102 = KYC fail).
- *
- * Error codes:
- *   4104 — Missing Nominated Number → configure in M-PESA Web Portal
- *   4102 — Merchant KYC Fail        → provide valid KYC
- *   4201 — USSD Network Error       → retry on stable network
- *   4203 — USSD Exception Error     → retry on stable network
+ * Endpoint:
+ *   Sandbox:    POST https://sandbox.safaricom.co.ke/v1/ussdpush/get-msisdn
+ *   Production: POST https://api.safaricom.co.ke/v1/ussdpush/get-msisdn
  */
 
 import { createError } from '../../utils/errors'
@@ -34,16 +15,16 @@ import type { B2BExpressCheckoutRequest, B2BExpressCheckoutResponse } from './ty
 
 /**
  * Generates a random UUID v4-style string for RequestRefID.
- * Uses crypto.randomUUID() where available (Node ≥18, Bun, edge runtimes).
+ * Uses crypto.randomUUID() where available (Node ≥18, Bun, Cloudflare Workers).
  * Falls back to timestamp + random hex for older environments.
  */
 function generateRequestRefId(): string {
   try {
-    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
       return crypto.randomUUID()
     }
   } catch {
-    // fall through
+    // fall through to fallback
   }
   return (
     `${Date.now().toString(16)}-` +
@@ -55,8 +36,16 @@ function generateRequestRefId(): string {
 /**
  * Initiates a B2B USSD Push to a merchant's till.
  *
- * @param baseUrl     - Daraja base URL (sandbox or production)
- * @param accessToken - Valid OAuth bearer token
+ * Per docs:
+ *   - primaryShortCode: merchant's till (debit party)
+ *   - receiverShortCode: vendor's paybill (credit party)
+ *   - amount: sent as a string in the payload (e.g. "100")
+ *   - RequestRefID: must be unique per request for idempotency
+ *   - The sync response only confirms the USSD was initiated.
+ *   - The actual transaction result arrives via POST to callbackUrl.
+ *
+ * @param baseUrl     - Daraja environment base URL
+ * @param accessToken - Valid OAuth bearer token from Authorization API
  * @param request     - B2B Express Checkout parameters
  * @returns           - Daraja acknowledgement (code "0" = USSD initiated)
  */
@@ -65,31 +54,33 @@ export async function initiateB2BExpressCheckout(
   accessToken: string,
   request: B2BExpressCheckoutRequest,
 ): Promise<B2BExpressCheckoutResponse> {
-  // ── Validation ──────────────────────────────────────────────────────────────
-
-  if (!request.primaryShortCode?.trim()) {
+  // ── Validate primaryShortCode ───────────────────────────────────────────────
+  if (!request.primaryShortCode || !String(request.primaryShortCode).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
       message: "primaryShortCode is required — the merchant's till number (debit party).",
     })
   }
 
-  if (!request.receiverShortCode?.trim()) {
+  // ── Validate receiverShortCode ──────────────────────────────────────────────
+  if (!request.receiverShortCode || !String(request.receiverShortCode).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
       message: "receiverShortCode is required — the vendor's Paybill account (credit party).",
     })
   }
 
+  // ── Validate amount (whole number ≥ 1) ─────────────────────────────────────
   const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: `amount must be a whole number ≥ 1 (got ${request.amount} which rounds to ${amount}).`,
+      message: `amount must be a whole number ≥ 1 (got ${request.amount}).`,
     })
   }
 
-  if (!request.paymentRef?.trim()) {
+  // ── Validate paymentRef ─────────────────────────────────────────────────────
+  if (!request.paymentRef || !String(request.paymentRef).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
       message:
@@ -97,25 +88,30 @@ export async function initiateB2BExpressCheckout(
     })
   }
 
-  if (!request.callbackUrl?.trim()) {
+  // ── Validate callbackUrl ────────────────────────────────────────────────────
+  if (!request.callbackUrl || !String(request.callbackUrl).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'callbackUrl is required — Safaricom POSTs the transaction result here.',
+      message: 'callbackUrl is required — Daraja POSTs the transaction result here.',
     })
   }
 
-  if (!request.partnerName?.trim()) {
+  // ── Validate partnerName ────────────────────────────────────────────────────
+  if (!request.partnerName || !String(request.partnerName).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: "partnerName is required — your friendly name shown in the merchant's USSD prompt.",
+      message:
+        "partnerName is required — vendor's friendly name shown in the merchant's USSD prompt.",
     })
   }
 
-  // ── Build payload matching Daraja spec exactly ──────────────────────────────
+  // ── Build payload — exactly as documented by Daraja ─────────────────────────
   //
-  // Per Daraja docs: amount is sent as a string ("100"), not a number.
-  // RequestRefID must be unique per request — auto-generated if not provided.
-
+  // Field name notes per Daraja docs:
+  //   - Most fields are camelCase (primaryShortCode, receiverShortCode, etc.)
+  //   - amount is sent as a STRING "100", not a number
+  //   - RequestRefID is PascalCase (unique to this field in the Daraja spec)
+  //
   const payload = {
     primaryShortCode: String(request.primaryShortCode),
     receiverShortCode: String(request.receiverShortCode),
