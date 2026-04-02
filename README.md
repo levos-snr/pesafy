@@ -11,7 +11,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
 [![CI](https://github.com/levos-snr/pesafy/actions/workflows/ci.yml/badge.svg)](https://github.com/levos-snr/pesafy/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/github/levos-snr/pesafy/graph/badge.svg?token=JYK2BS1ZZF)](https://codecov.io/github/levos-snr/pesafy)
-[![npm](https://img.shields.io/npm/v/pesafy)](https://www.npmjs.com/package/pesafy)
 
 ---
 
