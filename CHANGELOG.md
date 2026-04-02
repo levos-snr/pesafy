@@ -1,5 +1,11 @@
 # pesafy
 
+## 0.5.4
+
+### Patch Changes
+
+- added b2c disbursement
+
 ## 0.5.3
 
 ### Patch Changes

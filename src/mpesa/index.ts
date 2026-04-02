@@ -52,6 +52,12 @@ import {
   type TaxRemittanceResponse,
 } from './tax-remittance'
 import { queryTransactionStatus, type TransactionStatusRequest } from './transaction-status'
+import {
+  initiateB2CDisbursement as _initiateB2CDisbursement,
+  type B2CDisbursementRequest,
+  type B2CDisbursementResponse,
+} from './b2c-disbursement'
+
 import { DARAJA_BASE_URLS, type MpesaConfig } from './types'
 
 export class Mpesa {
@@ -261,6 +267,14 @@ export class Mpesa {
     const initiator = this.requireInitiator('B2C Payment')
     const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
     return _initiateB2CPayment(this.baseUrl, token, cred, initiator, request)
+  }
+
+  // ── B2C Payment Disbursement ────────────────────────────────────────────────────────────
+
+  async b2cDisbursement(request: B2CDisbursementRequest): Promise<B2CDisbursementResponse> {
+    const initiator = this.requireInitiator('B2C Disbursement')
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
+    return _initiateB2CDisbursement(this.baseUrl, token, cred, initiator, request)
   }
 
   // ── Bill Manager ───────────────────────────────────────────────────────────
