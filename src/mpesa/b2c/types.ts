@@ -1,99 +1,58 @@
-// src/mpesa/b2c/types.ts
-
 /**
- * Business to Customer (B2C) types
+ * src/mpesa/b2c/types.ts
  *
- * API: POST /mpesa/b2b/v1/paymentrequest
+ * Strictly aligned with Safaricom Daraja B2C Account Top Up API documentation.
+ * Endpoint: POST /mpesa/b2b/v1/paymentrequest
  *
- * B2C enables two flows:
- *   1. BusinessPayToBulk  — load funds from MMF/Working account to a B2C shortcode
- *      for bulk disbursement (salaries, commissions, winnings, etc.)
- *   2. Standard B2C       — pay directly to a customer's M-PESA wallet
- *
- * NOTE: This is an ASYNCHRONOUS API.
- * The synchronous response only confirms Safaricom received the request.
- * The actual result arrives later via POST to your ResultURL.
- *
- * Ref: B2C Account Top Up — Daraja Developer Portal
+ * Only CommandID = "BusinessPayToBulk" is documented and supported.
+ * SenderIdentifierType and RecieverIdentifierType are always "4" per docs.
  */
 
-// ── Command IDs ───────────────────────────────────────────────────────────────
+// ── Command ID ────────────────────────────────────────────────────────────────
 
 /**
- * B2C CommandID values.
- *
- *   BusinessPayment      — Unsecured business payment to a customer (e.g. winnings)
- *   SalaryPayment        — Disbursement of salaries to customers
- *   PromotionPayment     — Payment of promotions/bonuses
- *   BusinessPayToBulk    — Load funds to a B2C shortcode for bulk disbursement
+ * The only CommandID supported by the B2C Account Top Up API.
+ * Docs: "Use BusinessPayToBulk only"
  */
-export type B2CCommandID =
-  | 'BusinessPayment'
-  | 'SalaryPayment'
-  | 'PromotionPayment'
-  | 'BusinessPayToBulk'
+export type B2CCommandID = 'BusinessPayToBulk'
 
 // ── Request ───────────────────────────────────────────────────────────────────
 
 export interface B2CRequest {
   /**
-   * The type of transaction. Use "BusinessPayToBulk" for account top-up.
-   * For direct customer payments use: "BusinessPayment", "SalaryPayment",
-   * or "PromotionPayment".
+   * Transaction type. Must be "BusinessPayToBulk".
    * Daraja field: CommandID
    */
   commandId: B2CCommandID
 
   /**
-   * The transaction amount. Must be a whole number ≥ 1.
-   * Daraja field: Amount
+   * Transaction amount in KES. Must be a whole number ≥ 1.
+   * Daraja field: Amount (sent as string per API spec)
    */
   amount: number
 
   /**
-   * Your business shortcode from which money is deducted.
-   * This is the PartyA (debit party).
+   * Sender shortcode — the originating business shortcode.
    * Daraja field: PartyA
+   * SenderIdentifierType is always "4" (Organisation ShortCode) per docs.
    */
   partyA: string
 
   /**
-   * The recipient shortcode or MSISDN (credit party).
-   *
-   * For BusinessPayToBulk:
-   *   - The B2C shortcode to which money is moved (e.g. "600000")
-   *
-   * For BusinessPayment / SalaryPayment / PromotionPayment:
-   *   - The customer's M-PESA phone number (254XXXXXXXXX format)
-   *
+   * Receiver shortcode — the B2C shortcode that receives the funds.
    * Daraja field: PartyB
+   * RecieverIdentifierType is always "4" (Organisation ShortCode) per docs.
    */
   partyB: string
 
   /**
-   * Type of the sender (PartyA) identifier.
-   * For this API, only "4" (Organisation ShortCode) is allowed.
-   * Daraja field: SenderIdentifierType
-   * Default: "4"
-   */
-  senderIdentifierType?: '4'
-
-  /**
-   * Type of the receiver (PartyB) identifier.
-   * For this API, only "4" (Organisation ShortCode) is allowed.
-   * Daraja field: RecieverIdentifierType
-   * Default: "4"
-   */
-  receiverIdentifierType?: '4'
-
-  /**
-   * A reference for this transaction (e.g. invoice number, batch reference).
+   * Account reference for the transaction (e.g. invoice or batch number).
    * Daraja field: AccountReference
    */
   accountReference: string
 
   /**
-   * Optional. The consumer's mobile number on behalf of whom you are paying.
+   * Optional. Customer phone number on whose behalf the transfer is made.
    * Format: 254XXXXXXXXX
    * Daraja field: Requester
    */
@@ -106,7 +65,7 @@ export interface B2CRequest {
   remarks?: string
 
   /**
-   * URL where Safaricom POSTs the final result after processing.
+   * URL Safaricom calls with the final async result after processing.
    * Must be publicly accessible. HTTPS required in production.
    * Daraja field: ResultURL
    */
@@ -123,39 +82,48 @@ export interface B2CRequest {
 // ── Synchronous acknowledgement response ──────────────────────────────────────
 
 export interface B2CResponse {
-  /** Unique request identifier assigned by Daraja upon successful submission */
+  /**
+   * Unique request identifier assigned by Daraja upon successful submission.
+   * Daraja field: OriginatorConversationID
+   */
   OriginatorConversationID: string
-  /** Unique request identifier assigned by M-Pesa upon successful submission */
+
+  /**
+   * Unique request identifier assigned by M-Pesa.
+   * Daraja field: ConversationID
+   */
   ConversationID: string
-  /** "0" = successful submission */
+
+  /**
+   * "0" indicates the request was accepted for processing.
+   * Daraja field: ResponseCode
+   */
   ResponseCode: string
-  /** Human-readable status, e.g. "Accept the service request successfully." */
+
+  /**
+   * Human-readable submission status description.
+   * Daraja field: ResponseDescription
+   */
   ResponseDescription: string
 }
 
 // ── Async result payload (POSTed to your ResultURL) ───────────────────────────
 
 /**
- * Known result parameter keys returned by Daraja for B2C transactions.
+ * Documented result parameter keys for B2C Account Top Up transactions.
+ * Source: Safaricom Daraja B2C Account Top Up — Successful Result Parameters.
  *
- * `(string & {})` is used as the catch-all so that:
- *   - The named literals appear in IntelliSense / autocomplete.
- *   - Any unknown future key Daraja may return is still accepted.
- *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
+ * `(string & {})` is used as a catch-all so:
+ *   - Named literals appear in IntelliSense/autocomplete.
+ *   - Future undocumented keys from Daraja are still accepted at runtime.
  */
 export type B2CResultParameterKey =
   | 'DebitAccountBalance'
   | 'Amount'
-  | 'DebitPartyAffectedAccountBalance'
-  | 'TransCompletedTime'
-  | 'DebitPartyCharges'
-  | 'ReceiverPartyPublicName'
   | 'Currency'
-  | 'InitiatorAccountCurrentBalance'
-  | 'B2CRecipientIsRegisteredCustomer'
-  | 'B2CChargesPaidAccountAvailableFunds'
-  | 'B2CWorkingAccountAvailableFunds'
-  | 'B2CUtilityAccountAvailableFunds'
+  | 'ReceiverPartyPublicName'
+  | 'TransactionCompletedTime'
+  | 'DebitPartyCharges'
   | (string & {})
 
 export interface B2CResultParameter {
@@ -165,18 +133,29 @@ export interface B2CResultParameter {
 
 export interface B2CResult {
   Result: {
-    /** Usually "0" */
+    /**
+     * Usually "0" for success. Docs show "0" (string) on success,
+     * numeric (e.g. 2001) on failure — typed as both for safety.
+     */
     ResultType: string | number
-    /** 0 = success */
-    ResultCode: number
+
+    /**
+     * "0" or 0 = success; non-zero = failure.
+     * Docs show string "0" on success, number 2001 on failure.
+     */
+    ResultCode: string | number
+
     /** Human-readable result description */
     ResultDesc: string
+
     OriginatorConversationID: string
     ConversationID: string
     TransactionID: string
+
     ResultParameters?: {
       ResultParameter: B2CResultParameter | B2CResultParameter[]
     }
+
     ReferenceData?: {
       ReferenceItem: { Key: string; Value?: string } | Array<{ Key: string; Value?: string }>
     }
@@ -184,6 +163,30 @@ export interface B2CResult {
 }
 
 // ── Error response (synchronous, on bad request) ──────────────────────────────
+
+/**
+ * Documented Daraja error codes for the B2C Account Top Up API.
+ */
+export const B2C_ERROR_CODES = {
+  /** Internal server error */
+  INTERNAL_SERVER_ERROR: '500.003.1001',
+  /** Invalid or expired access token */
+  INVALID_ACCESS_TOKEN: '400.003.01',
+  /** Bad request — missing or malformed data */
+  BAD_REQUEST: '400.003.02',
+  /** Quota violation — too many requests */
+  QUOTA_VIOLATION: '500.003.03',
+  /** Spike arrest violation — server not responding */
+  SPIKE_ARREST: '500.003.02',
+  /** Resource not found — wrong endpoint */
+  NOT_FOUND: '404.003.01',
+  /** Invalid authentication header — wrong HTTP method */
+  INVALID_AUTH_HEADER: '404.001.04',
+  /** Invalid request payload — incorrect JSON format */
+  INVALID_PAYLOAD: '400.002.05',
+} as const
+
+export type B2CErrorCode = (typeof B2C_ERROR_CODES)[keyof typeof B2C_ERROR_CODES]
 
 export interface B2CErrorResponse {
   /** Unique request ID assigned by the API gateway */
@@ -193,3 +196,17 @@ export interface B2CErrorResponse {
   /** Human-readable error message */
   errorMessage: string
 }
+
+// ── Known result codes (from documentation examples) ─────────────────────────
+
+/**
+ * Known B2C result codes documented by Safaricom Daraja.
+ */
+export const B2C_RESULT_CODES = {
+  /** Transaction processed successfully */
+  SUCCESS: 0,
+  /** Initiator information is invalid */
+  INVALID_INITIATOR: 2001,
+} as const
+
+export type B2CResultCode = (typeof B2C_RESULT_CODES)[keyof typeof B2C_RESULT_CODES]

@@ -97,19 +97,23 @@ export {
 // ── B2C ───────────────────────────────────────────────────────────────────────
 export type {
   B2CCommandID,
+  B2CErrorCode,
   B2CErrorResponse,
   B2CRequest,
   B2CResponse,
   B2CResult,
+  B2CResultCode,
   B2CResultParameter,
+  B2CResultParameterKey,
 } from './mpesa/b2c'
 export {
+  B2C_ERROR_CODES,
+  B2C_RESULT_CODES,
   getB2CAmount,
   getB2CConversationId,
   getB2CCurrency,
   getB2CDebitAccountBalance,
   getB2CDebitPartyCharges,
-  getB2CInitiatorAccountBalance,
   getB2COriginatorConversationId,
   getB2CReceiverPublicName,
   getB2CResultDesc,
@@ -120,6 +124,7 @@ export {
   isB2CFailure,
   isB2CResult,
   isB2CSuccess,
+  isKnownB2CResultCode,
 } from './mpesa/b2c'
 
 // ── B2B Express Checkout ──────────────────────────────────────────────────────

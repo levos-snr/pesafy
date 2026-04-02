@@ -139,8 +139,14 @@ interface B2BCheckoutBody {
   requestRefId?: string
 }
 
+/**
+ * B2C Account Top Up request body.
+ *
+ * commandId is locked to "BusinessPayToBulk" — the only CommandID
+ * supported by the Safaricom Daraja B2C Account Top Up API.
+ */
 interface B2CPaymentBody {
-  commandId: 'BusinessPayToBulk' | 'BusinessPayment' | 'SalaryPayment' | 'PromotionPayment'
+  commandId: 'BusinessPayToBulk'
   amount: number
   partyA?: string
   partyB: string
@@ -195,9 +201,6 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
           throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'phoneNumber is required' })
         }
 
-        // exactOptionalPropertyTypes: use conditional spreads for every optional
-        // field. Passing `T | undefined` directly to a `?: T` parameter is
-        // a compile error — the property must be absent, not set to undefined.
         const result = await mpesa.stkPush({
           amount: body.amount,
           phoneNumber: body.phoneNumber,
@@ -239,13 +242,9 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
   )
 
   // ── POST /mpesa/express/callback ──────────────────────────────────────────
-  // noImplicitReturns: every branch of this non-async handler must explicitly
-  // return. We add `return` before every `res.json()` call.
   router.post('/mpesa/express/callback', (req: Request, res: Response) => {
     const requestIP = extractRequestIP(req)
 
-    // exactOptionalPropertyTypes: config.skipIPCheck is `?: boolean`.
-    // Spreading with a conditional omits the key entirely when undefined.
     const result = handleWebhook(req.body, {
       requestIP,
       ...(config.skipIPCheck !== undefined ? { skipIPCheck: config.skipIPCheck } : {}),
@@ -414,11 +413,6 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
         throw new PesafyError({ code: 'VALIDATION_ERROR', message: 'msisdn is required' })
       }
 
-      // C2BSimulateRequest.billRefNumber is `?: string | null`.
-      // body.billRefNumber is `?: string` (undefined when absent from the request).
-      // With exactOptionalPropertyTypes, undefined ≠ string | null, so we
-      // spread it only when present — passing null explicitly for Buy Goods
-      // is handled inside simulateC2B itself.
       const result = await mpesa.simulateC2B({
         shortCode: body.shortCode ?? config.c2bShortCode ?? '',
         commandId: body.commandId,
@@ -633,7 +627,6 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
   })
 
   // ── POST /mpesa/b2b/callback ───────────────────────────────────────────────
-  // noImplicitReturns: all branches must return.
   router.post('/mpesa/b2b/callback', (req: Request, res: Response) => {
     const body = req.body as unknown
 
@@ -693,8 +686,14 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
       if (!body?.commandId) {
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
+          message: 'commandId is required: must be "BusinessPayToBulk"',
+        })
+      }
+      if (body.commandId !== 'BusinessPayToBulk') {
+        throw new PesafyError({
+          code: 'VALIDATION_ERROR',
           message:
-            'commandId is required: "BusinessPayToBulk" | "BusinessPayment" | "SalaryPayment" | "PromotionPayment"',
+            'commandId must be "BusinessPayToBulk" — the only CommandID supported by the B2C Account Top Up API',
         })
       }
       if (!body.amount || body.amount <= 0) {
@@ -706,8 +705,7 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
       if (!body.partyB) {
         throw new PesafyError({
           code: 'VALIDATION_ERROR',
-          message:
-            'partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN',
+          message: 'partyB is required — the receiver B2C shortcode',
         })
       }
       if (!body.accountReference) {
@@ -742,7 +740,6 @@ export function createMpesaExpressRouter(router: Router, config: MpesaExpressCon
   })
 
   // ── POST /mpesa/b2c/result ─────────────────────────────────────────────────
-  // noImplicitReturns: all branches must return.
   router.post('/mpesa/b2c/result', (req: Request, res: Response) => {
     const body = req.body as unknown
 

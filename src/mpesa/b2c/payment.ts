@@ -1,58 +1,41 @@
-// src/mpesa/b2c/payment.ts
-
 /**
- * B2C Payment (Business to Customer)
+ * src/mpesa/b2c/payment.ts
  *
- * API: POST /mpesa/b2b/v1/paymentrequest
+ * Initiates a B2C Account Top Up via Safaricom Daraja.
+ * Endpoint: POST /mpesa/b2b/v1/paymentrequest
  *
- * Supports two use-cases:
- *
- *   1. B2C Account Top Up (BusinessPayToBulk):
- *      Moves money from your MMF/Working account to a B2C shortcode's
- *      utility account for bulk disbursement.
- *      PartyA = your MMF shortcode, PartyB = target B2C shortcode.
- *
- *   2. Direct Customer Payment (BusinessPayment / SalaryPayment / PromotionPayment):
- *      Sends money directly to a customer's M-PESA wallet.
- *      PartyA = your shortcode, PartyB = customer's MSISDN (254XXXXXXXXX).
- *
- * This is ASYNCHRONOUS. The synchronous response only acknowledges receipt.
- * Final results arrive via POST to your ResultURL.
- *
- * Required M-PESA org portal roles:
- *   BusinessPayToBulk    → "Org Business Pay to Bulk API initiator" role
- *   BusinessPayment      → "Org Business Payment API initiator" role
- *   SalaryPayment        → "Org Salary Payment API initiator" role
- *   PromotionPayment     → "Org Promotion Payment API initiator" role
- *
- * Fixed Daraja field values:
- *   SenderIdentifierType:   "4" (Organisation ShortCode — only value allowed)
- *   RecieverIdentifierType: "4" (Organisation ShortCode — only value allowed)
- *
- * Error codes (HTTP 4xx/5xx from Daraja):
- *   500.003.1001 — Internal Server Error
- *   400.003.01   — Invalid Access Token
- *   400.003.02   — Bad Request
- *   500.003.03   — Quota Violation (too many requests per second)
- *   500.003.02   — Spike Arrest Violation
- *   404.003.01   — Resource not found
- *   404.001.04   — Invalid Authentication Header
- *   400.002.05   — Invalid Request Payload
+ * Strictly follows the Safaricom Daraja B2C Account Top Up API documentation:
+ *   - CommandID must be "BusinessPayToBulk"
+ *   - SenderIdentifierType is always "4" (hardcoded per docs)
+ *   - RecieverIdentifierType is always "4" (hardcoded per docs)
+ *   - Amount is sent as a string per the JSON spec
+ *   - Requester is optional
  */
 
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
 import type { B2CRequest, B2CResponse } from './types'
 
+/** The only endpoint documented for this API */
+const B2C_ENDPOINT = '/mpesa/b2b/v1/paymentrequest'
+
 /**
- * Initiates a B2C payment (Business to Customer).
+ * Per documentation: SenderIdentifierType and RecieverIdentifierType
+ * must always be "4" (Organisation ShortCode). Not configurable.
+ */
+const IDENTIFIER_TYPE = '4' as const
+
+/**
+ * Initiates a B2C Account Top Up payment request.
  *
- * @param baseUrl            - Daraja base URL (sandbox or production)
- * @param accessToken        - Valid OAuth bearer token
+ * @param baseUrl         - Daraja base URL (sandbox or production)
+ * @param accessToken     - Valid OAuth Bearer token
  * @param securityCredential - RSA-encrypted initiator password (base64)
- * @param initiatorName      - M-PESA org portal API operator username
- * @param request            - B2C payment parameters
- * @returns                  - Daraja acknowledgement response
+ * @param initiatorName   - M-Pesa API operator username with B2B role
+ * @param request         - B2C top-up request parameters
+ * @returns               Synchronous acknowledgement response from Daraja
+ * @throws {PesafyError}  VALIDATION_ERROR for invalid input before HTTP call
+ * @throws {PesafyError}  From httpRequest on network / API errors
  */
 export async function initiateB2CPayment(
   baseUrl: string,
@@ -61,49 +44,39 @@ export async function initiateB2CPayment(
   initiatorName: string,
   request: B2CRequest,
 ): Promise<B2CResponse> {
-  // ── Validation ──────────────────────────────────────────────────────────────
-
-  if (!request.commandId) {
+  // ── Validate CommandID ──────────────────────────────────────────────────────
+  // Documentation: "Use BusinessPayToBulk only"
+  if (!request.commandId || request.commandId !== 'BusinessPayToBulk') {
     throw createError({
       code: 'VALIDATION_ERROR',
       message:
-        'commandId is required: "BusinessPayToBulk" | "BusinessPayment" | "SalaryPayment" | "PromotionPayment"',
+        'commandId must be "BusinessPayToBulk". ' +
+        'This is the only CommandID supported by the B2C Account Top Up API.',
     })
   }
 
-  const validCommandIds = [
-    'BusinessPayToBulk',
-    'BusinessPayment',
-    'SalaryPayment',
-    'PromotionPayment',
-  ]
-  if (!validCommandIds.includes(request.commandId)) {
-    throw createError({
-      code: 'VALIDATION_ERROR',
-      message: `commandId must be one of: ${validCommandIds.join(', ')}. Got: "${request.commandId}"`,
-    })
-  }
-
+  // ── Validate amount ─────────────────────────────────────────────────────────
   const amount = Math.round(request.amount)
   if (!Number.isFinite(amount) || amount < 1) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: `amount must be a whole number ≥ 1 (got ${request.amount} which rounds to ${amount}).`,
+      message:
+        `amount must be a whole number ≥ 1 ` + `(got ${request.amount} which rounds to ${amount}).`,
     })
   }
 
+  // ── Validate required string fields ────────────────────────────────────────
   if (!request.partyA?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'partyA is required — your business shortcode from which money is deducted.',
+      message: 'partyA is required — the sender shortcode from which funds are deducted.',
     })
   }
 
   if (!request.partyB?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message:
-        'partyB is required — the recipient shortcode (BusinessPayToBulk) or customer MSISDN (other commands).',
+      message: 'partyB is required — the receiver B2C shortcode that receives the funds.',
     })
   }
 
@@ -117,7 +90,7 @@ export async function initiateB2CPayment(
   if (!request.resultUrl?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'resultUrl is required — Safaricom POSTs the B2C result here.',
+      message: 'resultUrl is required — Safaricom POSTs the async result here.',
     })
   }
 
@@ -130,33 +103,42 @@ export async function initiateB2CPayment(
 
   // ── Build payload matching Daraja spec exactly ──────────────────────────────
   //
-  // Per official docs:
-  //   SenderIdentifierType:   "4" — only "4" (Organisation ShortCode) is supported
-  //   RecieverIdentifierType: "4" — only "4" (Organisation ShortCode) is supported
-  //   Amount is sent as a string per the API spec
-  //   Requester is optional — only included when provided
+  // Field mapping (camelCase → Daraja PascalCase):
+  //   commandId          → CommandID         ("BusinessPayToBulk")
+  //   partyA             → PartyA            (string)
+  //   partyB             → PartyB            (string)
+  //   accountReference   → AccountReference  (string)
+  //   requester          → Requester         (string, omitted if not provided)
+  //   remarks            → Remarks           (string)
+  //   resultUrl          → ResultURL         (string)
+  //   queueTimeOutUrl    → QueueTimeOutURL   (string)
+  //   amount             → Amount            (string per JSON sample in docs)
+  //
+  // Hardcoded per docs:
+  //   SenderIdentifierType   → "4"
+  //   RecieverIdentifierType → "4"
 
   const payload: Record<string, unknown> = {
     Initiator: initiatorName,
     SecurityCredential: securityCredential,
     CommandID: request.commandId,
-    SenderIdentifierType: request.senderIdentifierType ?? '4',
-    RecieverIdentifierType: request.receiverIdentifierType ?? '4',
+    SenderIdentifierType: IDENTIFIER_TYPE,
+    RecieverIdentifierType: IDENTIFIER_TYPE,
     Amount: String(amount),
     PartyA: String(request.partyA),
     PartyB: String(request.partyB),
     AccountReference: request.accountReference,
-    Remarks: request.remarks ?? 'B2C Payment',
+    Remarks: request.remarks ?? 'B2C Account Top Up',
     QueueTimeOutURL: request.queueTimeOutUrl,
     ResultURL: request.resultUrl,
   }
 
-  // Requester is optional — only include when explicitly provided
+  // Requester is optional — only included when explicitly provided (per docs)
   if (request.requester?.trim()) {
     payload['Requester'] = String(request.requester)
   }
 
-  const { data } = await httpRequest<B2CResponse>(`${baseUrl}/mpesa/b2b/v1/paymentrequest`, {
+  const { data } = await httpRequest<B2CResponse>(`${baseUrl}${B2C_ENDPOINT}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}` },
     body: payload,
