@@ -1,43 +1,5 @@
 // src/mpesa/c2b/simulate.ts
 
-/**
- * C2B Simulate Transaction — SANDBOX ONLY
- *
- * Simulates a customer payment to your Paybill or Till number.
- *
- * API:
- *   v1: POST /mpesa/c2b/v1/simulate
- *   v2: POST /mpesa/c2b/v2/simulate   ← default
- *
- * ─── CRITICAL: BillRefNumber rules (confirmed by Daraja docs + live testing) ─
- *
- *   CustomerPayBillOnline  (Paybill):
- *     → INCLUDE BillRefNumber as the account/invoice reference.
- *       Even an empty string "" is acceptable for Paybill.
- *
- *   CustomerBuyGoodsOnline (Till):
- *     → COMPLETELY OMIT BillRefNumber from the JSON body.
- *     → DO NOT send it as null, undefined, or "" (empty string).
- *     → Daraja docs say "null for till number" but in practice ANY presence
- *       of the field — including null or "" — triggers:
- *         HTTP 400: "The element AccountReference is invalid"
- *       which Daraja sandbox may also surface as HTTP 503.
- *     → The fix is to never include the key in the payload object at all.
- *
- * ─── CRITICAL: URL registration per shortcode ─────────────────────────────────
- *
- *   Daraja docs: "Register URLs before each simulation."
- *   Registration is PER SHORTCODE — each shortcode is registered INDEPENDENTLY:
- *     - Paybill shortcode (e.g. 600977): registerC2BUrls({ shortCode: "600977" })
- *     - Till shortcode   (e.g. 600000): registerC2BUrls({ shortCode: "600000" })
- *   Simulating with a shortcode whose URLs are not registered will cause errors.
- *
- * ─── Sandbox shortcodes ───────────────────────────────────────────────────────
- *
- *   CustomerPayBillOnline  → your registered Paybill shortcode (e.g. 600977)
- *   CustomerBuyGoodsOnline → Daraja test Till shortcode: 600000
- */
-
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
 import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from './types'

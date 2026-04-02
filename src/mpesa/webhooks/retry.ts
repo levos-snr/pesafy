@@ -1,13 +1,5 @@
 // src/mpesa/webhooks/retry.ts
 
-/**
- * Exponential backoff retry for webhook at-least-once delivery.
- *
- * Daraja is asynchronous — if your callback endpoint is down, the API
- * Gateway logs a 503 and discards the result. Use this utility to
- * retry your own internal processing after receiving a webhook.
- */
-
 export interface RetryOptions {
   /** Maximum number of attempts (default: Infinity) */
   maxRetries?: number

@@ -1,27 +1,5 @@
 // src/mpesa/c2b/register-url.ts
 
-/**
- * C2B Register URL
- *
- * Registers your Confirmation and Validation URLs with Safaricom.
- *
- * API:
- *   v1: POST /mpesa/c2b/v1/registerurl
- *   v2: POST /mpesa/c2b/v2/registerurl  ← default (masked MSISDN in callbacks)
- *
- * Sandbox:    https://sandbox.safaricom.co.ke/mpesa/c2b/v{1|2}/registerurl
- * Production: https://api.safaricom.co.ke/mpesa/c2b/v{1|2}/registerurl
- *
- * Notes from Daraja docs:
- *   - Sandbox: you can register URLs multiple times / overwrite existing.
- *   - Production: one-time call. To change, delete via Self Services > URL
- *     Management on the Daraja portal, then re-register.
- *   - ResponseType must be exactly "Completed" or "Cancelled" (sentence case).
- *   - Production URLs must be HTTPS. Sandbox allows HTTP.
- *   - URLs must not contain keywords: M-PESA, Safaricom, exe, exec, cmd, sql, query.
- *   - Do not use public URL testers (ngrok, mockbin, requestbin) in production.
- */
-
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
 import type { C2BApiVersion, C2BRegisterUrlRequest, C2BRegisterUrlResponse } from './types'
