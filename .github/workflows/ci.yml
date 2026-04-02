@@ -1,4 +1,5 @@
 name: CI
+
 on:
   pull_request:
     branches:
@@ -6,48 +7,93 @@ on:
   push:
     branches:
       - main
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
 jobs:
   ci:
     name: Lint · Type-check · Test · Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22, 24]
+        node-version: [20, 22, 24]
+
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Type check
         run: pnpm typecheck
+
       - name: Lint
         run: pnpm lint
+
       - name: Format check
         run: pnpm format:check
-      - name: Test
+
+      # Run tests with coverage + JUnit output on Node 24 only (one upload)
+      - name: Test with coverage (Node 24)
+        if: matrix.node-version == 24
+        run: |
+          pnpm vitest run \
+            --coverage \
+            --reporter=verbose \
+            --reporter=junit \
+            --outputFile=test-report.junit.xml
+
+      # Plain test run on Node 20 & 22 (no coverage upload)
+      - name: Test (Node ${{ matrix.node-version }})
+        if: matrix.node-version != 24
         run: pnpm test
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 24
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          flags: unittests
+          fail_ci_if_error: false
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && matrix.node-version == 24 }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./test-report.junit.xml
+
       - name: Build package
         run: pnpm build
+
   docs:
     name: Build docs
     runs-on: ubuntu-latest
     needs: ci
     if: github.ref == 'refs/heads/main'
+
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v5
+
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Build docs
         run: pnpm docs:build

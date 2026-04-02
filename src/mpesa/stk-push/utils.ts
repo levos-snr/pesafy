@@ -1,19 +1,5 @@
 // src/mpesa/stk-push/utils.ts
 
-/**
- * STK Push utility functions
- *
- * Password spec (from Daraja docs):
- *   Password = Base64( BusinessShortCode + Passkey + Timestamp )
- *   Timestamp = YYYYMMDDHHmmss
- *
- * IMPORTANT: Generate the timestamp ONCE per request and pass the same
- * value to BOTH getStkPushPassword() and the request body's Timestamp field.
- * Safaricom validates that Base64(Shortcode+Passkey+Timestamp) matches the
- * Timestamp sent in the body — two separate calls to getTimestamp() will
- * produce different values and cause auth failures.
- */
-
 export { formatSafaricomPhone as formatPhoneNumber } from '../../utils/phone'
 
 /**

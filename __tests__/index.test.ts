@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { Mpesa, PesafyError } from '../index'
-import type { MpesaConfig } from '../mpesa/types'
+import { Mpesa, PesafyError } from '../src/index'
+import type { MpesaConfig } from '../src/mpesa/types'
 
 test('Mpesa class can be instantiated', () => {
   const config: MpesaConfig = {
@@ -8,7 +8,6 @@ test('Mpesa class can be instantiated', () => {
     consumerSecret: 'test-secret',
     environment: 'sandbox',
   }
-
   const mpesa = new Mpesa(config)
   expect(mpesa).toBeInstanceOf(Mpesa)
 })
@@ -19,7 +18,6 @@ test('Mpesa class initializes with correct environment', () => {
     consumerSecret: 'test-secret',
     environment: 'production',
   }
-
   const mpesa = new Mpesa(config)
   expect(mpesa).toBeInstanceOf(Mpesa)
 })

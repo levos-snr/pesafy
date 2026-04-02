@@ -1,9 +1,9 @@
-// src/mpesa/c2b/index.ts
-
 /**
- * Customer to Business (C2B) module exports
+ * src/mpesa/c2b/index.ts
  *
- * Supports:
+ * Customer to Business (C2B) module exports.
+ *
+ * Covers:
  *   - Register Confirmation + Validation URLs (v1 and v2)
  *   - Simulate C2B transaction (sandbox only)
  *   - Validation callback helpers (accept / reject)
@@ -13,6 +13,7 @@
 
 export { registerC2BUrls } from './register-url'
 export { simulateC2B } from './simulate'
+
 export type {
   C2BApiVersion,
   C2BCommandID,
@@ -27,6 +28,7 @@ export type {
   C2BValidationResponse,
   C2BValidationResultCode,
 } from './types'
+
 export {
   acceptC2BValidation,
   acknowledgeC2BConfirmation,

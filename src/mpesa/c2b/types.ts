@@ -1,130 +1,141 @@
-// src/mpesa/c2b/types.ts
-
 /**
- * Customer to Business (C2B) types
+ * src/mpesa/c2b/types.ts
  *
- * API Versions:
- *   v1: /mpesa/c2b/v1/registerurl  — callback MSISDN is SHA256-hashed
- *   v2: /mpesa/c2b/v2/registerurl  — callback MSISDN is masked (2547 ***** 126)
+ * Customer to Business (C2B) type definitions.
+ * Strictly aligned with Safaricom Daraja C2B API documentation (v2).
  *
- * Use v2 for new integrations (recommended by Safaricom).
- *
- * Ref: Customer To Business (C2B) — Daraja Developer Portal
+ * Docs: https://developer.safaricom.co.ke/APIs/CustomerToBusinessRegisterURL
  */
 
-// ── API Version ───────────────────────────────────────────────────────────────
+// ── Shared ────────────────────────────────────────────────────────────────────
 
-/** C2B API version. v2 is recommended; v1 sends SHA256-hashed MSISDN. */
 export type C2BApiVersion = 'v1' | 'v2'
+
+/**
+ * ResponseType for Register URL.
+ *
+ * Determines what M-PESA does when the Validation URL is unreachable.
+ *
+ * IMPORTANT (per docs): Must be sentence case — "Completed" or "Cancelled".
+ *   ✓ "Completed"  ✗ "COMPLETED"  ✗ "completed"
+ *   ✓ "Cancelled"  ✗ "CANCELLED"  ✗ "cancelled"
+ */
+export type C2BResponseType = 'Completed' | 'Cancelled'
 
 // ── Register URL ──────────────────────────────────────────────────────────────
 
 /**
- * What M-PESA should do if your Validation URL is unreachable or times out.
- *   "Completed" — M-PESA automatically completes the transaction.
- *   "Cancelled" — M-PESA automatically cancels the transaction.
+ * Request body for C2B Register URL API.
  *
- * NOTE: Must be exactly "Completed" or "Cancelled" (sentence case, no typos).
- * Daraja docs: "the words Cancelled/Completed must be in sentence case and well-spelled."
+ * Daraja payload shape:
+ * {
+ *   "ShortCode":        "600984",
+ *   "ResponseType":     "Completed",
+ *   "ConfirmationURL":  "https://yourdomain.com/confirm",
+ *   "ValidationURL":    "https://yourdomain.com/validate"
+ * }
  */
-export type C2BResponseType = 'Completed' | 'Cancelled'
-
 export interface C2BRegisterUrlRequest {
-  /**
-   * Your M-PESA Paybill or Till shortcode.
-   * Daraja field: ShortCode
-   */
+  /** Paybill or Till shortcode */
   shortCode: string
 
   /**
-   * Default action if the Validation URL is unreachable.
-   * "Completed" | "Cancelled"
-   * Daraja field: ResponseType
+   * Default action when Validation URL is unreachable.
+   * Must be sentence-case: "Completed" or "Cancelled".
    */
   responseType: C2BResponseType
 
-  /**
-   * URL that receives payment notification after successful payment.
-   * Must be publicly accessible. HTTPS required in production.
-   * Daraja field: ConfirmationURL
-   */
+  /** URL that receives the confirmation callback after payment completes */
   confirmationUrl: string
 
   /**
-   * URL that receives validation request before M-PESA processes the payment.
-   * Only called if External Validation is enabled on your shortcode.
-   * Contact apisupport@safaricom.co.ke to enable External Validation.
-   * Daraja field: ValidationURL
+   * URL that receives the validation callback before payment completes.
+   * Only called when external validation is enabled on the shortcode.
    */
   validationUrl: string
 
-  /**
-   * C2B API version to use.
-   * v2 (default): callback MSISDN is masked — recommended for new integrations.
-   * v1: callback MSISDN is SHA256-hashed.
-   */
+  /** API version to use — defaults to "v2" */
   apiVersion?: C2BApiVersion
 }
 
+/**
+ * Response from C2B Register URL API.
+ *
+ * Daraja response shape:
+ * {
+ *   "OriginatorCoversationID": "6e86-45dd-91ac-fd5d4178ab523408729",
+ *   "ResponseCode":            "0",
+ *   "ResponseDescription":     "Success"
+ * }
+ *
+ * Note: "OriginatorCoversationID" — Daraja spells "Conversation" as
+ * "Coverstation" in the actual API response. We preserve the typo to
+ * match the real payload.
+ */
 export interface C2BRegisterUrlResponse {
-  /** Global unique identifier for this request */
+  /** Global unique identifier for this request (note Daraja's spelling) */
   OriginatorCoversationID: string
   /** "0" = success */
   ResponseCode: string
   ResponseDescription: string
 }
 
-// ── Simulate (Sandbox ONLY) ───────────────────────────────────────────────────
+// ── Simulate (Sandbox only) ───────────────────────────────────────────────────
 
 /**
- * C2B transaction type for simulation.
- *   "CustomerPayBillOnline" — Paybill payment (requires BillRefNumber)
- *   "CustomerBuyGoodsOnline" — Till/Buy Goods payment (BillRefNumber usually null)
+ * CommandID for C2B simulation.
  *
- * NOTE: Simulation is ONLY supported in Sandbox, NOT in production.
+ * "CustomerPayBillOnline" — payment to a Paybill number
+ * "CustomerBuyGoodsOnline" — payment to a Till number
  */
 export type C2BCommandID = 'CustomerPayBillOnline' | 'CustomerBuyGoodsOnline'
 
+/**
+ * Request body for C2B Simulate API (Sandbox only).
+ *
+ * Daraja payload shape:
+ * {
+ *   "ShortCode":      600984,          ← numeric
+ *   "CommandID":      "CustomerPayBillOnline",
+ *   "Amount":         1,               ← numeric, whole number
+ *   "Msisdn":         254708374149,    ← numeric
+ *   "BillRefNumber":  "TestRef"        ← omit entirely for CustomerBuyGoodsOnline
+ * }
+ */
 export interface C2BSimulateRequest {
-  /**
-   * Your M-PESA Paybill or Till shortcode.
-   * Daraja field: ShortCode
-   */
+  /** Paybill or Till shortcode — sent as a number in the payload */
   shortCode: string | number
 
-  /**
-   * Type of transaction to simulate.
-   * Daraja field: CommandID
-   */
+  /** Transaction type — Paybill or BuyGoods */
   commandId: C2BCommandID
 
-  /**
-   * Amount to transact. Only whole numbers are supported by M-PESA.
-   * Daraja field: Amount
-   */
+  /** Amount in KES — whole numbers only; fractional values are rounded */
   amount: number
 
-  /**
-   * Phone number from which funds will be debited.
-   * Use the test number from the Daraja simulator: 254708374149
-   * Daraja field: Msisdn
-   */
+  /** Sender MSISDN. Sandbox test number: 254708374149 */
   msisdn: string | number
 
   /**
-   * Account reference (Paybill payments only).
-   * For Buy Goods (till), this is usually null or empty.
-   * Daraja field: BillRefNumber
+   * Account reference for Paybill payments.
+   * MUST be omitted (not null, not "") for CustomerBuyGoodsOnline.
+   * Per docs: "null for customer buy goods"
    */
   billRefNumber?: string | null
 
-  /**
-   * C2B API version — must match the version used when registering URLs.
-   * Default: "v2"
-   */
+  /** API version to use — defaults to "v2" */
   apiVersion?: C2BApiVersion
 }
 
+/**
+ * Response from C2B Simulate API.
+ *
+ * Daraja response shape:
+ * {
+ *   "OriginatorCoversationID": "53e3-4aa8-9fe0-8fb5e4092cdd3405976",
+ *   "ResponseCode":            "0",
+ *   "ResponseDescription":     "Accept the service request successfully."
+ * }
+ */
 export interface C2BSimulateResponse {
   /** Global unique identifier for this request */
   OriginatorCoversationID: string
@@ -133,41 +144,38 @@ export interface C2BSimulateResponse {
   ResponseDescription: string
 }
 
-// ── Validation Callback (POST to your ValidationURL) ─────────────────────────
+// ── Validation Callback (POST → your ValidationURL) ───────────────────────────
 
 /**
- * Payload Safaricom POSTs to your ValidationURL.
+ * Payload POSTed to your ValidationURL by M-PESA (v2 masked MSISDN).
  *
- * Only received if External Validation is enabled on your shortcode.
- * You must respond within ~8 seconds or M-PESA uses the ResponseType default.
- *
- * v1: MSISDN is SHA256-hashed
- * v2: MSISDN is masked (e.g. "2547 ***** 126")
+ * Only received when external validation is enabled on the shortcode.
+ * OrgAccountBalance is BLANK for validation requests.
  */
 export interface C2BValidationPayload {
   /** "Pay Bill" or "Buy Goods" */
   TransactionType: string
   /** Unique M-PESA transaction ID */
   TransID: string
-  /** YYYYMMDDHHMMSS */
+  /** Transaction timestamp: YYYYMMDDHHmmss */
   TransTime: string
   /** Amount the customer is paying */
   TransAmount: string
-  /** Your shortcode */
+  /** Your shortcode (5–6 digits) */
   BusinessShortCode: string
-  /** Account reference (Paybill only) */
+  /** Account reference (Paybill only) — up to 20 alphanumeric chars */
   BillRefNumber: string
-  /** Invoice number (usually empty) */
+  /** Invoice number — usually empty */
   InvoiceNumber: string
   /**
    * Blank for validation requests.
    * Contains new balance after payment for confirmation requests.
    */
   OrgAccountBalance: string
-  /** Third-party transaction ID (optional, can echo back in response) */
+  /** Third-party transaction ID. Can echo back in your validation response. */
   ThirdPartyTransID: string
   /**
-   * v1: SHA256-hashed MSISDN
+   * v1: SHA-256 hashed MSISDN
    * v2: masked MSISDN e.g. "2547 ***** 126"
    */
   MSISDN: string
@@ -176,70 +184,73 @@ export interface C2BValidationPayload {
   LastName: string
 }
 
-// ── Validation Response (your server → Safaricom) ────────────────────────────
+// ── Validation Response (your server → M-PESA) ────────────────────────────────
 
 /**
- * Result codes for C2B validation.
- *   "0"        — Accept the transaction
- *   "C2B00011" — Invalid MSISDN
- *   "C2B00012" — Invalid Account Number
- *   "C2B00013" — Invalid Amount
- *   "C2B00014" — Invalid KYC Details
- *   "C2B00015" — Invalid Short code
- *   "C2B00016" — Other Error
+ * Result codes for validation rejection.
+ *
+ * When rejecting, use one of these codes (NOT "0").
+ * Using specific codes ensures customers receive appropriate messages.
  */
 export type C2BValidationResultCode =
-  | '0'
-  | 'C2B00011'
-  | 'C2B00012'
-  | 'C2B00013'
-  | 'C2B00014'
-  | 'C2B00015'
-  | 'C2B00016'
+  | '0' // Accept
+  | 'C2B00011' // Invalid MSISDN
+  | 'C2B00012' // Invalid Account Number
+  | 'C2B00013' // Invalid Amount
+  | 'C2B00014' // Invalid KYC Details
+  | 'C2B00015' // Invalid Short code
+  | 'C2B00016' // Other Error
 
+/**
+ * Response your ValidationURL must return to M-PESA.
+ *
+ * Accept:
+ *   { "ResultCode": "0",        "ResultDesc": "Accepted" }
+ *
+ * Reject:
+ *   { "ResultCode": "C2B00011", "ResultDesc": "Rejected" }
+ */
 export interface C2BValidationResponse {
-  /**
-   * "0" = Accept the transaction.
-   * Any C2B error code = Reject.
-   *
-   * Typed as `C2BValidationResultCode` for known codes.
-   * If you need to pass a custom/unknown code, cast to `string`.
-   */
+  /** "0" to accept; any C2B error code to reject */
   ResultCode: C2BValidationResultCode
-  /**
-   * "Accepted" when ResultCode is "0".
-   * "Rejected" when ResultCode is a non-zero error code.
-   */
+  /** "Accepted" or "Rejected" */
   ResultDesc: 'Accepted' | 'Rejected'
   /**
-   * Optional. If set, this value is echoed back in the Confirmation callback
-   * as ThirdPartyTransID. Useful for correlating validation → confirmation.
+   * Optional — echo back the ThirdPartyTransID from the validation request.
+   * M-PESA will include it in the subsequent confirmation callback.
    */
   ThirdPartyTransID?: string
 }
 
-// ── Confirmation Callback (POST to your ConfirmationURL) ─────────────────────
+// ── Confirmation Callback (POST → your ConfirmationURL) ──────────────────────
 
 /**
- * Payload Safaricom POSTs to your ConfirmationURL after a successful payment.
+ * Payload POSTed to your ConfirmationURL by M-PESA after payment completes (v2).
  *
- * Always respond with { ResultCode: 0, ResultDesc: "Success" }.
- * Daraja docs: always respond 200 to Safaricom.
+ * OrgAccountBalance contains the NEW balance after this payment.
  */
 export interface C2BConfirmationPayload {
+  /** "Pay Bill" or "Buy Goods" */
   TransactionType: string
+  /** Unique M-PESA transaction ID */
   TransID: string
+  /** Transaction timestamp: YYYYMMDDHHmmss */
   TransTime: string
+  /** Amount transacted */
   TransAmount: string
+  /** Your shortcode (5–6 digits) */
   BusinessShortCode: string
+  /** Account reference (Paybill only) */
   BillRefNumber: string
+  /** Invoice number — usually empty */
   InvoiceNumber: string
-  /** New balance after payment */
+  /** New balance after this payment */
   OrgAccountBalance: string
+  /** Third-party transaction ID (echoed from validation response if set) */
   ThirdPartyTransID: string
   /**
-   * v1: SHA256-hashed
-   * v2: masked, e.g. "2547 ***** 126"
+   * v1: SHA-256 hashed MSISDN
+   * v2: masked MSISDN e.g. "2547 ***** 126"
    */
   MSISDN: string
   FirstName: string
@@ -247,10 +258,12 @@ export interface C2BConfirmationPayload {
   LastName: string
 }
 
-/** Acknowledgement your ConfirmationURL must return to Safaricom */
+/**
+ * Acknowledgement your ConfirmationURL must return to M-PESA.
+ * Always respond with ResultCode 0 to acknowledge receipt.
+ */
 export interface C2BConfirmationAck {
   /** Always 0 */
   ResultCode: 0
-  /** Usually "Success" */
   ResultDesc: string
 }

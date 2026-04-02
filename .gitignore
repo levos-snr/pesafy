@@ -42,3 +42,15 @@ docs/.vitepress/cache
 
 # vercel
 .vercel
+
+# Coverage reports (generated in CI — don't commit)
+coverage/
+
+# Test result artefacts
+test-report.junit.xml
+
+# pnpm
+.pnpm-store/
+
+
+

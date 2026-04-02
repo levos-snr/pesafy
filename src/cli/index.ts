@@ -1,26 +1,5 @@
 #!/usr/bin/env node
 // 📁 PATH: src/cli/index.ts
-/**
- *
- * Usage:
- *   npx pesafy <command> [options]
- *   bunx pesafy <command> [options]
- *
- * Commands:
- *   init               — scaffold .env + config with prompts
- *   stk-push           — send an STK Push from the terminal
- *   stk-query          — query an STK Push status
- *   balance            — query M-PESA account balance
- *   token              — print a fresh OAuth token
- *   encrypt            — encrypt an initiator password → SecurityCredential
- *   validate-phone     — validate/normalise a Kenyan phone number
- *   register-c2b-urls  — register C2B Confirmation + Validation URLs
- *   simulate-c2b       — simulate a C2B payment (sandbox only)
- *   reversal           — initiate a transaction reversal
- *   doctor             — check your .env config for common mistakes
- *   version            — print the library version
- *   help               — show this help
- */
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'

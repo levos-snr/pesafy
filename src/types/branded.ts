@@ -1,20 +1,5 @@
 // 📁 PATH: src/types/branded.ts
 
-/**
- * Branded primitive types for compile-time safety.
- *
- * Prevents common bugs like passing a phone number where an amount is expected,
- * or mixing sandbox and production shortcodes.
- *
- * @example
- * // ✅ Correct
- * const amount: KesAmount = toKesAmount(100);
- * const phone: MsisdnKE = toMsisdn("0712345678");
- *
- * // ❌ Compile error — plain number is not KesAmount
- * const bad: KesAmount = 100;
- */
-
 declare const __brand: unique symbol
 type Brand<T, B extends string> = T & { readonly [__brand]: B }
 

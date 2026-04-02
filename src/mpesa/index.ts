@@ -1,33 +1,5 @@
 // 📁 PATH: src/mpesa/index.ts
 
-/**
- * M-Pesa Daraja API client
- *
- * Supported APIs:
- *   STK Push / M-Pesa Express    — stkPush(), stkQuery()
- *   Transaction Status           — transactionStatus()
- *   Dynamic QR Code              — generateDynamicQR()
- *   C2B Register + Simulate      — registerC2BUrls(), simulateC2B()
- *   Tax Remittance (KRA)         — remitTax()
- *   B2B Express Checkout         — b2bExpressCheckout()
- *   B2C Payment / Top-Up         — b2cPayment()
- *   Account Balance              — accountBalance()           ← NEW
- *   Transaction Reversal         — reverseTransaction()       ← NEW
- *   Bill Manager                 — billManagerOptIn(),        ← NEW
- *                                   sendInvoice(),
- *                                   sendBulkInvoices(),
- *                                   cancelInvoice()
- *
- * @example
- * const mpesa = new Mpesa({
- *   consumerKey:          process.env.MPESA_CONSUMER_KEY!,
- *   consumerSecret:       process.env.MPESA_CONSUMER_SECRET!,
- *   environment:          "sandbox",
- *   lipaNaMpesaShortCode: "174379",
- *   lipaNaMpesaPassKey:   "bfb279...",
- * });
- */
-
 import { readFile } from 'node:fs/promises'
 import { TokenManager } from '../core/auth'
 import { encryptSecurityCredential } from '../core/encryption'

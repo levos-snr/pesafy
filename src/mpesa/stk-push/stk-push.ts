@@ -1,36 +1,18 @@
-// src/mpesa/stk-push/stk-push.ts
-
 /**
- * M-Pesa Express (STK Push) — initiates a payment prompt on the customer's phone.
+ * src/mpesa/stk-push/stk-push.ts
  *
- * API: POST /mpesa/stkpush/v1/processrequest
+ * Initiates an STK Push (M-PESA Express) payment.
  *
- * Daraja request body (from docs):
- * {
- *   "BusinessShortCode": 174379,
- *   "Password":          "base64(Shortcode+Passkey+Timestamp)",
- *   "Timestamp":         "20210628092408",
- *   "TransactionType":   "CustomerPayBillOnline",
- *   "Amount":            "1",
- *   "PartyA":            "254722000000",
- *   "PartyB":            "174379",
- *   "PhoneNumber":       "254722111111",
- *   "CallBackURL":       "https://mydomain.com/path",
- *   "AccountReference":  "accountref",   ← max 12 chars
- *   "TransactionDesc":   "txndesc"        ← max 13 chars
- * }
+ * Daraja endpoint: POST /mpesa/stkpush/v1/processrequest
  *
- * Notes from docs:
- * - All fields except TransactionDesc are mandatory.
- * - Amount must be a whole number ≥ 1 (KES).
- * - PartyA/PhoneNumber must be 254XXXXXXXXX format.
- * - AccountReference max 12 chars.
- * - TransactionDesc max 13 chars.
+ * Transaction limits (Daraja docs):
+ *   Min per transaction: KES 1
+ *   Max per transaction: KES 250,000
  */
 
 import { PesafyError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
-import type { StkPushRequest, StkPushResponse } from './types'
+import { STK_PUSH_LIMITS, type StkPushRequest, type StkPushResponse } from './types'
 import { formatPhoneNumber, getStkPushPassword, getTimestamp } from './utils'
 
 export async function processStkPush(
@@ -38,24 +20,40 @@ export async function processStkPush(
   accessToken: string,
   request: StkPushRequest,
 ): Promise<StkPushResponse> {
-  // ── Amount validation ───────────────────────────────────────────────────────
+  // ── Amount validation (Daraja transaction limits) ──────────────────────────
+
   const amount = Math.round(request.amount)
-  if (amount < 1) {
+
+  if (!Number.isFinite(amount) || amount < STK_PUSH_LIMITS.MIN_AMOUNT) {
     throw new PesafyError({
       code: 'VALIDATION_ERROR',
-      message: `Amount must be at least KES 1 (got ${request.amount} which rounds to ${amount}).`,
+      message:
+        `Amount must be at least KES ${STK_PUSH_LIMITS.MIN_AMOUNT} ` +
+        `(got ${request.amount} which rounds to ${amount}).`,
+    })
+  }
+
+  if (amount > STK_PUSH_LIMITS.MAX_AMOUNT) {
+    throw new PesafyError({
+      code: 'VALIDATION_ERROR',
+      message:
+        `Amount must not exceed KES ${STK_PUSH_LIMITS.MAX_AMOUNT.toLocaleString()} per transaction ` +
+        `as per Safaricom Daraja limits (got ${request.amount} which rounds to ${amount}).`,
     })
   }
 
   // ── Generate timestamp ONCE ─────────────────────────────────────────────────
-  // Must be identical in Password (encoded) and Timestamp (body) fields.
+  // The Password and Timestamp fields MUST use the same timestamp value.
+  // Daraja format: YYYYMMDDHHmmss
   const timestamp = getTimestamp()
 
   // ── PartyB logic ────────────────────────────────────────────────────────────
-  // Paybill → PartyB = shortCode
-  // Buy Goods (Till) → PartyB = till number (passed as request.partyB)
+  // CustomerPayBillOnline → PartyB = shortCode (Paybill number)
+  // CustomerBuyGoodsOnline → PartyB = till number (passed as request.partyB)
   const partyB = request.partyB ?? request.shortCode
 
+  // ── Build Daraja request body ───────────────────────────────────────────────
+  // All 11 fields documented by Safaricom Daraja are present.
   const body = {
     BusinessShortCode: request.shortCode,
     Password: getStkPushPassword(request.shortCode, request.passKey, timestamp),
@@ -71,10 +69,11 @@ export async function processStkPush(
     TransactionDesc: request.transactionDesc.slice(0, 13),
   }
 
-  // httpRequest already retries 503/429/5xx with exponential backoff + jitter.
+  // ── HTTP request ────────────────────────────────────────────────────────────
+  // httpRequest retries 503/429/5xx with exponential backoff + jitter.
   // If all retries are exhausted it throws PesafyError with code "REQUEST_FAILED"
-  // and statusCode 503 — callers should treat this as TRANSIENT, not a final
-  // failure. Never mark a transaction "failed" on a 503.
+  // and statusCode 503. Never mark a transaction "failed" on a 503 — the
+  // transaction may have been processed even if the acknowledgement was lost.
   const { data } = await httpRequest<StkPushResponse>(
     `${baseUrl}/mpesa/stkpush/v1/processrequest`,
     {
@@ -83,7 +82,7 @@ export async function processStkPush(
       body,
       // Daraja sandbox needs more retries and longer gaps due to instability
       retries: 5,
-      retryDelay: 3000,
+      retryDelay: 3_000,
     },
   )
 

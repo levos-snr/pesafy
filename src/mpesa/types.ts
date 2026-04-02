@@ -1,9 +1,5 @@
 // 📁 PATH: src/mpesa/types.ts
 
-/**
- * Core M-Pesa / Daraja configuration types
- */
-
 export type Environment = 'sandbox' | 'production'
 
 export const DARAJA_BASE_URLS: Record<Environment, string> = {
