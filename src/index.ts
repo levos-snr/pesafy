@@ -1,13 +1,5 @@
 // 📁 PATH: src/index.ts
 
-/**
- * pesafy — M-PESA Daraja API SDK
- *
- * @example
- * import { Mpesa } from "pesafy";
- * const mpesa = new Mpesa({ consumerKey: "...", consumerSecret: "...", environment: "sandbox" });
- */
-
 // ── Main client ───────────────────────────────────────────────────────────────
 export { Mpesa } from './mpesa'
 

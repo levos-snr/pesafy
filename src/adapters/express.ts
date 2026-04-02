@@ -1,39 +1,4 @@
-// src/express/index.ts
-/**
- * Express-friendly helpers for Daraja APIs.
- *
- * Attaches handlers to an existing Express Router:
- *
- *   STK Push / M-Pesa Express:
- *     POST /mpesa/express/stk-push          — initiate STK Push
- *     POST /mpesa/express/stk-query         — check STK Push status
- *     POST /mpesa/express/callback          — receive STK Push callback from Safaricom
- *
- *   Transaction Status:
- *     POST /mpesa/transaction-status/query  — query M-Pesa transaction
- *     POST /mpesa/transaction-status/result — receive Transaction Status result from Safaricom
- *
- *   Customer to Business (C2B):
- *     POST /mpesa/c2b/register-url          — register Confirmation + Validation URLs
- *     POST /mpesa/c2b/simulate              — sandbox simulation (sandbox only)
- *     POST /mpesa/c2b/validation            — receive C2B validation from Safaricom
- *     POST /mpesa/c2b/confirmation          — receive C2B confirmation from Safaricom
- *
- *   Tax Remittance:
- *     POST /mpesa/tax/remit                 — initiate a tax remittance to KRA
- *     POST /mpesa/tax/result                — receive Tax Remittance result from Safaricom
- *
- *   B2B Express Checkout:
- *     POST /mpesa/b2b/checkout              — initiate USSD Push to merchant's till
- *     POST /mpesa/b2b/callback              — receive B2B transaction result from Safaricom
- *
- *   B2C Payment / Account Top Up:
- *     POST /mpesa/b2c/payment               — initiate B2C payment or account top-up
- *     POST /mpesa/b2c/result                — receive B2C result from Safaricom
- *
- * NOTE: This module does NOT import Express at runtime.
- * Pass in an existing Express Router and it attaches handlers.
- */
+// src/adapters/express.ts
 
 import type { NextFunction, Request, Response, Router } from 'express'
 import { Mpesa } from '../mpesa'

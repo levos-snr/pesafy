@@ -2,13 +2,11 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['__tests__/**/*.{test,spec}.{ts,tsx}', 'src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist'],
+
     environment: 'node',
 
-    // "threads" (worker_threads) is faster than "forks" for CPU-bound unit
-    // tests. Switch to "forks" only if a test uses native addons or needs
-    // separate process isolation.
     pool: 'threads',
     isolate: true,
 
@@ -19,8 +17,6 @@ export default defineConfig({
     restoreMocks: true,
     mockReset: true,
 
-    // Explicit reporter list: "default" gives the interactive terminal UI;
-    // "github-actions" annotates PRs inline when running in CI.
     reporters: process.env.CI ? ['github-actions', 'verbose'] : ['default'],
 
     coverage: {
