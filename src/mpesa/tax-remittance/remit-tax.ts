@@ -1,26 +1,5 @@
 // src/mpesa/tax-remittance/remit-tax.ts
 
-/**
- * Tax Remittance — remits tax to Kenya Revenue Authority (KRA) via M-PESA.
- *
- * API: POST /mpesa/b2b/v1/remittax
- *
- * This is ASYNCHRONOUS. The synchronous response only acknowledges receipt.
- * Final results arrive via POST to your ResultURL.
- *
- * Prerequisites (from Daraja docs):
- *   - Prior integration with KRA for tax declaration.
- *   - A valid Payment Registration Number (PRN) from KRA.
- *   - Initiator with the "Tax Remittance ORG API" role on the M-PESA org portal.
- *   - SecurityCredential encrypted with the correct environment certificate.
- *
- * Fixed Daraja field values for this API:
- *   CommandID:              "PayTaxToKRA"  (always)
- *   SenderIdentifierType:   "4"            (always — Organisation ShortCode)
- *   RecieverIdentifierType: "4"            (always — Organisation ShortCode)
- *   PartyB:                 "572572"       (always — KRA's M-PESA shortcode)
- */
-
 import { createError } from '../../utils/errors'
 import { httpRequest } from '../../utils/http'
 import type { TaxRemittanceRequest, TaxRemittanceResponse } from './types'
@@ -34,12 +13,29 @@ export const TAX_COMMAND_ID = 'PayTaxToKRA'
 /**
  * Remits tax to Kenya Revenue Authority (KRA) via M-PESA.
  *
+ * Endpoint: POST /mpesa/b2b/v1/remittax
+ *
  * @param baseUrl            - Daraja base URL (sandbox or production)
  * @param accessToken        - Valid OAuth bearer token
  * @param securityCredential - RSA-encrypted initiator password (base64)
  * @param initiatorName      - M-PESA org portal API operator username
  * @param request            - Tax remittance parameters
- * @returns                  - Daraja acknowledgement response
+ * @returns                  - Daraja synchronous acknowledgement response
+ *
+ * @example
+ * const response = await remitTax(
+ *   'https://sandbox.safaricom.co.ke',
+ *   accessToken,
+ *   securityCredential,
+ *   'TaxPayer',
+ *   {
+ *     amount:           239,
+ *     partyA:           '888880',
+ *     accountReference: '353353',
+ *     resultUrl:        'https://mydomain.com/b2b/remittax/result/',
+ *     queueTimeOutUrl:  'https://mydomain.com/b2b/remittax/queue/',
+ *   },
+ * )
  */
 export async function remitTax(
   baseUrl: string,
@@ -58,7 +54,7 @@ export async function remitTax(
     })
   }
 
-  if (!request.partyA) {
+  if (!request.partyA?.trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
       message: 'partyA is required — your M-PESA business shortcode from which tax is deducted.',

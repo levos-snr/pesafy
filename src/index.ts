@@ -155,8 +155,28 @@ export type {
   TaxRemittanceResponse,
   TaxRemittanceResult,
   TaxRemittanceResultParameter,
+  TaxRemittanceResultParameterKey,
 } from './mpesa/tax-remittance'
-export { KRA_SHORTCODE, remitTax, TAX_COMMAND_ID } from './mpesa/tax-remittance'
+export {
+  // API client
+  KRA_SHORTCODE,
+  remitTax,
+  TAX_COMMAND_ID,
+  // Webhook helpers — type guards
+  isTaxRemittanceFailure,
+  isTaxRemittanceResult,
+  isTaxRemittanceSuccess,
+  // Webhook helpers — field extractors
+  getTaxAmount,
+  getTaxCompletedTime,
+  getTaxConversationId,
+  getTaxOriginatorConversationId,
+  getTaxReceiverName,
+  getTaxResultCode,
+  getTaxResultDesc,
+  getTaxResultParam,
+  getTaxTransactionId,
+} from './mpesa/tax-remittance'
 
 // ── Transaction Status ────────────────────────────────────────────────────────
 export type {

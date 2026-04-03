@@ -1,17 +1,5 @@
 // src/mpesa/tax-remittance/types.ts
 
-/**
- * Tax Remittance types
- *
- * API: POST /mpesa/b2b/v1/remittax
- *
- * NOTE: This is an ASYNCHRONOUS API.
- * The synchronous response only confirms Safaricom received the request.
- * The actual result arrives later via POST to your ResultURL.
- *
- * Ref: Tax Remittance — Daraja Developer Portal
- */
-
 // ── Request ───────────────────────────────────────────────────────────────────
 
 export interface TaxRemittanceRequest {
@@ -31,7 +19,7 @@ export interface TaxRemittanceRequest {
   /**
    * The KRA account to which money is credited.
    * For Tax Remittance, only "572572" is allowed.
-   * Defaults to "572572" if omitted.
+   * Defaults to KRA_SHORTCODE ("572572") when omitted.
    * Daraja field: PartyB
    */
   partyB?: string
@@ -58,7 +46,8 @@ export interface TaxRemittanceRequest {
   queueTimeOutUrl: string
 
   /**
-   * Optional remarks (up to 100 characters).
+   * Additional information associated with the transaction.
+   * Optional — defaults to "Tax Remittance" when omitted.
    * Daraja field: Remarks
    */
   remarks?: string
@@ -73,14 +62,14 @@ export interface TaxRemittanceResponse {
   ConversationID: string
   /** "0" = successful submission */
   ResponseCode: string
-  /** Human-readable status description */
+  /** Descriptive message of the submission status */
   ResponseDescription: string
 }
 
-// ── Async result payload (POSTed to your ResultURL) ───────────────────────────
+// ── Result parameter keys — strictly from Daraja docs ─────────────────────────
 
 /**
- * Known result parameter keys for Tax Remittance.
+ * Known result parameter keys for Tax Remittance as documented by Daraja.
  *
  * `(string & {})` is used as the catch-all so that:
  *   - Named literals appear in IntelliSense / autocomplete.
@@ -88,14 +77,9 @@ export interface TaxRemittanceResponse {
  *   - The `no-redundant-type-constituents` ESLint rule is not triggered.
  */
 export type TaxRemittanceResultParameterKey =
-  | 'DebitAccountBalance'
   | 'Amount'
-  | 'DebitPartyAffectedAccountBalance'
-  | 'TransCompletedTime'
-  | 'DebitPartyCharges'
+  | 'TransactionCompletedTime'
   | 'ReceiverPartyPublicName'
-  | 'Currency'
-  | 'InitiatorAccountCurrentBalance'
   | (string & {})
 
 export interface TaxRemittanceResultParameter {
@@ -103,22 +87,34 @@ export interface TaxRemittanceResultParameter {
   Value: string | number
 }
 
+// ── Async result payload (POSTed to your ResultURL) ───────────────────────────
+
 export interface TaxRemittanceResult {
   Result: {
-    /** Usually "0" */
-    ResultType: string
-    /** 0 = success */
-    ResultCode: number
+    /**
+     * Result type indicator.
+     * Daraja returns "0" (string) in success callbacks.
+     * Can also be numeric in some environments.
+     */
+    ResultType: string | number
+    /**
+     * 0 / "0" = success; non-zero = failure.
+     * Daraja returns "0" (string) in success callbacks per the docs.
+     * Failure codes (e.g. 2001) are typically returned as numbers.
+     */
+    ResultCode: string | number
     /** Human-readable result description */
     ResultDesc: string
     OriginatorConversationID: string
     ConversationID: string
     TransactionID: string
+    /**
+     * Present on successful results only.
+     * Daraja may return ResultParameter as a single object or an array —
+     * both shapes are handled by the webhook helpers.
+     */
     ResultParameters?: {
-      ResultParameter: TaxRemittanceResultParameter[]
-    }
-    ReferenceData?: {
-      ReferenceItem: { Key: string; Value: string } | Array<{ Key: string; Value: string }>
+      ResultParameter: TaxRemittanceResultParameter | TaxRemittanceResultParameter[]
     }
   }
 }
@@ -126,10 +122,10 @@ export interface TaxRemittanceResult {
 // ── Error response (synchronous, on bad request) ──────────────────────────────
 
 export interface TaxRemittanceErrorResponse {
-  /** Unique request ID assigned by the API gateway */
+  /** Unique requestID for the payment request */
   requestId: string
-  /** Daraja error code, e.g. "404.001.04" */
+  /** Unique error code defined in documentation, e.g. "404.001.04" */
   errorCode: string
-  /** Human-readable error message, e.g. "Invalid Access Token" */
+  /** Descriptive message of the failure, e.g. "Invalid Access Token" */
   errorMessage: string
 }
