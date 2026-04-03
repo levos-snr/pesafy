@@ -155,6 +155,48 @@ export {
   isB2BCheckoutSuccess,
 } from './mpesa/b2b-express-checkout'
 
+// ── B2B Pay Bill ──────────────────────────────────────────────────────────────
+export type {
+  B2BPayBillCommandID,
+  B2BPayBillErrorCode,
+  B2BPayBillErrorResponse,
+  B2BPayBillReferenceItem,
+  B2BPayBillRequest,
+  B2BPayBillResponse,
+  B2BPayBillResult,
+  B2BPayBillResultCode,
+  B2BPayBillResultParameter,
+  B2BPayBillResultParameterKey,
+} from './mpesa/b2b-pay-bill'
+export {
+  // API client
+  initiateB2BPayBill,
+  // Result code constants
+  B2B_PAY_BILL_ERROR_CODES,
+  B2B_PAY_BILL_RESULT_CODES,
+  // Webhook helpers — type guards
+  isB2BPayBillFailure,
+  isB2BPayBillResult,
+  isB2BPayBillSuccess,
+  isKnownB2BPayBillResultCode,
+  // Webhook helpers — field extractors
+  getB2BPayBillAmount,
+  getB2BPayBillBillReferenceNumber,
+  getB2BPayBillCompletedTime,
+  getB2BPayBillConversationId,
+  getB2BPayBillCurrency,
+  getB2BPayBillDebitAccountBalance,
+  getB2BPayBillDebitPartyAffectedBalance,
+  getB2BPayBillDebitPartyCharges,
+  getB2BPayBillInitiatorBalance,
+  getB2BPayBillOriginatorConversationId,
+  getB2BPayBillReceiverName,
+  getB2BPayBillResultCode,
+  getB2BPayBillResultDesc,
+  getB2BPayBillResultParam,
+  getB2BPayBillTransactionId,
+} from './mpesa/b2b-pay-bill'
+
 // ── Tax Remittance ────────────────────────────────────────────────────────────
 export type {
   TaxRemittanceErrorResponse,

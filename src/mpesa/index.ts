@@ -16,6 +16,11 @@ import {
   type B2BExpressCheckoutRequest,
   type B2BExpressCheckoutResponse,
 } from './b2b-express-checkout'
+import {
+  initiateB2BPayBill as _initiateB2BPayBill,
+  type B2BPayBillRequest,
+  type B2BPayBillResponse,
+} from './b2b-pay-bill'
 import { initiateB2CPayment as _initiateB2CPayment, type B2CRequest, type B2CResponse } from './b2c'
 import {
   billManagerOptIn as _billManagerOptIn,
@@ -261,6 +266,36 @@ export class Mpesa {
     return _initiateB2BExpressCheckout(this.baseUrl, token, request)
   }
 
+  // ── B2B Pay Bill ───────────────────────────────────────────────────────────
+
+  /**
+   * Pays a bill from your business account to a Paybill number.
+   *
+   * Moves money from your MMF/Working account to the recipient's utility account.
+   * ASYNCHRONOUS — the sync response is only acknowledgement.
+   * The final result arrives via POST to your resultUrl.
+   *
+   * Requires the "Org Business Pay Bill API initiator" role on M-PESA.
+   *
+   * @example
+   * await mpesa.b2bPayBill({
+   *   commandId:        "BusinessPayBill",
+   *   amount:           239,
+   *   partyA:           "123456",
+   *   partyB:           "000000",
+   *   accountReference: "INV-353353",
+   *   requester:        "254700000000",
+   *   remarks:          "Supplier payment",
+   *   resultUrl:        "https://yourdomain.com/mpesa/b2b/result",
+   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2b/timeout",
+   * });
+   */
+  async b2bPayBill(request: B2BPayBillRequest): Promise<B2BPayBillResponse> {
+    const initiator = this.requireInitiator('B2B Pay Bill')
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
+    return _initiateB2BPayBill(this.baseUrl, token, cred, initiator, request)
+  }
+
   // ── B2C Payment ────────────────────────────────────────────────────────────
 
   async b2cPayment(request: B2CRequest): Promise<B2CResponse> {
@@ -269,7 +304,7 @@ export class Mpesa {
     return _initiateB2CPayment(this.baseUrl, token, cred, initiator, request)
   }
 
-  // ── B2C Payment Disbursement ────────────────────────────────────────────────────────────
+  // ── B2C Payment Disbursement ───────────────────────────────────────────────
 
   async b2cDisbursement(request: B2CDisbursementRequest): Promise<B2CDisbursementResponse> {
     const initiator = this.requireInitiator('B2C Disbursement')
