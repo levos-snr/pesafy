@@ -276,10 +276,40 @@ export {
 
 // ── Transaction Status ────────────────────────────────────────────────────────
 export type {
+  TransactionStatusErrorCode,
   TransactionStatusRequest,
   TransactionStatusResponse,
   TransactionStatusResult,
+  TransactionStatusResultCode,
   TransactionStatusResultParameter,
+  TransactionStatusResultParameterKey,
+} from './mpesa/transaction-status'
+export {
+  // API client
+  queryTransactionStatus,
+  // Error & result code constants
+  TRANSACTION_STATUS_ERROR_CODES,
+  TRANSACTION_STATUS_RESULT_CODES,
+  // Webhook helpers — type guards
+  isTransactionStatusFailure,
+  isTransactionStatusResult,
+  isTransactionStatusSuccess,
+  isKnownTransactionStatusResultCode,
+  // Webhook helpers — core field extractors
+  getTransactionStatusConversationId,
+  getTransactionStatusOriginatorConversationId,
+  getTransactionStatusResultCode,
+  getTransactionStatusResultDesc,
+  getTransactionStatusTransactionId,
+  // Webhook helpers — result parameter extractors
+  getTransactionStatusAmount,
+  getTransactionStatusCreditPartyName,
+  getTransactionStatusDebitAccountBalance,
+  getTransactionStatusDebitPartyName,
+  getTransactionStatusReceiptNo,
+  getTransactionStatusResultParam,
+  getTransactionStatusStatus,
+  getTransactionStatusTransactionDate,
 } from './mpesa/transaction-status'
 
 // ── Account Balance ───────────────────────────────────────────────────────────
