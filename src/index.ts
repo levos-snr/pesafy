@@ -7,6 +7,10 @@ export { Mpesa } from './mpesa'
 export type { Environment, MpesaConfig } from './mpesa/types'
 export { DARAJA_BASE_URLS } from './mpesa/types'
 
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export type { AuthErrorCode, AuthErrorResponse, TokenCacheEntry, TokenResponse } from './core/auth'
+export { AUTH_ERROR_CODES, TokenManager } from './core/auth'
+
 // ── Branded types & helpers ───────────────────────────────────────────────────
 export type {
   CheckoutRequestID,
@@ -154,6 +158,49 @@ export {
   isB2BCheckoutCancelled,
   isB2BCheckoutSuccess,
 } from './mpesa/b2b-express-checkout'
+
+// ── B2B Buy Goods ─────────────────────────────────────────────────────────────
+export type {
+  B2BBuyGoodsCommandID,
+  B2BBuyGoodsErrorCode,
+  B2BBuyGoodsErrorResponse,
+  B2BBuyGoodsReferenceItem,
+  B2BBuyGoodsRequest,
+  B2BBuyGoodsResponse,
+  B2BBuyGoodsResult,
+  B2BBuyGoodsResultCode,
+  B2BBuyGoodsResultParameter,
+  B2BBuyGoodsResultParameterKey,
+} from './mpesa/b2b-buy-goods'
+export {
+  // API client
+  initiateB2BBuyGoods,
+  // Result code constants
+  B2B_BUY_GOODS_ERROR_CODES,
+  B2B_BUY_GOODS_RESULT_CODES,
+  // Webhook helpers — type guards
+  isB2BBuyGoodsFailure,
+  isB2BBuyGoodsResult,
+  isB2BBuyGoodsSuccess,
+  isKnownB2BBuyGoodsResultCode,
+  // Webhook helpers — field extractors
+  getB2BBuyGoodsAmount,
+  getB2BBuyGoodsBillReferenceNumber,
+  getB2BBuyGoodsCompletedTime,
+  getB2BBuyGoodsConversationId,
+  getB2BBuyGoodsCurrency,
+  getB2BBuyGoodsDebitAccountBalance,
+  getB2BBuyGoodsDebitPartyAffectedBalance,
+  getB2BBuyGoodsDebitPartyCharges,
+  getB2BBuyGoodsInitiatorBalance,
+  getB2BBuyGoodsOriginatorConversationId,
+  getB2BBuyGoodsQueueTimeoutUrl,
+  getB2BBuyGoodsReceiverName,
+  getB2BBuyGoodsResultCode,
+  getB2BBuyGoodsResultDesc,
+  getB2BBuyGoodsResultParam,
+  getB2BBuyGoodsTransactionId,
+} from './mpesa/b2b-buy-goods'
 
 // ── B2B Pay Bill ──────────────────────────────────────────────────────────────
 export type {

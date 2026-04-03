@@ -17,6 +17,11 @@ import {
   type B2BExpressCheckoutResponse,
 } from './b2b-express-checkout'
 import {
+  initiateB2BBuyGoods as _initiateB2BBuyGoods,
+  type B2BBuyGoodsRequest,
+  type B2BBuyGoodsResponse,
+} from './b2b-buy-goods'
+import {
   initiateB2BPayBill as _initiateB2BPayBill,
   type B2BPayBillRequest,
   type B2BPayBillResponse,
@@ -264,6 +269,37 @@ export class Mpesa {
   ): Promise<B2BExpressCheckoutResponse> {
     const token = await this.getToken()
     return _initiateB2BExpressCheckout(this.baseUrl, token, request)
+  }
+
+  // ── B2B Buy Goods ──────────────────────────────────────────────────────────
+
+  /**
+   * Pays for goods and services from your business account to a till number,
+   * merchant store number, or Merchant HO.
+   *
+   * Moves money from your MMF/Working account to the recipient's merchant account.
+   * ASYNCHRONOUS — the sync response is only acknowledgement.
+   * The final result arrives via POST to your resultUrl.
+   *
+   * Requires the "Org Business Pay Bill API initiator" role on M-PESA.
+   *
+   * @example
+   * await mpesa.b2bBuyGoods({
+   *   commandId:        "BusinessBuyGoods",
+   *   amount:           239,
+   *   partyA:           "123456",
+   *   partyB:           "000000",
+   *   accountReference: "INV-353353",
+   *   requester:        "254700000000",
+   *   remarks:          "Stock purchase",
+   *   resultUrl:        "https://yourdomain.com/mpesa/b2b/result",
+   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2b/timeout",
+   * });
+   */
+  async b2bBuyGoods(request: B2BBuyGoodsRequest): Promise<B2BBuyGoodsResponse> {
+    const initiator = this.requireInitiator('B2B Buy Goods')
+    const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
+    return _initiateB2BBuyGoods(this.baseUrl, token, cred, initiator, request)
   }
 
   // ── B2B Pay Bill ───────────────────────────────────────────────────────────
