@@ -2,10 +2,20 @@
  * src/mpesa/c2b/webhooks.ts
  *
  * C2B webhook callback helpers.
+ * Strictly aligned with Safaricom Daraja C2B API documentation.
  *
- * Daraja posts callbacks with TransactionType of "Pay Bill" or "Buy Goods"
- * (NOT the CommandID strings "CustomerPayBillOnline" / "CustomerBuyGoodsOnline").
- * This file strictly reflects what the docs say about the callback payload.
+ * Process flow (per docs):
+ * - External Validation DISABLED (default):
+ *     M-PESA automatically completes → sends ONE Confirmation to your ConfirmationURL.
+ * - External Validation ENABLED (opt-in via apisupport@safaricom.co.ke):
+ *     M-PESA → Validation request → your response → M-PESA processes
+ *     → if accepted: Confirmation request (you receive TWO callbacks)
+ *     → if rejected or timeout: cancelled, NO Confirmation sent
+ *
+ * Callback TransactionType (per docs):
+ *   "Pay Bill" for Paybill payments
+ *   "Buy Goods" for Till payments
+ *   (NOT the request CommandID strings)
  */
 
 import type {
@@ -16,11 +26,16 @@ import type {
   C2BValidationResultCode,
 } from './types'
 
-// ── Type guard ────────────────────────────────────────────────────────────────
+// ── Runtime type guard ────────────────────────────────────────────────────────
 
 /**
  * Returns true if `body` looks like a valid C2B callback payload.
  * Works for both Validation and Confirmation payloads.
+ *
+ * Checks the minimum required fields from the Daraja docs payload sample:
+ *   - TransID
+ *   - BusinessShortCode
+ *   - TransAmount
  */
 export function isC2BPayload(body: unknown): body is C2BValidationPayload {
   if (!body || typeof body !== 'object') return false
@@ -37,7 +52,7 @@ export function isC2BPayload(body: unknown): body is C2BValidationPayload {
 /**
  * Builds an "accept" validation response.
  *
- * Per Daraja docs:
+ * Per Daraja docs (to accept the payment):
  *   { "ResultCode": "0", "ResultDesc": "Accepted" }
  *
  * @param thirdPartyTransID - Optional: echo back the ThirdPartyTransID received
@@ -54,16 +69,16 @@ export function acceptC2BValidation(thirdPartyTransID?: string): C2BValidationRe
 /**
  * Builds a "reject" validation response.
  *
- * Per Daraja docs:
+ * Per Daraja docs (to reject the payment):
  *   { "ResultCode": "C2B00011", "ResultDesc": "Rejected" }
  *
- * Use specific result codes so customers receive appropriate error messages:
+ * Documented result codes and their meanings:
  *   C2B00011 — Invalid MSISDN
  *   C2B00012 — Invalid Account Number
  *   C2B00013 — Invalid Amount
  *   C2B00014 — Invalid KYC Details
- *   C2B00015 — Invalid Short code
- *   C2B00016 — Other Error
+ *   C2B00015 — Invalid Shortcode
+ *   C2B00016 — Other Error (default)
  *
  * @param resultCode - Must NOT be "0". Defaults to "C2B00016" (Other Error).
  */
@@ -79,6 +94,9 @@ export function rejectC2BValidation(
 /**
  * Builds the confirmation acknowledgement your ConfirmationURL must return.
  * Always respond with ResultCode 0 to acknowledge receipt.
+ *
+ * Per docs process flow: M-PESA expects an acknowledgement response.
+ * Failure to acknowledge may cause M-PESA to retry the confirmation.
  */
 export function acknowledgeC2BConfirmation(): C2BConfirmationAck {
   return { ResultCode: 0, ResultDesc: 'Success' }
@@ -88,20 +106,27 @@ export function acknowledgeC2BConfirmation(): C2BConfirmationAck {
 
 /**
  * Extracts the transaction amount as a number from a C2B callback payload.
- * TransAmount is a string in the payload (e.g. "5.00").
+ * TransAmount is a string in the payload (e.g. "10" per docs sample).
  */
 export function getC2BAmount(payload: C2BValidationPayload | C2BConfirmationPayload): number {
   return Number(payload.TransAmount)
 }
 
-/** Extracts the M-PESA transaction ID (receipt) from a C2B callback payload. */
+/**
+ * Extracts the M-PESA transaction ID (receipt) from a C2B callback payload.
+ * Example from docs: "RKTQDM7W6S"
+ */
 export function getC2BTransactionId(
   payload: C2BValidationPayload | C2BConfirmationPayload,
 ): string {
   return payload.TransID
 }
 
-/** Extracts the account reference (BillRefNumber) from a C2B callback payload. */
+/**
+ * Extracts the account reference (BillRefNumber) from a C2B callback payload.
+ * Example from docs: "invoice008"
+ * Empty string for Buy Goods payments (no account reference).
+ */
 export function getC2BAccountRef(payload: C2BValidationPayload | C2BConfirmationPayload): string {
   return payload.BillRefNumber
 }
@@ -109,15 +134,19 @@ export function getC2BAccountRef(payload: C2BValidationPayload | C2BConfirmation
 /**
  * Returns the customer's full name from a C2B callback payload.
  * Joins FirstName, MiddleName, LastName; skips empty parts.
+ * Per docs: customer names "can be empty".
  */
 export function getC2BCustomerName(payload: C2BValidationPayload | C2BConfirmationPayload): string {
   return [payload.FirstName, payload.MiddleName, payload.LastName].filter(Boolean).join(' ').trim()
 }
 
+// ── Transaction type helpers ──────────────────────────────────────────────────
+
 /**
  * Returns true if the payload is a Paybill payment.
  *
- * Per Daraja docs, the callback TransactionType for Paybill is "Pay Bill".
+ * Per Daraja docs, the callback TransactionType for Paybill is "Pay Bill"
+ * (NOT "CustomerPayBillOnline" which is the request CommandID).
  */
 export function isPaybillPayment(payload: C2BValidationPayload | C2BConfirmationPayload): boolean {
   return payload.TransactionType === 'Pay Bill'
@@ -126,7 +155,8 @@ export function isPaybillPayment(payload: C2BValidationPayload | C2BConfirmation
 /**
  * Returns true if the payload is a Buy Goods (Till) payment.
  *
- * Per Daraja docs, the callback TransactionType for Buy Goods is "Buy Goods".
+ * Per Daraja docs, the callback TransactionType for Buy Goods is "Buy Goods"
+ * (NOT "CustomerBuyGoodsOnline" which is the request CommandID).
  */
 export function isBuyGoodsPayment(payload: C2BValidationPayload | C2BConfirmationPayload): boolean {
   return payload.TransactionType === 'Buy Goods'

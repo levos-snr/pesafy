@@ -9,6 +9,7 @@
  *   - Validation callback helpers (accept / reject)
  *   - Confirmation callback helpers
  *   - Typed payload shapes for both callback types
+ *   - Error code constants (API registration errors + validation result codes)
  */
 
 export { registerC2BUrls } from './register-url'
@@ -19,6 +20,7 @@ export type {
   C2BCommandID,
   C2BConfirmationAck,
   C2BConfirmationPayload,
+  C2BRegisterUrlErrorCode,
   C2BRegisterUrlRequest,
   C2BRegisterUrlResponse,
   C2BResponseType,
@@ -28,6 +30,8 @@ export type {
   C2BValidationResponse,
   C2BValidationResultCode,
 } from './types'
+
+export { C2B_REGISTER_URL_ERROR_CODES, C2B_VALIDATION_RESULT_CODES } from './types'
 
 export {
   acceptC2BValidation,

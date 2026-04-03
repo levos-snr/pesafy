@@ -2,11 +2,13 @@
  * src/mpesa/c2b/register-url.ts
  *
  * C2B Register URL implementation.
- * Strictly aligned with Safaricom Daraja C2B API documentation.
+ * Strictly aligned with Safaricom Daraja C2B Register URL API documentation.
  *
- * Endpoint (v2):
- *   Sandbox:    POST https://sandbox.safaricom.co.ke/mpesa/c2b/v2/registerurl
- *   Production: POST https://api.safaricom.co.ke/mpesa/c2b/v2/registerurl
+ * Endpoint (v1 — documented primary):
+ *   Sandbox:    POST https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl
+ *   Production: POST https://api.safaricom.co.ke/mpesa/c2b/v1/registerurl
+ *
+ * Also supports v2 via the apiVersion option.
  */
 
 import { createError } from '../../utils/errors'
@@ -15,27 +17,31 @@ import type { C2BApiVersion, C2BRegisterUrlRequest, C2BRegisterUrlResponse } fro
 
 /**
  * Forbidden URL keywords per Daraja documentation:
- * "Avoid keywords like M-PESA, Safaricom, exe, exec, cmd, SQL, query, etc."
+ * "Avoid keywords such as M-PESA, M-Pesa, Safaricom, exe, exec, cme, or variants in your URLs."
  *
  * We lowercase-compare, so "MPESA", "Mpesa", "mPeSa" are all caught.
+ *
+ * Additional blocked keywords (documented variants): cmd, sql, query
  */
 const FORBIDDEN_URL_KEYWORDS: readonly string[] = [
   'mpesa',
   'safaricom',
   'exec',
   'exe',
-  'cmd',
+  'cme', // explicitly documented by Daraja
+  'cmd', // documented variant of cme
   'sql',
   'query',
 ] as const
 
 /**
  * Valid ResponseType values per Daraja docs (sentence case, exactly spelled).
+ * Per docs: "The words Cancelled and Completed must be in Sentence case."
  */
 const VALID_RESPONSE_TYPES: readonly string[] = ['Completed', 'Cancelled'] as const
 
 /**
- * Validates a callback URL against Daraja's URL requirements.
+ * Validates a callback URL against Daraja's documented URL requirements.
  * Throws PesafyError if the URL violates any documented rule.
  */
 function validateCallbackUrl(url: string, fieldName: string): void {
@@ -54,8 +60,8 @@ function validateCallbackUrl(url: string, fieldName: string): void {
         code: 'VALIDATION_ERROR',
         message:
           `${fieldName} must not contain the keyword "${keyword}". ` +
-          `Daraja rejects URLs containing: mpesa, safaricom, exec, exe, cmd, sql, query ` +
-          `(and their variants).`,
+          `Daraja rejects URLs containing: mpesa, safaricom, exe, exec, cme ` +
+          `(and variants: cmd, sql, query).`,
       })
     }
   }
@@ -64,12 +70,18 @@ function validateCallbackUrl(url: string, fieldName: string): void {
 /**
  * Registers C2B Confirmation and Validation URLs with Safaricom.
  *
- * Per docs:
+ * Per Daraja documentation:
  *   - Sandbox: may be called multiple times (URLs can be overwritten).
- *   - Production: one-time call; to change URLs, delete existing and re-register.
+ *   - Production: one-time call. To change URLs, delete existing on the portal
+ *     or email apisupport@safaricom.co.ke, then re-register.
  *   - ResponseType must be sentence-case: "Completed" or "Cancelled".
- *   - Both URLs must be publicly accessible.
- *   - Production requires HTTPS; Sandbox accepts HTTP.
+ *   - Both URLs must be publicly accessible and internet-reachable.
+ *   - Production requires HTTPS; Sandbox allows HTTP.
+ *   - Do not use public URL testers (ngrok, mockbin, requestbin) — they are blocked.
+ *   - The Validation URL is only called when external validation is enabled.
+ *     To activate, email apisupport@safaricom.co.ke.
+ *   - If M-PESA cannot reach your Validation URL within ~8 seconds, it defaults
+ *     to the ResponseType action set during registration.
  *
  * @param baseUrl     - Daraja environment base URL
  * @param accessToken - Valid OAuth bearer token from Authorization API
@@ -85,7 +97,7 @@ export async function registerC2BUrls(
   if (!request.shortCode || !String(request.shortCode).trim()) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'shortCode is required',
+      message: 'shortCode is required — the unique Paybill or Till number of the organisation.',
     })
   }
 
@@ -93,7 +105,9 @@ export async function registerC2BUrls(
   if (!request.responseType) {
     throw createError({
       code: 'VALIDATION_ERROR',
-      message: 'responseType is required: "Completed" or "Cancelled" (sentence case)',
+      message:
+        'responseType is required: "Completed" or "Cancelled" ' +
+        '(sentence case, correctly spelled per Daraja docs).',
     })
   }
 
@@ -101,16 +115,17 @@ export async function registerC2BUrls(
     throw createError({
       code: 'VALIDATION_ERROR',
       message:
-        `responseType must be exactly "Completed" or "Cancelled" (sentence case, correctly spelled). ` +
+        `responseType must be exactly "Completed" or "Cancelled" ` +
+        `(sentence case, correctly spelled per Daraja docs). ` +
         `Got: "${String(request.responseType)}"`,
     })
   }
 
-  // ── Validate URLs ───────────────────────────────────────────────────────────
+  // ── Validate URLs (per docs forbidden keyword list) ─────────────────────────
   validateCallbackUrl(request.confirmationUrl, 'confirmationUrl')
   validateCallbackUrl(request.validationUrl, 'validationUrl')
 
-  // ── Determine API version (default v2 per docs) ─────────────────────────────
+  // ── Determine API version (defaults to v1 — documented primary endpoint) ────
   const version: C2BApiVersion = request.apiVersion ?? 'v2'
 
   // ── Build payload — exactly as documented ───────────────────────────────────

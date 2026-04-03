@@ -70,6 +70,7 @@ export type {
   C2BCommandID,
   C2BConfirmationAck,
   C2BConfirmationPayload,
+  C2BRegisterUrlErrorCode,
   C2BRegisterUrlRequest,
   C2BRegisterUrlResponse,
   C2BResponseType,
@@ -80,6 +81,14 @@ export type {
   C2BValidationResultCode,
 } from './mpesa/c2b'
 export {
+  // API clients
+  registerC2BUrls,
+  simulateC2B,
+  // Error code constants (from Daraja troubleshooting docs)
+  C2B_REGISTER_URL_ERROR_CODES,
+  // Validation result code constants (from Daraja validation docs)
+  C2B_VALIDATION_RESULT_CODES,
+  // Webhook helpers
   acceptC2BValidation,
   acknowledgeC2BConfirmation,
   getC2BAccountRef,
@@ -89,9 +98,7 @@ export {
   isBuyGoodsPayment,
   isC2BPayload,
   isPaybillPayment,
-  registerC2BUrls,
   rejectC2BValidation,
-  simulateC2B,
 } from './mpesa/c2b'
 
 // ── B2C ───────────────────────────────────────────────────────────────────────

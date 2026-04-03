@@ -4,10 +4,10 @@
  * C2B Simulate implementation (Sandbox ONLY).
  * Strictly aligned with Safaricom Daraja C2B API documentation.
  *
+ * Per docs: "NB: Simulation is not supported on production."
+ *
  * Endpoint (v2, sandbox only):
  *   POST https://sandbox.safaricom.co.ke/mpesa/c2b/v2/simulate
- *
- * Per docs: "NB: Simulation is not supported on production."
  */
 
 import { createError } from '../../utils/errors'
@@ -19,11 +19,11 @@ import type { C2BApiVersion, C2BSimulateRequest, C2BSimulateResponse } from './t
  *
  * Daraja payload shape:
  * {
- *   "ShortCode":      600984,                    ← numeric
- *   "CommandID":      "CustomerPayBillOnline",
- *   "Amount":         1,                         ← numeric, whole number ≥ 1
- *   "Msisdn":         254708374149,              ← numeric
- *   "BillRefNumber":  "AccountRef"               ← Paybill only; OMIT for BuyGoods
+ *   "ShortCode":     600984,                   ← numeric
+ *   "CommandID":     "CustomerPayBillOnline",
+ *   "Amount":        1,                        ← numeric, whole number ≥ 1
+ *   "Msisdn":        254708374149,             ← numeric
+ *   "BillRefNumber": "AccountRef"              ← Paybill only; OMIT for BuyGoods
  * }
  *
  * CRITICAL — BillRefNumber handling (per docs):
@@ -46,8 +46,8 @@ export async function simulateC2B(
     throw createError({
       code: 'VALIDATION_ERROR',
       message:
-        'C2B simulate is only available in the Sandbox environment. ' +
-        'In production, customers initiate payments via M-PESA App, USSD, or SIM Toolkit.',
+        'C2B simulate is only available in the Sandbox environment (per Daraja docs). ' +
+        'In production, customers initiate payments directly via M-PESA App, USSD, or SIM Toolkit.',
     })
   }
 
@@ -89,7 +89,7 @@ export async function simulateC2B(
     })
   }
 
-  // ── Determine transaction type ──────────────────────────────────────────────
+  // ── Determine transaction type and API version ──────────────────────────────
   const isBuyGoods = request.commandId === 'CustomerBuyGoodsOnline'
   const version: C2BApiVersion = request.apiVersion ?? 'v2'
 
@@ -107,11 +107,10 @@ export async function simulateC2B(
   }
 
   if (!isBuyGoods) {
-    // Paybill: include BillRefNumber (empty string is acceptable when no ref needed)
+    // Paybill: include BillRefNumber (empty string acceptable when no ref needed)
     payload['BillRefNumber'] = request.billRefNumber ?? ''
   }
 
-  // ── Call Daraja ─────────────────────────────────────────────────────────────
   const { data } = await httpRequest<C2BSimulateResponse>(
     `${baseUrl}/mpesa/c2b/${version}/simulate`,
     {
