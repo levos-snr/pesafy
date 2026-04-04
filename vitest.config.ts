@@ -18,16 +18,12 @@ export default defineConfig({
       // lcov is required for Codecov; html is nice locally
       reporter: ['text', 'lcov', 'html'],
       reportsDirectory: './coverage',
-
-      // ── Thresholds disabled while tests are still being written ──────────
-      // Uncomment and raise these once all modules have test coverage.
-      // thresholds: {
-      //   lines: 80,
-      //   functions: 80,
-      //   branches: 75,
-      //   statements: 80,
-      // },
-
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
       exclude: [
         'node_modules',
         'dist',

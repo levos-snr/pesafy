@@ -1,23 +1,24 @@
 codecov:
+  # Token is read from the CODECOV_TOKEN GitHub Actions secret — never hardcode it here.
+  # See: https://docs.codecov.com/docs/quick-start
+
+  # Notify after this many builds are received
   notify:
-    after_n_builds: 3
+    after_n_builds: 3 # one per matrix node (20, 22, 24) — wait for all
 
 coverage:
   precision: 2
   round: down
-  range: "0...100"
+  range: "70...100"
 
   status:
     project:
       default:
-        # Informational only while tests are being written — never blocks CI.
-        # Change to a real target (e.g. 80%) once all modules are covered.
-        target: auto # auto = "don't go lower than current"
-        threshold: 100% # wide open: any value passes
-        informational: true # post a status but never set it to "failure"
+        target: 80%
+        threshold: 2% # allow a 2% dip before marking red
     patch:
       default:
-        informational: true
+        target: 75%
 
 comment:
   layout: "reach,diff,flags,files"

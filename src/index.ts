@@ -1,4 +1,4 @@
-// 📁 PATH: src/index.ts
+// src/index.ts
 
 // ── Main client ───────────────────────────────────────────────────────────────
 export { Mpesa } from './mpesa'
@@ -367,14 +367,30 @@ export {
 export type {
   BillManagerBulkInvoiceRequest,
   BillManagerBulkInvoiceResponse,
+  BillManagerCancelBulkInvoiceRequest,
+  BillManagerCancelBulkInvoiceResponse,
   BillManagerCancelInvoiceRequest,
   BillManagerCancelInvoiceResponse,
   BillManagerInvoiceItem,
   BillManagerOptInRequest,
   BillManagerOptInResponse,
+  BillManagerPaymentCallbackResponse,
   BillManagerPaymentNotification,
+  BillManagerReconciliationRequest,
+  BillManagerReconciliationResponse,
   BillManagerSingleInvoiceRequest,
   BillManagerSingleInvoiceResponse,
+  BillManagerUpdateOptInRequest,
+  BillManagerUpdateOptInResponse,
+} from './mpesa/bill-manager'
+export {
+  billManagerOptIn,
+  cancelBulkInvoices,
+  cancelInvoice,
+  reconcilePayment,
+  sendBulkInvoices,
+  sendSingleInvoice,
+  updateOptIn,
 } from './mpesa/bill-manager'
 
 // ── Dynamic QR ────────────────────────────────────────────────────────────────

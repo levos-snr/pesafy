@@ -1,4 +1,4 @@
-// 📁 PATH: src/mpesa/index.ts
+// src/mpesa/index.ts
 
 import { readFile } from 'node:fs/promises'
 import { TokenManager } from '../core/auth'
@@ -29,17 +29,26 @@ import {
 import { initiateB2CPayment as _initiateB2CPayment, type B2CRequest, type B2CResponse } from './b2c'
 import {
   billManagerOptIn as _billManagerOptIn,
+  cancelBulkInvoices as _cancelBulkInvoices,
   cancelInvoice as _cancelInvoice,
+  reconcilePayment as _reconcilePayment,
   sendBulkInvoices as _sendBulkInvoices,
   sendSingleInvoice as _sendSingleInvoice,
+  updateOptIn as _updateOptIn,
   type BillManagerBulkInvoiceRequest,
   type BillManagerBulkInvoiceResponse,
+  type BillManagerCancelBulkInvoiceRequest,
+  type BillManagerCancelBulkInvoiceResponse,
   type BillManagerCancelInvoiceRequest,
   type BillManagerCancelInvoiceResponse,
   type BillManagerOptInRequest,
   type BillManagerOptInResponse,
+  type BillManagerReconciliationRequest,
+  type BillManagerReconciliationResponse,
   type BillManagerSingleInvoiceRequest,
   type BillManagerSingleInvoiceResponse,
+  type BillManagerUpdateOptInRequest,
+  type BillManagerUpdateOptInResponse,
 } from './bill-manager'
 import {
   registerC2BUrls as _registerC2BUrls,
@@ -144,15 +153,6 @@ export class Mpesa {
 
   /**
    * Safe wrapper for accountBalance — returns Result<T> instead of throwing.
-   * Ideal for application-level code that prefers not to use try/catch.
-   *
-   * @example
-   * const result = await mpesa.accountBalanceSafe({ ... });
-   * if (result.ok) {
-   *   console.log(result.data.OriginatorConversationID);
-   * } else {
-   *   console.error(result.error.code, result.error.message);
-   * }
    */
   async accountBalanceSafe(
     request: AccountBalanceRequest,
@@ -217,20 +217,6 @@ export class Mpesa {
    * Balance data is POSTed to your resultUrl callback.
    *
    * Required org portal role: "Balance Query ORG API"
-   *
-   * identifierType values:
-   *   "1" = MSISDN
-   *   "2" = Till Number
-   *   "4" = Organisation ShortCode (most common)
-   *
-   * @example
-   * await mpesa.accountBalance({
-   *   partyA:          "174379",
-   *   identifierType:  "4",
-   *   resultUrl:       "https://yourdomain.com/mpesa/balance/result",
-   *   queueTimeOutUrl: "https://yourdomain.com/mpesa/balance/timeout",
-   *   remarks:         "Daily reconciliation",
-   * });
    */
   async accountBalance(request: AccountBalanceRequest): Promise<AccountBalanceResponse> {
     const initiator = this.requireInitiator('Account Balance')
@@ -316,11 +302,32 @@ export class Mpesa {
 
   // ── Bill Manager ───────────────────────────────────────────────────────────
 
+  /**
+   * Opts your shortcode into Bill Manager.
+   *
+   * Must be called first before using any other Bill Manager API.
+   * On success the shortcode is whitelisted.
+   */
   async billManagerOptIn(request: BillManagerOptInRequest): Promise<BillManagerOptInResponse> {
     const token = await this.getToken()
     return _billManagerOptIn(this.baseUrl, token, request)
   }
 
+  /**
+   * Updates opt-in details for an already-registered shortcode.
+   * Endpoint: POST /v1/billmanager-invoice/change-optin-details
+   */
+  async updateOptIn(
+    request: BillManagerUpdateOptInRequest,
+  ): Promise<BillManagerUpdateOptInResponse> {
+    const token = await this.getToken()
+    return _updateOptIn(this.baseUrl, token, request)
+  }
+
+  /**
+   * Sends a single customised e-invoice to a customer via SMS.
+   * The customer can pay via USSD, STK, M-PESA App, or the invoice link.
+   */
   async sendInvoice(
     request: BillManagerSingleInvoiceRequest,
   ): Promise<BillManagerSingleInvoiceResponse> {
@@ -328,6 +335,9 @@ export class Mpesa {
     return _sendSingleInvoice(this.baseUrl, token, request)
   }
 
+  /**
+   * Sends up to 1000 e-invoices in a single request.
+   */
   async sendBulkInvoices(
     request: BillManagerBulkInvoiceRequest,
   ): Promise<BillManagerBulkInvoiceResponse> {
@@ -335,11 +345,38 @@ export class Mpesa {
     return _sendBulkInvoices(this.baseUrl, token, request)
   }
 
+  /**
+   * Cancels a single previously sent invoice.
+   * Partially or fully paid invoices cannot be cancelled.
+   */
   async cancelInvoice(
     request: BillManagerCancelInvoiceRequest,
   ): Promise<BillManagerCancelInvoiceResponse> {
     const token = await this.getToken()
     return _cancelInvoice(this.baseUrl, token, request)
+  }
+
+  /**
+   * Cancels multiple previously sent invoices.
+   * Partially or fully paid invoices cannot be cancelled.
+   */
+  async cancelBulkInvoices(
+    request: BillManagerCancelBulkInvoiceRequest,
+  ): Promise<BillManagerCancelBulkInvoiceResponse> {
+    const token = await this.getToken()
+    return _cancelBulkInvoices(this.baseUrl, token, request)
+  }
+
+  /**
+   * Sends a payment acknowledgment to Bill Manager after your system has
+   * processed a payment notification received at your callbackUrl.
+   * Endpoint: POST /v1/billmanager-invoice/reconciliation
+   */
+  async reconcilePayment(
+    request: BillManagerReconciliationRequest,
+  ): Promise<BillManagerReconciliationResponse> {
+    const token = await this.getToken()
+    return _reconcilePayment(this.baseUrl, token, request)
   }
 
   // ── Utilities ──────────────────────────────────────────────────────────────
