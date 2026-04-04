@@ -30,9 +30,7 @@ const dim = (s: string) => `${C.dim}${s}${C.reset}`
 function getPkgVersion(): string {
   try {
     const pkgPath = resolve(new URL('../../package.json', import.meta.url).pathname)
-    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as {
-      version: string
-    }
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version: string }
     return pkg.version
   } catch {
     return 'unknown'
@@ -81,7 +79,7 @@ function requireEnv(env: Record<string, string>, ...keys: string[]): void {
   }
 }
 
-// ── HTTP helper (no external deps needed) ────────────────────────────────────
+// ── HTTP helper ────────────────────────────────────────────────────────────────
 async function fetchJson<T>(
   url: string,
   method: 'GET' | 'POST',
@@ -138,7 +136,7 @@ ${b('COMMANDS')}
   ${g('validate-phone')} ${c('<phone>')}  Validate and normalise a Kenyan phone number
   ${g('stk-push')}              Initiate an STK Push payment prompt
   ${g('stk-query')} ${c('<checkoutId>')}  Query status of an STK Push
-  ${g('balance')}               Query M-PESA account balance
+  ${g('balance')}               Query M-PESA account balance (async — result via ResultURL)
   ${g('reversal')} ${c('<txId>')}         Initiate a transaction reversal
   ${g('register-c2b-urls')}     Register C2B Confirmation + Validation URLs
   ${g('simulate-c2b')}          Simulate a C2B payment (sandbox only)
@@ -157,15 +155,28 @@ ${b('ENVIRONMENT')}
     MPESA_PASSKEY          — Lipa Na M-PESA passkey
     MPESA_CALLBACK_URL     — Public callback URL
 
-  Initiator APIs (B2C / Reversal / Balance) additionally require:
+  Initiator APIs (Account Balance / B2C / Reversal) additionally require:
     MPESA_INITIATOR_NAME
     MPESA_INITIATOR_PASSWORD
     MPESA_CERTIFICATE_PATH — Path to .cer file
+    MPESA_RESULT_URL       — Public URL for async balance/reversal result
+    MPESA_QUEUE_TIMEOUT_URL
+
+${b('ACCOUNT BALANCE NOTES')}
+  The Account Balance API is ASYNCHRONOUS.
+  The CLI submits the request and prints the OriginatorConversationID.
+  Daraja will POST the actual balance data to MPESA_RESULT_URL.
+
+  IdentifierType values:
+    1 = MSISDN
+    2 = Till Number
+    4 = Organisation ShortCode (default, most common)
 
 ${b('EXAMPLES')}
   ${dim('$ npx pesafy init')}
   ${dim('$ npx pesafy stk-push --amount 100 --phone 254712345678')}
   ${dim('$ npx pesafy stk-query ws_CO_1234567890')}
+  ${dim('$ npx pesafy balance --shortcode 600000 --identifier-type 4')}
   ${dim('$ npx pesafy token')}
   ${dim('$ npx pesafy doctor')}
   ${dim('$ npx pesafy validate-phone 0712345678')}
@@ -185,16 +196,18 @@ async function cmdInit() {
     'STK Push Callback URL',
     'https://yourdomain.com/api/mpesa/callback',
   )
-  const initiatorName = await prompt('Initiator Name (leave blank if not using B2C/Reversal)')
+  const initiatorName = await prompt(
+    'Initiator Name (leave blank if not using B2C/Reversal/Balance)',
+  )
   const initiatorPassword = await prompt(
-    'Initiator Password (leave blank if not using B2C/Reversal)',
+    'Initiator Password (leave blank if not using B2C/Reversal/Balance)',
   )
   const certPath = await prompt(
     'Certificate path (leave blank to skip)',
     './SandboxCertificate.cer',
   )
   const resultUrl = await prompt(
-    'Result URL (for async APIs)',
+    'Result URL (for async APIs — Account Balance, Reversal, B2C)',
     'https://yourdomain.com/api/mpesa/result',
   )
   const queueTimeoutUrl = await prompt(
@@ -214,12 +227,13 @@ MPESA_SHORTCODE=${shortcode}
 MPESA_PASSKEY=${passkey}
 MPESA_CALLBACK_URL=${callbackUrl}
 
-# Initiator (B2C / Reversal / Account Balance / Tax Remittance)
+# Initiator (Account Balance / B2C / Reversal / Transaction Status / Tax Remittance)
+# Required org portal role for Account Balance: "Balance Query ORG API"
 MPESA_INITIATOR_NAME=${initiatorName}
 MPESA_INITIATOR_PASSWORD=${initiatorPassword}
 MPESA_CERTIFICATE_PATH=${certPath}
 
-# Async API result endpoints
+# Async API result endpoints (Account Balance, Reversal, B2C)
 MPESA_RESULT_URL=${resultUrl}
 MPESA_QUEUE_TIMEOUT_URL=${queueTimeoutUrl}
 `
@@ -280,10 +294,10 @@ async function cmdDoctor() {
     ok = false
   }
 
-  console.log(`\n${b('Initiator (B2C / Reversal / Balance — optional):')}`)
+  console.log(`\n${b('Initiator (Account Balance / B2C / Reversal / Balance — optional):')}`)
   const hasInitiator = !!(env['MPESA_INITIATOR_NAME'] && env['MPESA_INITIATOR_PASSWORD'])
   if (!hasInitiator) {
-    console.log(dim('  — Not configured (only required for B2C, Reversal, Balance, Tax)'))
+    console.log(dim('  — Not configured (required for Account Balance, B2C, Reversal, Tax)'))
   } else {
     check('MPESA_INITIATOR_NAME')
     check('MPESA_INITIATOR_PASSWORD')
@@ -301,11 +315,24 @@ async function cmdDoctor() {
     }
   }
 
-  console.log(`\n${b('Async result URLs (optional but recommended):')}`)
+  console.log(`\n${b('Async result URLs (required for Account Balance, Reversal, B2C):')}`)
   if (env['MPESA_RESULT_URL']) {
     console.log(`${g('✔')}  MPESA_RESULT_URL`)
+    const resultUrl = env['MPESA_RESULT_URL']
+    if (envVal === 'production' && !resultUrl.startsWith('https://')) {
+      console.log(r('  ✖  MPESA_RESULT_URL must be HTTPS in production'))
+      ok = false
+    }
   } else {
-    console.log(dim('  — Not set'))
+    console.log(y('⚠  MPESA_RESULT_URL not set — required for Account Balance, Reversal, B2C'))
+  }
+
+  if (env['MPESA_QUEUE_TIMEOUT_URL']) {
+    console.log(`${g('✔')}  MPESA_QUEUE_TIMEOUT_URL`)
+  } else {
+    console.log(
+      y('⚠  MPESA_QUEUE_TIMEOUT_URL not set — required for Account Balance, Reversal, B2C'),
+    )
   }
 
   console.log('')
@@ -393,7 +420,6 @@ async function cmdStkPush(args: string[]) {
     'MPESA_CALLBACK_URL',
   )
 
-  // Parse --amount and --phone from args
   const getArg = (flag: string) => {
     const idx = args.indexOf(flag)
     return idx !== -1 ? args[idx + 1] : undefined
@@ -417,11 +443,9 @@ async function cmdStkPush(args: string[]) {
   console.log(dim('\nFetching token…'))
   const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
-  // Format phone
   const { formatSafaricomPhone } = await import('../utils/phone/index.js')
   const msisdn = formatSafaricomPhone(phone)
 
-  // Build password
   const { getStkPushPassword, getTimestamp } = await import('../mpesa/stk-push/utils.js')
   const timestamp = getTimestamp()
   const password = getStkPushPassword(env['MPESA_SHORTCODE']!, env['MPESA_PASSKEY']!, timestamp)
@@ -516,6 +540,26 @@ async function cmdStkQuery(args: string[]) {
   }
 }
 
+/**
+ * Account Balance CLI command
+ *
+ * Daraja API: POST /mpesa/accountbalance/v1/query
+ *
+ * ASYNCHRONOUS — submits the request and returns OriginatorConversationID.
+ * Actual balance data arrives via POST to MPESA_RESULT_URL.
+ *
+ * Required env:
+ *   MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_ENVIRONMENT
+ *   MPESA_INITIATOR_NAME, MPESA_INITIATOR_PASSWORD, MPESA_CERTIFICATE_PATH
+ *   MPESA_RESULT_URL, MPESA_QUEUE_TIMEOUT_URL
+ *
+ * Required org portal role: "Balance Query ORG API"
+ *
+ * Flags:
+ *   --shortcode <code>        — PartyA shortcode to query (default: MPESA_SHORTCODE)
+ *   --identifier-type <type>  — "1" MSISDN | "2" Till | "4" ShortCode (default: "4")
+ *   --remarks <text>          — Optional remarks (default: "Balance query via pesafy CLI")
+ */
 async function cmdBalance(args: string[]) {
   const env = loadEnv()
   requireEnv(
@@ -527,9 +571,46 @@ async function cmdBalance(args: string[]) {
     'MPESA_INITIATOR_PASSWORD',
   )
 
-  const partyA = args[0] ?? env['MPESA_SHORTCODE'] ?? (await prompt('Shortcode to query'))
+  const getArg = (flag: string) => {
+    const idx = args.indexOf(flag)
+    return idx !== -1 ? args[idx + 1] : undefined
+  }
+
+  // PartyA — the shortcode being queried
+  const partyA =
+    getArg('--shortcode') ??
+    args[0] ??
+    env['MPESA_SHORTCODE'] ??
+    (await prompt('Shortcode to query (PartyA)'))
+
+  // IdentifierType — defaults to "4" (Organisation ShortCode) per Daraja docs
+  const identifierTypeRaw = getArg('--identifier-type') ?? env['MPESA_IDENTIFIER_TYPE'] ?? '4'
+  const validIdentifierTypes = ['1', '2', '4'] as const
+  type IdentifierType = '1' | '2' | '4'
+  if (!validIdentifierTypes.includes(identifierTypeRaw as IdentifierType)) {
+    console.error(
+      r(
+        `✖  Invalid --identifier-type "${identifierTypeRaw}". Must be "1" (MSISDN), "2" (Till), or "4" (ShortCode).`,
+      ),
+    )
+    process.exit(1)
+  }
+  const identifierType = identifierTypeRaw as IdentifierType
+
+  const remarks = getArg('--remarks') ?? 'Balance query via pesafy CLI'
+
   const resultUrl = env['MPESA_RESULT_URL'] ?? (await prompt('Result URL'))
   const queueTimeoutUrl = env['MPESA_QUEUE_TIMEOUT_URL'] ?? (await prompt('Queue Timeout URL'))
+
+  // Validate URLs are present
+  if (!resultUrl.trim()) {
+    console.error(r('✖  ResultURL is required. Set MPESA_RESULT_URL in your .env'))
+    process.exit(1)
+  }
+  if (!queueTimeoutUrl.trim()) {
+    console.error(r('✖  QueueTimeOutURL is required. Set MPESA_QUEUE_TIMEOUT_URL in your .env'))
+    process.exit(1)
+  }
 
   const baseUrl =
     env['MPESA_ENVIRONMENT'] === 'production'
@@ -539,38 +620,95 @@ async function cmdBalance(args: string[]) {
   console.log(dim('\nFetching token…'))
   const token = await getToken(env['MPESA_CONSUMER_KEY']!, env['MPESA_CONSUMER_SECRET']!, baseUrl)
 
+  // Encrypt initiator password using the certificate
   const { encryptSecurityCredential } = await import('../core/encryption/index.js')
   const { readFile } = await import('node:fs/promises')
   const certPath = env['MPESA_CERTIFICATE_PATH'] ?? './SandboxCertificate.cer'
-  const pem = await readFile(resolve(process.cwd(), certPath), 'utf-8')
-  const cred = encryptSecurityCredential(env['MPESA_INITIATOR_PASSWORD']!, pem)
 
-  console.log(dim('Sending balance query…\n'))
+  if (!existsSync(resolve(process.cwd(), certPath))) {
+    console.error(r(`✖  Certificate not found: ${certPath}`))
+    console.error(dim('  Download from Safaricom Daraja portal and set MPESA_CERTIFICATE_PATH'))
+    process.exit(1)
+  }
+
+  const pem = await readFile(resolve(process.cwd(), certPath), 'utf-8')
+  const securityCredential = encryptSecurityCredential(env['MPESA_INITIATOR_PASSWORD']!, pem)
+
+  console.log(dim('Sending Account Balance query…\n'))
+
+  const identifierTypeLabel: Record<IdentifierType, string> = {
+    '1': 'MSISDN',
+    '2': 'Till Number',
+    '4': 'Organisation ShortCode',
+  }
 
   try {
+    // Exactly 8 fields per Daraja Account Balance spec
     const result = (await fetchJson(
       `${baseUrl}/mpesa/accountbalance/v1/query`,
       'POST',
       { Authorization: `Bearer ${token}` },
       {
         Initiator: env['MPESA_INITIATOR_NAME'],
-        SecurityCredential: cred,
+        SecurityCredential: securityCredential,
         CommandID: 'AccountBalance',
-        PartyA: partyA,
-        IdentifierType: '4',
+        PartyA: String(partyA),
+        IdentifierType: identifierType,
         ResultURL: resultUrl,
         QueueTimeOutURL: queueTimeoutUrl,
-        Remarks: 'Balance query via pesafy CLI',
+        Remarks: remarks,
       },
     )) as Record<string, string>
 
     if (result['ResponseCode'] === '0') {
+      console.log(`${g('✔  Account Balance query submitted!')}\n`)
       console.log(
-        `${g('✔  Balance query submitted!')} Result will be POSTed to:\n  ${c(resultUrl)}\n`,
+        `  ${b('OriginatorConversationID:')} ${c(result['OriginatorConversationID'] ?? '')}`,
+      )
+      console.log(`  ${b('ConversationID:')}           ${result['ConversationID'] ?? ''}`)
+      console.log(`  ${b('ResponseDescription:')}      ${result['ResponseDescription'] ?? ''}`)
+      console.log(`  ${b('PartyA (shortcode):')}       ${partyA}`)
+      console.log(
+        `  ${b('IdentifierType:')}           ${identifierType} (${identifierTypeLabel[identifierType]})`,
+      )
+      console.log()
+      console.log(
+        dim(`  ⚠  This API is ASYNCHRONOUS. The balance data will be POSTed to:\n  ${resultUrl}\n`),
+      )
+      console.log(
+        dim(
+          `  Save the OriginatorConversationID to correlate the async callback.\n` +
+            `  If the callback fails, check the M-PESA org portal manually.\n`,
+        ),
       )
     } else {
-      console.log(r('✖  Request failed:'))
+      console.log(`${r('✖  Account Balance query failed:')}\n`)
       console.log(JSON.stringify(result, null, 2))
+
+      // Provide helpful hints for common error codes
+      const errorCode = result['errorCode'] ?? ''
+      if (errorCode === '18' || result['ResponseDescription']?.includes('initiator')) {
+        console.log(y('\n  Hint: Error 18 = Initiator Credential Check Failure'))
+        console.log(dim('  — Verify MPESA_INITIATOR_NAME is the correct API operator username'))
+        console.log(
+          dim('  — Confirm the API user is active (not dormant) on the M-PESA org portal'),
+        )
+        console.log(dim('  — Ensure the certificate matches the environment (sandbox/production)'))
+      } else if (errorCode === '20') {
+        console.log(y('\n  Hint: Error 20 = Unresolved Initiator'))
+        console.log(
+          dim('  — The initiator username was not found. Log in to the M-PESA portal to verify.'),
+        )
+      } else if (errorCode === '21') {
+        console.log(y('\n  Hint: Error 21 = Initiator to Primary Party Permission Failure'))
+        console.log(dim('  — The API user does not have the "Balance Query ORG API" role.'))
+        console.log(dim('  — Ask your Business Administrator to assign the correct role.'))
+      } else if (errorCode === '15') {
+        console.log(y('\n  Hint: Error 15 = Duplicate Detected'))
+        console.log(
+          dim('  — A request with the same OriginatorConversationID was already submitted.'),
+        )
+      }
     }
   } catch (e) {
     console.error(r(`✖  ${(e as Error).message}`))

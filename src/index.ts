@@ -85,14 +85,10 @@ export type {
   C2BValidationResultCode,
 } from './mpesa/c2b'
 export {
-  // API clients
   registerC2BUrls,
   simulateC2B,
-  // Error code constants (from Daraja troubleshooting docs)
   C2B_REGISTER_URL_ERROR_CODES,
-  // Validation result code constants (from Daraja validation docs)
   C2B_VALIDATION_RESULT_CODES,
-  // Webhook helpers
   acceptC2BValidation,
   acknowledgeC2BConfirmation,
   getC2BAccountRef,
@@ -173,17 +169,13 @@ export type {
   B2BBuyGoodsResultParameterKey,
 } from './mpesa/b2b-buy-goods'
 export {
-  // API client
   initiateB2BBuyGoods,
-  // Result code constants
   B2B_BUY_GOODS_ERROR_CODES,
   B2B_BUY_GOODS_RESULT_CODES,
-  // Webhook helpers — type guards
   isB2BBuyGoodsFailure,
   isB2BBuyGoodsResult,
   isB2BBuyGoodsSuccess,
   isKnownB2BBuyGoodsResultCode,
-  // Webhook helpers — field extractors
   getB2BBuyGoodsAmount,
   getB2BBuyGoodsBillReferenceNumber,
   getB2BBuyGoodsCompletedTime,
@@ -216,17 +208,13 @@ export type {
   B2BPayBillResultParameterKey,
 } from './mpesa/b2b-pay-bill'
 export {
-  // API client
   initiateB2BPayBill,
-  // Result code constants
   B2B_PAY_BILL_ERROR_CODES,
   B2B_PAY_BILL_RESULT_CODES,
-  // Webhook helpers — type guards
   isB2BPayBillFailure,
   isB2BPayBillResult,
   isB2BPayBillSuccess,
   isKnownB2BPayBillResultCode,
-  // Webhook helpers — field extractors
   getB2BPayBillAmount,
   getB2BPayBillBillReferenceNumber,
   getB2BPayBillCompletedTime,
@@ -254,15 +242,12 @@ export type {
   TaxRemittanceResultParameterKey,
 } from './mpesa/tax-remittance'
 export {
-  // API client
   KRA_SHORTCODE,
   remitTax,
   TAX_COMMAND_ID,
-  // Webhook helpers — type guards
   isTaxRemittanceFailure,
   isTaxRemittanceResult,
   isTaxRemittanceSuccess,
-  // Webhook helpers — field extractors
   getTaxAmount,
   getTaxCompletedTime,
   getTaxConversationId,
@@ -285,23 +270,18 @@ export type {
   TransactionStatusResultParameterKey,
 } from './mpesa/transaction-status'
 export {
-  // API client
   queryTransactionStatus,
-  // Error & result code constants
   TRANSACTION_STATUS_ERROR_CODES,
   TRANSACTION_STATUS_RESULT_CODES,
-  // Webhook helpers — type guards
   isTransactionStatusFailure,
   isTransactionStatusResult,
   isTransactionStatusSuccess,
   isKnownTransactionStatusResultCode,
-  // Webhook helpers — core field extractors
   getTransactionStatusConversationId,
   getTransactionStatusOriginatorConversationId,
   getTransactionStatusResultCode,
   getTransactionStatusResultDesc,
   getTransactionStatusTransactionId,
-  // Webhook helpers — result parameter extractors
   getTransactionStatusAmount,
   getTransactionStatusCreditPartyName,
   getTransactionStatusDebitAccountBalance,
@@ -315,15 +295,33 @@ export {
 // ── Account Balance ───────────────────────────────────────────────────────────
 export type {
   AccountBalanceData,
+  AccountBalanceErrorCode,
   AccountBalanceRequest,
   AccountBalanceResponse,
   AccountBalanceResult,
+  AccountBalanceReferenceItem,
+  AccountBalanceResultParameter,
+  AccountBalanceResultParameterKey,
   ParsedAccount,
 } from './mpesa/account-balance'
 export {
-  getAccountBalanceParam,
+  // API client
+  queryAccountBalance,
+  // Constants
+  ACCOUNT_BALANCE_ERROR_CODES,
+  // Type guards
   isAccountBalanceSuccess,
+  // Parsers
   parseAccountBalance,
+  // Parameter extractors
+  getAccountBalanceParam,
+  // Field extractors
+  getAccountBalanceTransactionId,
+  getAccountBalanceConversationId,
+  getAccountBalanceOriginatorConversationId,
+  getAccountBalanceCompletedTime,
+  getAccountBalanceRawBalance,
+  getAccountBalanceReferenceItem,
 } from './mpesa/account-balance'
 
 // ── Reversal ──────────────────────────────────────────────────────────────────

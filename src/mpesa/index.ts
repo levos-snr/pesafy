@@ -130,17 +130,35 @@ export class Mpesa {
     return name
   }
 
-  // ── Safe wrappers — return Result<T> instead of throwing ──────────────────
+  // ── Safe wrappers ──────────────────────────────────────────────────────────
 
-  /**
-   * Like stkPush() but returns Result<T> instead of throwing.
-   * Ideal for application-level code that prefers not to use try/catch.
-   */
   async stkPushSafe(
     request: Omit<StkPushRequest, 'shortCode' | 'passKey'>,
   ): Promise<Result<Awaited<ReturnType<typeof this.stkPush>>>> {
     try {
       return ok(await this.stkPush(request))
+    } catch (e) {
+      return err(e as PesafyError)
+    }
+  }
+
+  /**
+   * Safe wrapper for accountBalance — returns Result<T> instead of throwing.
+   * Ideal for application-level code that prefers not to use try/catch.
+   *
+   * @example
+   * const result = await mpesa.accountBalanceSafe({ ... });
+   * if (result.ok) {
+   *   console.log(result.data.OriginatorConversationID);
+   * } else {
+   *   console.error(result.error.code, result.error.message);
+   * }
+   */
+  async accountBalanceSafe(
+    request: AccountBalanceRequest,
+  ): Promise<Result<AccountBalanceResponse>> {
+    try {
+      return ok(await this.accountBalance(request))
     } catch (e) {
       return err(e as PesafyError)
     }
@@ -196,7 +214,14 @@ export class Mpesa {
    * Queries the balance of your M-PESA shortcode.
    *
    * ASYNCHRONOUS — the sync response is only acknowledgement.
-   * Balance data is POSTed to your resultUrl.
+   * Balance data is POSTed to your resultUrl callback.
+   *
+   * Required org portal role: "Balance Query ORG API"
+   *
+   * identifierType values:
+   *   "1" = MSISDN
+   *   "2" = Till Number
+   *   "4" = Organisation ShortCode (most common)
    *
    * @example
    * await mpesa.accountBalance({
@@ -204,6 +229,7 @@ export class Mpesa {
    *   identifierType:  "4",
    *   resultUrl:       "https://yourdomain.com/mpesa/balance/result",
    *   queueTimeOutUrl: "https://yourdomain.com/mpesa/balance/timeout",
+   *   remarks:         "Daily reconciliation",
    * });
    */
   async accountBalance(request: AccountBalanceRequest): Promise<AccountBalanceResponse> {
@@ -214,21 +240,6 @@ export class Mpesa {
 
   // ── Reversal ───────────────────────────────────────────────────────────────
 
-  /**
-   * Reverses a completed M-PESA transaction.
-   *
-   * ASYNCHRONOUS — reversal result arrives via POST to your resultUrl.
-   *
-   * @example
-   * await mpesa.reverseTransaction({
-   *   transactionId:          "OEI2AK4XXXX",
-   *   receiverParty:          "174379",
-   *   receiverIdentifierType: "4",
-   *   amount:                 100,
-   *   resultUrl:              "https://yourdomain.com/mpesa/reversal/result",
-   *   queueTimeOutUrl:        "https://yourdomain.com/mpesa/reversal/timeout",
-   * });
-   */
   async reverseTransaction(request: ReversalRequest): Promise<ReversalResponse> {
     const initiator = this.requireInitiator('Reversal')
     const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
@@ -273,29 +284,6 @@ export class Mpesa {
 
   // ── B2B Buy Goods ──────────────────────────────────────────────────────────
 
-  /**
-   * Pays for goods and services from your business account to a till number,
-   * merchant store number, or Merchant HO.
-   *
-   * Moves money from your MMF/Working account to the recipient's merchant account.
-   * ASYNCHRONOUS — the sync response is only acknowledgement.
-   * The final result arrives via POST to your resultUrl.
-   *
-   * Requires the "Org Business Pay Bill API initiator" role on M-PESA.
-   *
-   * @example
-   * await mpesa.b2bBuyGoods({
-   *   commandId:        "BusinessBuyGoods",
-   *   amount:           239,
-   *   partyA:           "123456",
-   *   partyB:           "000000",
-   *   accountReference: "INV-353353",
-   *   requester:        "254700000000",
-   *   remarks:          "Stock purchase",
-   *   resultUrl:        "https://yourdomain.com/mpesa/b2b/result",
-   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2b/timeout",
-   * });
-   */
   async b2bBuyGoods(request: B2BBuyGoodsRequest): Promise<B2BBuyGoodsResponse> {
     const initiator = this.requireInitiator('B2B Buy Goods')
     const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
@@ -304,28 +292,6 @@ export class Mpesa {
 
   // ── B2B Pay Bill ───────────────────────────────────────────────────────────
 
-  /**
-   * Pays a bill from your business account to a Paybill number.
-   *
-   * Moves money from your MMF/Working account to the recipient's utility account.
-   * ASYNCHRONOUS — the sync response is only acknowledgement.
-   * The final result arrives via POST to your resultUrl.
-   *
-   * Requires the "Org Business Pay Bill API initiator" role on M-PESA.
-   *
-   * @example
-   * await mpesa.b2bPayBill({
-   *   commandId:        "BusinessPayBill",
-   *   amount:           239,
-   *   partyA:           "123456",
-   *   partyB:           "000000",
-   *   accountReference: "INV-353353",
-   *   requester:        "254700000000",
-   *   remarks:          "Supplier payment",
-   *   resultUrl:        "https://yourdomain.com/mpesa/b2b/result",
-   *   queueTimeOutUrl:  "https://yourdomain.com/mpesa/b2b/timeout",
-   * });
-   */
   async b2bPayBill(request: B2BPayBillRequest): Promise<B2BPayBillResponse> {
     const initiator = this.requireInitiator('B2B Pay Bill')
     const [token, cred] = await Promise.all([this.getToken(), this.buildSecurityCredential()])
@@ -340,7 +306,7 @@ export class Mpesa {
     return _initiateB2CPayment(this.baseUrl, token, cred, initiator, request)
   }
 
-  // ── B2C Payment Disbursement ───────────────────────────────────────────────
+  // ── B2C Disbursement ───────────────────────────────────────────────────────
 
   async b2cDisbursement(request: B2CDisbursementRequest): Promise<B2CDisbursementResponse> {
     const initiator = this.requireInitiator('B2C Disbursement')
@@ -350,37 +316,11 @@ export class Mpesa {
 
   // ── Bill Manager ───────────────────────────────────────────────────────────
 
-  /**
-   * Opts in a shortcode for Bill Manager.
-   *
-   * @example
-   * await mpesa.billManagerOptIn({
-   *   shortcode:        "600984",
-   *   email:            "billing@company.com",
-   *   officialContact:  "0700000000",
-   *   sendReminders:    "1",
-   *   callbackUrl:      "https://yourdomain.com/mpesa/bills/callback",
-   * });
-   */
   async billManagerOptIn(request: BillManagerOptInRequest): Promise<BillManagerOptInResponse> {
     const token = await this.getToken()
     return _billManagerOptIn(this.baseUrl, token, request)
   }
 
-  /**
-   * Sends a single invoice via Bill Manager.
-   *
-   * @example
-   * await mpesa.sendInvoice({
-   *   externalReference: "INV-001",
-   *   billingPeriod:     "2024-01",
-   *   invoiceName:       "January Subscription",
-   *   dueDate:           "2024-01-31 23:59:00",
-   *   accountReference:  "ACC-12345",
-   *   amount:            2500,
-   *   partyA:            "254712345678",
-   * });
-   */
   async sendInvoice(
     request: BillManagerSingleInvoiceRequest,
   ): Promise<BillManagerSingleInvoiceResponse> {
@@ -388,9 +328,6 @@ export class Mpesa {
     return _sendSingleInvoice(this.baseUrl, token, request)
   }
 
-  /**
-   * Sends up to 1 000 invoices in a single bulk request.
-   */
   async sendBulkInvoices(
     request: BillManagerBulkInvoiceRequest,
   ): Promise<BillManagerBulkInvoiceResponse> {
@@ -398,9 +335,6 @@ export class Mpesa {
     return _sendBulkInvoices(this.baseUrl, token, request)
   }
 
-  /**
-   * Cancels a previously issued Bill Manager invoice.
-   */
   async cancelInvoice(
     request: BillManagerCancelInvoiceRequest,
   ): Promise<BillManagerCancelInvoiceResponse> {
@@ -410,12 +344,10 @@ export class Mpesa {
 
   // ── Utilities ──────────────────────────────────────────────────────────────
 
-  /** Force the cached OAuth token to refresh on the next API call. */
   clearTokenCache(): void {
     this.tokenManager.clearCache()
   }
 
-  /** Returns the current environment ("sandbox" | "production") */
   get environment() {
     return this.config.environment
   }
