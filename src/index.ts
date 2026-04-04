@@ -1,17 +1,45 @@
-// src/index.ts
+/**
+ * src/index.ts
+ *
+ * Root package entry point — exports everything consumers need.
+ *
+ * Sections:
+ *   1.  Mpesa client class
+ *   2.  Core types (environment, config)
+ *   3.  Auth (TokenManager, token types)
+ *   4.  Branded types & Result helpers
+ *   5.  Errors (PesafyError, createError, isPesafyError)
+ *   6.  Encryption
+ *   7.  Phone utilities
+ *   8.  STK Push              (FIXED: added STK_PUSH_LIMITS, STK_RESULT_CODES, isKnownStkResultCode, StkResultCode)
+ *   9.  C2B
+ *   10. B2C Account Top Up
+ *   11. B2B Express Checkout
+ *   12. B2B Buy Goods
+ *   13. B2B Pay Bill
+ *   14. Tax Remittance
+ *   15. Transaction Status
+ *   16. Account Balance
+ *   17. Reversal
+ *   18. Bill Manager
+ *   19. Dynamic QR            (FIXED: added generateDynamicQR, validators, QR_TRANSACTION_CODES, extra types)
+ *   20. B2C Disbursement      (FIXED: was entirely missing — full module now exported)
+ *   21. Webhooks
+ *   22. HTTP (advanced)
+ */
 
-// ── Main client ───────────────────────────────────────────────────────────────
+// ── 1. Mpesa client ───────────────────────────────────────────────────────────
 export { Mpesa } from './mpesa'
 
-// ── Core types ────────────────────────────────────────────────────────────────
+// ── 2. Core types ─────────────────────────────────────────────────────────────
 export type { Environment, MpesaConfig } from './mpesa/types'
 export { DARAJA_BASE_URLS } from './mpesa/types'
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
+// ── 3. Auth ───────────────────────────────────────────────────────────────────
 export type { AuthErrorCode, AuthErrorResponse, TokenCacheEntry, TokenResponse } from './core/auth'
 export { AUTH_ERROR_CODES, TokenManager } from './core/auth'
 
-// ── Branded types & helpers ───────────────────────────────────────────────────
+// ── 4. Branded types & helpers ────────────────────────────────────────────────
 export type {
   CheckoutRequestID,
   ConversationID,
@@ -38,17 +66,17 @@ export {
   toTill,
 } from './types/branded'
 
-// ── Errors ────────────────────────────────────────────────────────────────────
+// ── 5. Errors ─────────────────────────────────────────────────────────────────
 export type { ErrorCode, PesafyErrorOptions } from './utils/errors'
 export { createError, isPesafyError, PesafyError } from './utils/errors'
 
-// ── Encryption ────────────────────────────────────────────────────────────────
+// ── 6. Encryption ─────────────────────────────────────────────────────────────
 export { encryptSecurityCredential } from './core/encryption'
 
-// ── Phone utilities ───────────────────────────────────────────────────────────
+// ── 7. Phone utilities ────────────────────────────────────────────────────────
 export { formatSafaricomPhone } from './utils/phone'
 
-// ── STK Push ──────────────────────────────────────────────────────────────────
+// ── 8. STK Push ───────────────────────────────────────────────────────────────
 export type {
   StkCallbackFailure,
   StkCallbackInner,
@@ -59,16 +87,23 @@ export type {
   StkPushResponse,
   StkQueryRequest,
   StkQueryResponse,
+  StkResultCode,
   TransactionType,
 } from './mpesa/stk-push'
 export {
+  // Constants — were missing before this fix
+  STK_PUSH_LIMITS,
+  STK_RESULT_CODES,
+  // Type guard — was missing before this fix
+  isKnownStkResultCode,
+  // Helpers
   formatPhoneNumber,
   getCallbackValue,
   getTimestamp,
   isStkCallbackSuccess,
 } from './mpesa/stk-push'
 
-// ── C2B ───────────────────────────────────────────────────────────────────────
+// ── 9. C2B ────────────────────────────────────────────────────────────────────
 export type {
   C2BApiVersion,
   C2BCommandID,
@@ -101,7 +136,7 @@ export {
   rejectC2BValidation,
 } from './mpesa/c2b'
 
-// ── B2C ───────────────────────────────────────────────────────────────────────
+// ── 10. B2C Account Top Up ────────────────────────────────────────────────────
 export type {
   B2CCommandID,
   B2CErrorCode,
@@ -134,7 +169,7 @@ export {
   isKnownB2CResultCode,
 } from './mpesa/b2c'
 
-// ── B2B Express Checkout ──────────────────────────────────────────────────────
+// ── 11. B2B Express Checkout ──────────────────────────────────────────────────
 export type {
   B2BExpressCheckoutCallback,
   B2BExpressCheckoutCallbackCancelled,
@@ -145,6 +180,9 @@ export type {
   B2BExpressCheckoutResponse,
 } from './mpesa/b2b-express-checkout'
 export {
+  // FIXED: B2B_RESULT_CODES was missing — caused B2B_RESULT_CODES.SUCCESS and
+  // B2B_RESULT_CODES.CANCELLED to resolve as undefined in the root index tests.
+  B2B_RESULT_CODES,
   getB2BAmount,
   getB2BConversationId,
   getB2BRequestId,
@@ -155,7 +193,7 @@ export {
   isB2BCheckoutSuccess,
 } from './mpesa/b2b-express-checkout'
 
-// ── B2B Buy Goods ─────────────────────────────────────────────────────────────
+// ── 12. B2B Buy Goods ─────────────────────────────────────────────────────────
 export type {
   B2BBuyGoodsCommandID,
   B2BBuyGoodsErrorCode,
@@ -194,7 +232,7 @@ export {
   getB2BBuyGoodsTransactionId,
 } from './mpesa/b2b-buy-goods'
 
-// ── B2B Pay Bill ──────────────────────────────────────────────────────────────
+// ── 13. B2B Pay Bill ──────────────────────────────────────────────────────────
 export type {
   B2BPayBillCommandID,
   B2BPayBillErrorCode,
@@ -232,7 +270,7 @@ export {
   getB2BPayBillTransactionId,
 } from './mpesa/b2b-pay-bill'
 
-// ── Tax Remittance ────────────────────────────────────────────────────────────
+// ── 14. Tax Remittance ────────────────────────────────────────────────────────
 export type {
   TaxRemittanceErrorResponse,
   TaxRemittanceRequest,
@@ -259,7 +297,7 @@ export {
   getTaxTransactionId,
 } from './mpesa/tax-remittance'
 
-// ── Transaction Status ────────────────────────────────────────────────────────
+// ── 15. Transaction Status ────────────────────────────────────────────────────
 export type {
   TransactionStatusErrorCode,
   TransactionStatusRequest,
@@ -292,7 +330,7 @@ export {
   getTransactionStatusTransactionDate,
 } from './mpesa/transaction-status'
 
-// ── Account Balance ───────────────────────────────────────────────────────────
+// ── 16. Account Balance ───────────────────────────────────────────────────────
 export type {
   AccountBalanceData,
   AccountBalanceErrorCode,
@@ -305,17 +343,11 @@ export type {
   ParsedAccount,
 } from './mpesa/account-balance'
 export {
-  // API client
   queryAccountBalance,
-  // Constants
   ACCOUNT_BALANCE_ERROR_CODES,
-  // Type guards
   isAccountBalanceSuccess,
-  // Parsers
   parseAccountBalance,
-  // Parameter extractors
   getAccountBalanceParam,
-  // Field extractors
   getAccountBalanceTransactionId,
   getAccountBalanceConversationId,
   getAccountBalanceOriginatorConversationId,
@@ -324,7 +356,7 @@ export {
   getAccountBalanceReferenceItem,
 } from './mpesa/account-balance'
 
-// ── Reversal ──────────────────────────────────────────────────────────────────
+// ── 17. Reversal ──────────────────────────────────────────────────────────────
 export type {
   ReversalErrorCode,
   ReversalRequest,
@@ -335,19 +367,15 @@ export type {
   ReversalResultParameterKey,
 } from './mpesa/reversal'
 export {
-  // API client
   requestReversal,
-  // Constants
   REVERSAL_COMMAND_ID,
   REVERSAL_ERROR_CODES,
   REVERSAL_RECEIVER_IDENTIFIER_TYPE,
   REVERSAL_RESULT_CODES,
-  // Type guards
   isKnownReversalResultCode,
   isReversalFailure,
   isReversalResult,
   isReversalSuccess,
-  // Extractors
   getReversalAmount,
   getReversalCharge,
   getReversalCompletedTime,
@@ -363,7 +391,7 @@ export {
   getReversalTransactionId,
 } from './mpesa/reversal'
 
-// ── Bill Manager ──────────────────────────────────────────────────────────────
+// ── 18. Bill Manager ──────────────────────────────────────────────────────────
 export type {
   BillManagerBulkInvoiceRequest,
   BillManagerBulkInvoiceResponse,
@@ -393,10 +421,70 @@ export {
   updateOptIn,
 } from './mpesa/bill-manager'
 
-// ── Dynamic QR ────────────────────────────────────────────────────────────────
-export type { DynamicQRRequest, DynamicQRResponse, QRTransactionCode } from './mpesa/dynamic-qr'
+// ── 19. Dynamic QR ────────────────────────────────────────────────────────────
+// FIXED: generateDynamicQR function, QR_TRANSACTION_CODES constant, all
+// validators, and extra types were missing in the previous version.
+export type {
+  DynamicQRDarajaPayload,
+  DynamicQRErrorResponse,
+  DynamicQRRequest,
+  DynamicQRResponse,
+  QRTransactionCode,
+  ValidationFail,
+  ValidationOk,
+  ValidationResult,
+} from './mpesa/dynamic-qr'
+export {
+  generateDynamicQR,
+  QR_TRANSACTION_CODES,
+  DEFAULT_QR_SIZE,
+  MAX_QR_SIZE,
+  MIN_AMOUNT,
+  MIN_QR_SIZE,
+  validateAmount,
+  validateCpi,
+  validateDynamicQRRequest,
+  validateMerchantName,
+  validateRefNo,
+  validateSize,
+  validateTrxCode,
+} from './mpesa/dynamic-qr'
 
-// ── Webhooks ──────────────────────────────────────────────────────────────────
+// ── 20. B2C Disbursement ──────────────────────────────────────────────────────
+// FIXED: this entire module was missing from the previous version of src/index.ts.
+export type {
+  B2CDisbursementCommandID,
+  B2CDisbursementErrorResponse,
+  B2CDisbursementRequest,
+  B2CDisbursementResponse,
+  B2CDisbursementResult,
+  B2CDisbursementResultCode,
+  B2CDisbursementResultParameter,
+  B2CDisbursementResultParameterKey,
+} from './mpesa/b2c-disbursement'
+export {
+  initiateB2CDisbursement,
+  B2C_DISBURSEMENT_RESULT_CODES,
+  getB2CDisbursementAmount,
+  getB2CDisbursementCompletedTime,
+  getB2CDisbursementConversationId,
+  getB2CDisbursementOriginatorConversationId,
+  getB2CDisbursementReceiptNumber,
+  getB2CDisbursementReceiverName,
+  getB2CDisbursementResultCode,
+  getB2CDisbursementResultDesc,
+  getB2CDisbursementResultParam,
+  getB2CDisbursementTransactionId,
+  getB2CDisbursementUtilityBalance,
+  getB2CDisbursementWorkingBalance,
+  isB2CDisbursementFailure,
+  isB2CDisbursementRecipientRegistered,
+  isB2CDisbursementResult,
+  isB2CDisbursementSuccess,
+  isKnownB2CDisbursementResultCode,
+} from './mpesa/b2c-disbursement'
+
+// ── 21. Webhooks ──────────────────────────────────────────────────────────────
 export type {
   RetryOptions,
   RetryResult,
@@ -418,6 +506,6 @@ export {
   verifyWebhookIP,
 } from './mpesa/webhooks'
 
-// ── HTTP (advanced users) ─────────────────────────────────────────────────────
+// ── 22. HTTP (advanced users) ─────────────────────────────────────────────────
 export type { HttpRequestOptions, HttpResponse } from './utils/http'
 export { httpRequest } from './utils/http'
