@@ -158,11 +158,14 @@ export async function registerMpesaRoutes(
   })
 
   // ── Reversal ──────────────────────────────────────────────────────────────
+  //
+  // receiverIdentifierType is intentionally excluded from the Body type.
+  // Per Daraja docs it MUST always be "11" for the Reversals API — it is
+  // not a caller-configurable value. The SDK enforces this internally.
   app.post<{
     Body: {
       transactionId: string
       receiverParty: string
-      receiverIdentifierType: '1' | '2' | '4'
       amount: number
       remarks?: string
     }
@@ -174,9 +177,12 @@ export async function registerMpesaRoutes(
           message: 'resultUrl and queueTimeOutUrl must be set in config',
         })
       return await mpesa.reverseTransaction({
-        ...req.body,
+        transactionId: req.body.transactionId,
+        receiverParty: req.body.receiverParty,
+        amount: req.body.amount,
         resultUrl: config.resultUrl,
         queueTimeOutUrl: config.queueTimeOutUrl,
+        ...(req.body.remarks !== undefined ? { remarks: req.body.remarks } : {}),
       })
     } catch (e) {
       sendError(reply, e)

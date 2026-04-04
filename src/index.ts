@@ -325,11 +325,42 @@ export {
 } from './mpesa/account-balance'
 
 // ── Reversal ──────────────────────────────────────────────────────────────────
-export type { ReversalRequest, ReversalResponse, ReversalResult } from './mpesa/reversal'
+export type {
+  ReversalErrorCode,
+  ReversalRequest,
+  ReversalResponse,
+  ReversalResult,
+  ReversalResultCode,
+  ReversalResultParameter,
+  ReversalResultParameterKey,
+} from './mpesa/reversal'
 export {
-  getReversalConversationId,
-  getReversalTransactionId,
+  // API client
+  requestReversal,
+  // Constants
+  REVERSAL_COMMAND_ID,
+  REVERSAL_ERROR_CODES,
+  REVERSAL_RECEIVER_IDENTIFIER_TYPE,
+  REVERSAL_RESULT_CODES,
+  // Type guards
+  isKnownReversalResultCode,
+  isReversalFailure,
+  isReversalResult,
   isReversalSuccess,
+  // Extractors
+  getReversalAmount,
+  getReversalCharge,
+  getReversalCompletedTime,
+  getReversalConversationId,
+  getReversalCreditPartyPublicName,
+  getReversalDebitAccountBalance,
+  getReversalDebitPartyPublicName,
+  getReversalOriginalTransactionId,
+  getReversalOriginatorConversationId,
+  getReversalResultCode,
+  getReversalResultDesc,
+  getReversalResultParam,
+  getReversalTransactionId,
 } from './mpesa/reversal'
 
 // ── Bill Manager ──────────────────────────────────────────────────────────────
