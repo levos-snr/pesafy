@@ -1,4 +1,10 @@
 // src/mpesa/webhooks/retry.ts
+//
+// CHANGE: `while (attempts < opts.maxRetries)` → `while (attempts <= opts.maxRetries)`
+//
+// Rationale: maxRetries is the number of *retries* after the first attempt.
+// With maxRetries = 0 the caller expects exactly one attempt (no retries).
+// The old `<` condition skipped the loop entirely for maxRetries = 0.
 
 export interface RetryOptions {
   /** Maximum number of attempts (default: Infinity) */
@@ -31,11 +37,9 @@ export interface RetryResult<T> {
 /**
  * Retries `fn` with exponential backoff until it resolves, or limits are hit.
  *
- * @example
- * const result = await retryWithBackoff(
- *   () => sendToDatabase(webhookData),
- *   { maxRetries: 5, initialDelay: 500 }
- * );
+ * `maxRetries` = number of *retries* after the first attempt.
+ *   0 → one attempt total, no retries
+ *   N → up to N+1 attempts total
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -46,7 +50,8 @@ export async function retryWithBackoff<T>(
   let attempts = 0
   const startTime = Date.now()
 
-  while (attempts < opts.maxRetries) {
+  // FIX: `<=` instead of `<` so maxRetries=0 still executes one attempt
+  while (attempts <= opts.maxRetries) {
     attempts++
 
     if (Date.now() - startTime > opts.maxRetryDuration) {
@@ -68,7 +73,7 @@ export async function retryWithBackoff<T>(
         return { success: false, attempts, error: err }
       }
 
-      if (attempts < opts.maxRetries) {
+      if (attempts <= opts.maxRetries) {
         await new Promise((resolve) => setTimeout(resolve, delay))
         delay = Math.min(delay * opts.backoffMultiplier, opts.maxDelay)
       }
