@@ -1,5 +1,3 @@
-<!-- 📁 PATH: README.md -->
-
 # pesafy 💳
 
 > **Type-safe M-PESA Daraja SDK** for Node.js, Bun, Deno, Cloudflare Workers,
@@ -22,8 +20,11 @@
 - [API Reference](#api-reference)
   - [STK Push (M-PESA Express)](#stk-push-m-pesa-express)
   - [C2B (Customer to Business)](#c2b-customer-to-business)
-  - [B2C (Business to Customer)](#b2c-business-to-customer)
+  - [B2C Account Top Up](#b2c-account-top-up)
+  - [B2C Disbursement](#b2c-disbursement)
   - [B2B Express Checkout](#b2b-express-checkout)
+  - [B2B Pay Bill](#b2b-pay-bill)
+  - [B2B Buy Goods](#b2b-buy-goods)
   - [Account Balance](#account-balance)
   - [Transaction Status](#transaction-status)
   - [Transaction Reversal](#transaction-reversal)
@@ -100,20 +101,21 @@ npx pesafy doctor
 ### Commands
 
 ```
-npx pesafy init                       — Scaffold .env interactively
-npx pesafy doctor                     — Validate .env for common mistakes
-npx pesafy token                      — Print a fresh OAuth token
-npx pesafy encrypt                    — Encrypt initiator password → SecurityCredential
-npx pesafy validate-phone <phone>     — Validate / normalise a Kenyan phone number
-npx pesafy stk-push                   — Initiate an STK Push (interactive prompts)
+npx pesafy init                                   Scaffold .env interactively
+npx pesafy doctor                                 Validate .env for common mistakes
+npx pesafy token                                  Print a fresh OAuth token
+npx pesafy encrypt                                Encrypt initiator password → SecurityCredential
+npx pesafy validate-phone <phone>                 Validate / normalise a Kenyan phone number
+npx pesafy stk-push                               Initiate an STK Push (interactive prompts)
 npx pesafy stk-push --amount 100 --phone 0712345678 --ref INV-001
-npx pesafy stk-query <checkoutId>     — Check STK Push status
-npx pesafy balance                    — Query M-PESA account balance
-npx pesafy reversal <txId>            — Initiate a transaction reversal
-npx pesafy register-c2b-urls          — Register C2B Confirmation + Validation URLs
-npx pesafy simulate-c2b               — Simulate a C2B payment (sandbox only)
-npx pesafy version                    — Print library version
-npx pesafy help                       — Show help
+npx pesafy stk-query <checkoutId>                 Check STK Push status
+npx pesafy balance                                Query M-PESA account balance (async)
+npx pesafy balance --shortcode 600000 --identifier-type 4
+npx pesafy reversal <txId>                        Initiate a transaction reversal
+npx pesafy register-c2b-urls                      Register C2B Confirmation + Validation URLs
+npx pesafy simulate-c2b                           Simulate a C2B payment (sandbox only)
+npx pesafy version                                Print library version
+npx pesafy help                                   Show help
 ```
 
 ### Environment variables read by the CLI
@@ -121,13 +123,13 @@ npx pesafy help                       — Show help
 ```bash
 MPESA_CONSUMER_KEY
 MPESA_CONSUMER_SECRET
-MPESA_ENVIRONMENT          # sandbox | production
+MPESA_ENVIRONMENT           # sandbox | production
 MPESA_SHORTCODE
 MPESA_PASSKEY
 MPESA_CALLBACK_URL
 MPESA_INITIATOR_NAME
 MPESA_INITIATOR_PASSWORD
-MPESA_CERTIFICATE_PATH     # path to .cer file
+MPESA_CERTIFICATE_PATH      # path to .cer file
 MPESA_RESULT_URL
 MPESA_QUEUE_TIMEOUT_URL
 ```
@@ -150,14 +152,14 @@ const mpesa = new Mpesa({
   lipaNaMpesaShortCode: '174379',
   lipaNaMpesaPassKey: 'bfb279...',
 
-  // Initiator-based APIs (B2C, Reversal, Balance, Tax)
+  // Initiator-based APIs (B2C, B2B Pay Bill/Buy Goods, Reversal, Balance, Tax)
   initiatorName: 'testapi',
   initiatorPassword: 'Safaricom123!',
   certificatePath: './SandboxCertificate.cer',
 
   // HTTP tuning (optional)
   retries: 4, // default: 4
-  retryDelay: 2000, // default: 2000 ms
+  retryDelay: 2000, // default: 2 000 ms
   timeout: 30000, // default: 30 000 ms (per attempt)
 })
 ```
@@ -171,32 +173,39 @@ Prompts the customer to enter their M-PESA PIN on their phone.
 ```typescript
 // Initiate
 const push = await mpesa.stkPush({
-  amount:           100,               // KES — whole numbers only
-  phoneNumber:      "0712345678",      // any Kenyan format
-  callbackUrl:      "https://yourdomain.com/api/mpesa/callback",
-  accountReference: "INV-001",         // max 12 chars
-  transactionDesc:  "Subscription",    // max 13 chars
-  transactionType:  "CustomerPayBillOnline",  // default — or "CustomerBuyGoodsOnline"
-  partyB:           "174379",          // defaults to shortCode; set till number for Buy Goods
-});
+  amount: 100, // KES — whole numbers only (1–250 000)
+  phoneNumber: '0712345678', // any common Kenyan format
+  callbackUrl: 'https://yourdomain.com/api/mpesa/callback',
+  accountReference: 'INV-001', // max 12 chars
+  transactionDesc: 'Subscription', // max 13 chars
+  transactionType: 'CustomerPayBillOnline', // default; or "CustomerBuyGoodsOnline"
+  partyB: '174379', // defaults to shortCode; set till for Buy Goods
+})
 
-console.log(push.CheckoutRequestID);   // save this to query later
+console.log(push.CheckoutRequestID) // save this to query later
 
 // Query status
 const status = await mpesa.stkQuery({
   checkoutRequestId: push.CheckoutRequestID,
-});
+})
 
 if (status.ResultCode === 0) {
-  console.log("Payment confirmed!");
+  console.log('Payment confirmed!')
 }
 
 // Safe variant — returns Result<T> instead of throwing
-const result = await mpesa.stkPushSafe({ amount: 100, phoneNumber: "0712345678", ... });
+const result = await mpesa.stkPushSafe({
+  amount: 100,
+  phoneNumber: '0712345678',
+  callbackUrl: 'https://yourdomain.com/api/mpesa/callback',
+  accountReference: 'INV-001',
+  transactionDesc: 'Payment',
+})
+
 if (result.ok) {
-  console.log(result.data.CheckoutRequestID);
+  console.log(result.data.CheckoutRequestID)
 } else {
-  console.error(result.error.code, result.error.message);
+  console.error(result.error.code, result.error.message)
 }
 ```
 
@@ -214,6 +223,7 @@ function handleCallback(body: StkPushCallback) {
     const receipt = getCallbackValue(body, 'MpesaReceiptNumber') // string
     const amount = getCallbackValue(body, 'Amount') // number
     const phone = getCallbackValue(body, 'PhoneNumber') // number
+    const date = getCallbackValue(body, 'TransactionDate') // number (YYYYMMDDHHmmss)
   }
 }
 ```
@@ -238,10 +248,10 @@ Register your Paybill or Till to receive M-PESA payments.
 // 1. Register Confirmation + Validation URLs (do this once per shortcode)
 await mpesa.registerC2BUrls({
   shortCode: '600984',
-  responseType: 'Completed', // "Completed" | "Cancelled"
+  responseType: 'Completed', // "Completed" | "Cancelled" (sentence-case required)
   confirmationUrl: 'https://yourdomain.com/api/mpesa/c2b/confirmation',
   validationUrl: 'https://yourdomain.com/api/mpesa/c2b/validation',
-  apiVersion: 'v2', // default — v2 masks MSISDN in callbacks
+  apiVersion: 'v2', // default
 })
 
 // 2. Simulate (SANDBOX ONLY)
@@ -250,12 +260,12 @@ await mpesa.simulateC2B({
   commandId: 'CustomerPayBillOnline', // or "CustomerBuyGoodsOnline"
   amount: 10,
   msisdn: 254708374149,
-  billRefNumber: 'INV-001', // Paybill only — OMIT for Buy Goods
+  billRefNumber: 'INV-001', // Paybill only — omit entirely for Buy Goods
   apiVersion: 'v2',
 })
 ```
 
-**Validation webhook handlers:**
+**Validation webhook handler:**
 
 ```typescript
 import {
@@ -265,6 +275,8 @@ import {
   getC2BAmount,
   getC2BTransactionId,
   getC2BCustomerName,
+  isPaybillPayment,
+  isBuyGoodsPayment,
   type C2BValidationPayload,
   type C2BConfirmationPayload,
 } from 'pesafy'
@@ -272,26 +284,26 @@ import {
 // Validation URL — must respond in ≤8 seconds
 app.post('/api/mpesa/c2b/validation', (req, res) => {
   const payload = req.body as C2BValidationPayload
-  const amount = getC2BAmount(payload)
+  const amount = getC2BAmount(payload) // number
 
   if (amount > 100_000) {
-    // Reject with specific error code
     return res.json(rejectC2BValidation('C2B00013')) // Invalid Amount
   }
 
-  res.json(acceptC2BValidation()) // Accept
-  // or: res.json(acceptC2BValidation("MY-TX-ID")); // with correlation ID
+  // Optionally echo back ThirdPartyTransID for correlation
+  res.json(acceptC2BValidation(payload.ThirdPartyTransID))
 })
 
 // Confirmation URL — always respond 200 immediately
 app.post('/api/mpesa/c2b/confirmation', (req, res) => {
   const payload = req.body as C2BConfirmationPayload
-  const txId = getC2BTransactionId(payload)
-  const amount = getC2BAmount(payload)
-  const name = getC2BCustomerName(payload)
 
-  // Process async
-  processPayment({ txId, amount, name }).catch(console.error)
+  processPayment({
+    txId: getC2BTransactionId(payload),
+    amount: getC2BAmount(payload),
+    name: getC2BCustomerName(payload),
+    type: isPaybillPayment(payload) ? 'paybill' : 'till',
+  }).catch(console.error)
 
   res.json({ ResultCode: 0, ResultDesc: 'Success' })
 })
@@ -311,33 +323,21 @@ app.post('/api/mpesa/c2b/confirmation', (req, res) => {
 
 ---
 
-### B2C (Business to Customer)
+### B2C Account Top Up
 
-Send money to customers or load funds to a B2C shortcode.
+Moves funds from your MMF/Working account into a B2C disbursement shortcode.
+Only `BusinessPayToBulk` is supported by this API.
 
 ```typescript
-// BusinessPayToBulk — load funds to a B2C shortcode
 const ack = await mpesa.b2cPayment({
-  commandId: 'BusinessPayToBulk',
+  commandId: 'BusinessPayToBulk', // only valid CommandID for this API
   amount: 50_000,
-  partyA: '600979', // your MMF shortcode
+  partyA: '600979', // sender MMF shortcode (or set b2cPartyA in config)
   partyB: '600000', // target B2C shortcode
   accountReference: 'BATCH-2024-01',
   resultUrl: 'https://yourdomain.com/api/mpesa/b2c/result',
   queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2c/timeout',
-})
-
-// BusinessPayment — direct payment to customer wallet
-await mpesa.b2cPayment({
-  commandId: 'BusinessPayment', // or "SalaryPayment" / "PromotionPayment"
-  amount: 2500,
-  partyA: '600979',
-  partyB: '254712345678', // customer MSISDN
-  accountReference: 'SALARY-JAN',
-  resultUrl: 'https://yourdomain.com/api/mpesa/b2c/result',
-  queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2c/timeout',
-  remarks: 'January salary',
-  requester: '254712345678', // optional — consumer MSISDN
+  remarks: 'Monthly top-up',
 })
 ```
 
@@ -354,6 +354,9 @@ import {
   getB2COriginatorConversationId,
   getB2CReceiverPublicName,
   getB2CDebitAccountBalance,
+  getB2CDebitPartyCharges,
+  getB2CCurrency,
+  getB2CTransactionCompletedTime,
 } from 'pesafy'
 
 app.post('/api/mpesa/b2c/result', (req, res) => {
@@ -362,43 +365,99 @@ app.post('/api/mpesa/b2c/result', (req, res) => {
   if (!isB2CResult(req.body)) return
 
   if (isB2CSuccess(req.body)) {
-    const txId = getB2CTransactionId(req.body)
-    const amount = getB2CAmount(req.body)
-    const balance = getB2CDebitAccountBalance(req.body)
-    console.log('B2C success:', { txId, amount, balance })
-  } else if (isB2CFailure(req.body)) {
+    console.log('B2C success:', {
+      txId: getB2CTransactionId(req.body),
+      amount: getB2CAmount(req.body),
+      balance: getB2CDebitAccountBalance(req.body),
+    })
+  } else {
     console.error('B2C failed:', req.body.Result.ResultDesc)
   }
 })
 ```
 
-**B2C CommandIDs:**
+---
 
-| CommandID           | Use Case                      |
-| ------------------- | ----------------------------- |
-| `BusinessPayToBulk` | Load funds to a B2C shortcode |
-| `BusinessPayment`   | Unsecured payment to customer |
-| `SalaryPayment`     | Salary disbursement           |
-| `PromotionPayment`  | Promotions / bonus            |
+### B2C Disbursement
+
+Directly disburses funds to individual customer M-PESA wallets. Supports
+`BusinessPayment`, `SalaryPayment`, and `PromotionPayment`.
+
+```typescript
+const ack = await mpesa.b2cDisbursement({
+  originatorConversationId: 'unique-uuid-per-request', // required for idempotency
+  commandId: 'SalaryPayment', // "BusinessPayment" | "SalaryPayment" | "PromotionPayment"
+  amount: 2500,
+  partyA: '600979', // sender shortcode
+  partyB: '254712345678', // recipient MSISDN (2547XXXXXXXX)
+  remarks: 'January salary', // required, 2–100 chars
+  resultUrl: 'https://yourdomain.com/api/mpesa/b2c/disburse/result',
+  queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2c/disburse/timeout',
+  occasion: 'Payroll Jan 2024', // optional
+})
+```
+
+**B2C Disbursement result handler:**
+
+```typescript
+import {
+  isB2CDisbursementResult,
+  isB2CDisbursementSuccess,
+  isB2CDisbursementRecipientRegistered,
+  getB2CDisbursementReceiptNumber,
+  getB2CDisbursementAmount,
+  getB2CDisbursementReceiverName,
+  getB2CDisbursementUtilityBalance,
+  getB2CDisbursementWorkingBalance,
+  getB2CDisbursementCompletedTime,
+} from 'pesafy'
+
+app.post('/api/mpesa/b2c/disburse/result', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+
+  if (!isB2CDisbursementResult(req.body)) return
+
+  if (isB2CDisbursementSuccess(req.body)) {
+    console.log({
+      receipt: getB2CDisbursementReceiptNumber(req.body),
+      amount: getB2CDisbursementAmount(req.body),
+      receiver: getB2CDisbursementReceiverName(req.body),
+      registered: isB2CDisbursementRecipientRegistered(req.body), // boolean
+      utility: getB2CDisbursementUtilityBalance(req.body),
+      working: getB2CDisbursementWorkingBalance(req.body),
+      completedAt: getB2CDisbursementCompletedTime(req.body),
+    })
+  }
+})
+```
+
+**B2C Disbursement CommandIDs:**
+
+| CommandID          | Use Case                      |
+| ------------------ | ----------------------------- |
+| `BusinessPayment`  | Unsecured payment to customer |
+| `SalaryPayment`    | Salary disbursement           |
+| `PromotionPayment` | Promotions / bonus            |
 
 ---
 
 ### B2B Express Checkout
 
-Send a USSD Push to a merchant's till for B2B payments.
+Sends a USSD Push to a merchant's till — merchant approves by entering their
+M-PESA PIN.
 
 ```typescript
 const ack = await mpesa.b2bExpressCheckout({
   primaryShortCode: '000001', // merchant till (debit party)
-  receiverShortCode: '000002', // your Paybill (credit party)
+  receiverShortCode: '000002', // vendor Paybill (credit party)
   amount: 5000,
   paymentRef: 'INV-001',
   callbackUrl: 'https://yourdomain.com/api/mpesa/b2b/callback',
-  partnerName: 'Acme Supplies',
-  requestRefId: 'unique-uuid-per-request', // auto-generated if omitted
+  partnerName: 'Acme Supplies', // shown in merchant's USSD prompt
+  requestRefId: 'unique-uuid', // auto-generated UUID if omitted
 })
 
-// ack.code === "0" means USSD was initiated
+// ack.code === "0" → USSD push initiated successfully
 ```
 
 **B2B Callback handler:**
@@ -408,9 +467,13 @@ import {
   isB2BCheckoutCallback,
   isB2BCheckoutSuccess,
   isB2BCheckoutCancelled,
+  isB2BCheckoutFailed,
   getB2BTransactionId,
   getB2BAmount,
   getB2BConversationId,
+  getB2BPaymentReference,
+  getB2BResultCode,
+  getB2BRequestId,
 } from 'pesafy'
 
 app.post('/api/mpesa/b2b/callback', (req, res) => {
@@ -419,16 +482,20 @@ app.post('/api/mpesa/b2b/callback', (req, res) => {
   if (!isB2BCheckoutCallback(req.body)) return
 
   if (isB2BCheckoutSuccess(req.body)) {
-    const txId = getB2BTransactionId(req.body)
-    const amount = getB2BAmount(req.body)
-    console.log('B2B paid:', { txId, amount })
+    console.log('B2B paid:', {
+      txId: getB2BTransactionId(req.body),
+      amount: getB2BAmount(req.body),
+      convId: getB2BConversationId(req.body),
+    })
   } else if (isB2BCheckoutCancelled(req.body)) {
-    console.log('B2B cancelled by merchant')
+    console.log('Cancelled, ref:', getB2BPaymentReference(req.body))
+  } else {
+    console.warn('B2B failed, code:', getB2BResultCode(req.body))
   }
 })
 ```
 
-**B2B Error codes:**
+**B2B Express result codes:**
 
 | Code | Meaning                  |
 | ---- | ------------------------ |
@@ -441,28 +508,157 @@ app.post('/api/mpesa/b2b/callback', (req, res) => {
 
 ---
 
-### Account Balance
+### B2B Pay Bill
 
-Query the balance of your M-PESA shortcode. **Asynchronous** — result is POSTed
-to your `resultUrl`.
+Moves money from your MMF/Working account to another organisation's utility
+account.
 
 ```typescript
-await mpesa.accountBalance({
-  partyA: '174379',
-  identifierType: '4', // "1"=MSISDN, "2"=Till, "4"=ShortCode
-  resultUrl: 'https://yourdomain.com/api/mpesa/balance/result',
-  queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/balance/timeout',
-  remarks: 'Balance check',
+const ack = await mpesa.b2bPayBill({
+  commandId: 'BusinessPayBill', // only valid CommandID
+  amount: 10_000,
+  partyA: '600979', // your shortcode (debit)
+  partyB: '000000', // destination Paybill (credit)
+  accountReference: 'ACC-353353', // max 13 chars
+  resultUrl: 'https://yourdomain.com/api/mpesa/b2b/paybill/result',
+  queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2b/paybill/timeout',
+  remarks: 'Supplier payment',
+  requester: '254712345678', // optional — consumer MSISDN on whose behalf
+  occasion: 'Q1 Invoice', // optional
 })
 ```
 
-**Parsing the result:**
+**B2B Pay Bill result handler:**
+
+```typescript
+import {
+  isB2BPayBillResult,
+  isB2BPayBillSuccess,
+  getB2BPayBillTransactionId,
+  getB2BPayBillAmount,
+  getB2BPayBillReceiverName,
+  getB2BPayBillDebitPartyAffectedBalance,
+  getB2BPayBillBillReferenceNumber,
+  getB2BPayBillCompletedTime,
+} from 'pesafy'
+
+app.post('/api/mpesa/b2b/paybill/result', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  if (!isB2BPayBillResult(req.body)) return
+
+  if (isB2BPayBillSuccess(req.body)) {
+    console.log({
+      txId: getB2BPayBillTransactionId(req.body),
+      amount: getB2BPayBillAmount(req.body),
+      to: getB2BPayBillReceiverName(req.body),
+      balance: getB2BPayBillDebitPartyAffectedBalance(req.body),
+      billRef: getB2BPayBillBillReferenceNumber(req.body),
+      time: getB2BPayBillCompletedTime(req.body),
+    })
+  }
+})
+```
+
+---
+
+### B2B Buy Goods
+
+Moves money from your MMF/Working account to a merchant's till/store account.
+
+```typescript
+const ack = await mpesa.b2bBuyGoods({
+  commandId: 'BusinessBuyGoods', // only valid CommandID
+  amount: 5_000,
+  partyA: '600979', // your shortcode (debit)
+  partyB: '000000', // destination till / merchant store
+  accountReference: 'PO-19008', // max 13 chars
+  resultUrl: 'https://yourdomain.com/api/mpesa/b2b/buygoods/result',
+  queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2b/buygoods/timeout',
+  remarks: 'Stock purchase',
+  requester: '254712345678', // optional
+})
+```
+
+**B2B Buy Goods result handler:**
+
+```typescript
+import {
+  isB2BBuyGoodsResult,
+  isB2BBuyGoodsSuccess,
+  getB2BBuyGoodsTransactionId,
+  getB2BBuyGoodsAmount,
+  getB2BBuyGoodsReceiverName,
+  getB2BBuyGoodsDebitPartyAffectedBalance,
+  getB2BBuyGoodsBillReferenceNumber,
+  getB2BBuyGoodsCompletedTime,
+  getB2BBuyGoodsCurrency,
+} from 'pesafy'
+
+app.post('/api/mpesa/b2b/buygoods/result', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  if (!isB2BBuyGoodsResult(req.body)) return
+
+  if (isB2BBuyGoodsSuccess(req.body)) {
+    console.log({
+      txId: getB2BBuyGoodsTransactionId(req.body),
+      amount: getB2BBuyGoodsAmount(req.body),
+      currency: getB2BBuyGoodsCurrency(req.body),
+      to: getB2BBuyGoodsReceiverName(req.body),
+      balance: getB2BBuyGoodsDebitPartyAffectedBalance(req.body),
+      billRef: getB2BBuyGoodsBillReferenceNumber(req.body),
+      time: getB2BBuyGoodsCompletedTime(req.body),
+    })
+  }
+})
+```
+
+**B2B result codes (Pay Bill & Buy Goods share the same set):**
+
+| Code | Meaning                  |
+| ---- | ------------------------ |
+| 0    | Success                  |
+| 1    | Insufficient balance     |
+| 2    | Amount below minimum     |
+| 3    | Amount above maximum     |
+| 4    | Daily limit exceeded     |
+| 8    | Maximum balance exceeded |
+| 2001 | Invalid initiator info   |
+| 2006 | Account inactive         |
+| 2028 | Product not permitted    |
+| 2040 | Customer not registered  |
+
+---
+
+### Account Balance
+
+Queries the balance of your M-PESA shortcode. **Asynchronous** — result is
+POSTed to your `resultUrl`.
+
+```typescript
+await mpesa.accountBalance({
+  partyA:         '174379',
+  identifierType: '4', // "1"=MSISDN, "2"=Till, "4"=ShortCode (most common)
+  resultUrl:      'https://yourdomain.com/api/mpesa/balance/result',
+  queueTimeOutUrl:'https://yourdomain.com/api/mpesa/balance/timeout',
+  remarks:        'Balance check',
+})
+
+// Safe variant
+const result = await mpesa.accountBalanceSafe({ ... })
+```
+
+> **Required org portal role:** "Balance Query ORG API"
+
+**Parsing the result callback:**
 
 ```typescript
 import {
   isAccountBalanceSuccess,
   parseAccountBalance,
   getAccountBalanceParam,
+  getAccountBalanceRawBalance,
+  getAccountBalanceTransactionId,
+  getAccountBalanceCompletedTime,
   type AccountBalanceResult,
 } from 'pesafy'
 
@@ -472,13 +668,15 @@ app.post('/api/mpesa/balance/result', (req, res) => {
   const body = req.body as AccountBalanceResult
   if (!isAccountBalanceSuccess(body)) return
 
-  const raw = getAccountBalanceParam(body, 'AccountBalance') as string
+  const raw = getAccountBalanceRawBalance(body)
   const accounts = parseAccountBalance(raw ?? '')
 
   for (const account of accounts) {
+    // e.g. { name: "Working Account", currency: "KES", amount: "45000.00" }
     console.log(`${account.name}: ${account.currency} ${account.amount}`)
-    // e.g. "Working Account: KES 45000.00"
   }
+
+  console.log('Completed at:', getAccountBalanceCompletedTime(body))
 })
 ```
 
@@ -486,16 +684,48 @@ app.post('/api/mpesa/balance/result', (req, res) => {
 
 ### Transaction Status
 
-Query the result of any completed M-PESA transaction. **Asynchronous**.
+Queries the result of any completed M-PESA transaction. **Asynchronous**.
 
 ```typescript
 await mpesa.transactionStatus({
-  transactionId: 'OEI2AK4XXXX',
+  transactionId: 'OEI2AK4XXXX', // M-Pesa receipt number
+  // OR: originalConversationId: '7071-4170-...'  ← when no receipt is available
   partyA: '174379',
-  identifierType: '4',
+  identifierType: '4', // "1"=MSISDN, "2"=Till, "4"=ShortCode
   resultUrl: 'https://yourdomain.com/api/mpesa/tx/result',
   queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/tx/timeout',
   remarks: 'Check payment status',
+})
+```
+
+**Transaction status result handler:**
+
+```typescript
+import {
+  isTransactionStatusResult,
+  isTransactionStatusSuccess,
+  getTransactionStatusReceiptNo,
+  getTransactionStatusAmount,
+  getTransactionStatusStatus,
+  getTransactionStatusDebitPartyName,
+  getTransactionStatusCreditPartyName,
+  getTransactionStatusTransactionDate,
+} from 'pesafy'
+
+app.post('/api/mpesa/tx/result', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  if (!isTransactionStatusResult(req.body)) return
+
+  if (isTransactionStatusSuccess(req.body)) {
+    console.log({
+      receipt: getTransactionStatusReceiptNo(req.body),
+      amount: getTransactionStatusAmount(req.body),
+      status: getTransactionStatusStatus(req.body), // e.g. "Completed"
+      from: getTransactionStatusDebitPartyName(req.body),
+      to: getTransactionStatusCreditPartyName(req.body),
+      date: getTransactionStatusTransactionDate(req.body),
+    })
+  }
 })
 ```
 
@@ -503,147 +733,273 @@ await mpesa.transactionStatus({
 
 ### Transaction Reversal
 
-Reverse a completed M-PESA transaction. **Asynchronous**.
+Reverses a completed M-PESA C2B transaction. **Asynchronous**.
+
+> **Note:** `RecieverIdentifierType` is always `"11"` for reversals (per Daraja
+> docs). B2C reversals must be done manually on the M-PESA organisation portal.
+>
+> **Required org portal role:** "Org Reversals Initiator"
 
 ```typescript
 await mpesa.reverseTransaction({
-  transactionId: 'OEI2AK4XXXX',
-  receiverParty: '174379',
-  receiverIdentifierType: '4', // "1"=MSISDN, "2"=Till, "4"=ShortCode
-  amount: 500,
+  transactionId: 'OEI2AK4XXXX', // M-PESA receipt of the transaction to reverse
+  receiverParty: '174379', // your shortcode
+  amount: 500, // must equal the original amount
   resultUrl: 'https://yourdomain.com/api/mpesa/reversal/result',
   queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/reversal/timeout',
-  remarks: 'Erroneous charge',
+  remarks: 'Erroneous charge', // 2–100 chars
 })
 ```
 
 **Reversal result handler:**
 
 ```typescript
-import { isReversalSuccess, getReversalTransactionId } from 'pesafy'
+import {
+  isReversalResult,
+  isReversalSuccess,
+  getReversalTransactionId,
+  getReversalOriginalTransactionId,
+  getReversalAmount,
+  getReversalCreditPartyPublicName,
+  getReversalDebitPartyPublicName,
+  getReversalCompletedTime,
+  getReversalCharge,
+  REVERSAL_RESULT_CODES,
+} from 'pesafy'
 
 app.post('/api/mpesa/reversal/result', (req, res) => {
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  if (!isReversalResult(req.body)) return
 
   if (isReversalSuccess(req.body)) {
-    console.log('Reversed:', getReversalTransactionId(req.body))
+    console.log('Reversed:', {
+      newTxId: getReversalTransactionId(req.body),
+      origTxId: getReversalOriginalTransactionId(req.body),
+      amount: getReversalAmount(req.body),
+      to: getReversalCreditPartyPublicName(req.body),
+      from: getReversalDebitPartyPublicName(req.body),
+      time: getReversalCompletedTime(req.body),
+      charge: getReversalCharge(req.body),
+    })
+  } else {
+    const code = req.body.Result.ResultCode
+    // REVERSAL_RESULT_CODES.ALREADY_REVERSED = "R000001"
+    // REVERSAL_RESULT_CODES.INVALID_TRANSACTION_ID = "R000002"
+    console.warn('Reversal failed, code:', code)
   }
 })
 ```
+
+**Reversal result codes:**
+
+| Code    | Meaning                                   |
+| ------- | ----------------------------------------- |
+| 0       | Success                                   |
+| 1       | Insufficient balance                      |
+| 11      | DebitParty in invalid state               |
+| 21      | Initiator not allowed                     |
+| 2001    | Initiator information invalid             |
+| 2006    | Account inactive                          |
+| 2028    | Not permitted                             |
+| 8006    | Security credential locked                |
+| R000001 | Transaction already reversed              |
+| R000002 | OriginalTransactionID invalid / not found |
 
 ---
 
 ### Tax Remittance (KRA)
 
-Remit tax to Kenya Revenue Authority via M-PESA. **Asynchronous**.
+Remits tax to Kenya Revenue Authority via M-PESA. **Asynchronous**. `PartyB` is
+always KRA's shortcode `"572572"` — set automatically.
 
 ```typescript
 await mpesa.remitTax({
   amount: 5_000,
   partyA: '888880', // your business shortcode
-  accountReference: 'PRN1234XN', // KRA Payment Registration Number
+  accountReference: 'PRN1234XN', // KRA Payment Registration Number (PRN)
   resultUrl: 'https://yourdomain.com/api/mpesa/tax/result',
   queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/tax/timeout',
   remarks: 'Monthly PAYE',
 })
-// PartyB is always KRA_SHORTCODE ("572572") — auto-set
+```
+
+**Tax result handler:**
+
+```typescript
+import {
+  isTaxRemittanceResult,
+  isTaxRemittanceSuccess,
+  getTaxTransactionId,
+  getTaxAmount,
+  getTaxReceiverName,
+  getTaxCompletedTime,
+} from 'pesafy'
+
+app.post('/api/mpesa/tax/result', (req, res) => {
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
+  if (!isTaxRemittanceResult(req.body)) return
+
+  if (isTaxRemittanceSuccess(req.body)) {
+    console.log({
+      txId: getTaxTransactionId(req.body),
+      amount: getTaxAmount(req.body),
+      to: getTaxReceiverName(req.body),
+      time: getTaxCompletedTime(req.body),
+    })
+  }
+})
 ```
 
 ---
 
 ### Dynamic QR Code
 
-Generate an M-PESA QR code customers can scan to pay.
+Generates an M-PESA QR code customers scan to pay.
 
 ```typescript
 const qr = await mpesa.generateDynamicQR({
   merchantName: 'My Shop',
   refNo: 'INV-001',
   amount: 500,
-  trxCode: 'BG', // "BG"=Buy Goods, "PB"=Paybill, "WA"=Withdraw, "SM"=Send Money
-  cpi: '373132', // till / paybill / MSISDN
-  size: 300, // pixels (square)
+  trxCode: 'BG', // see table below
+  cpi: '373132', // till / paybill / MSISDN depending on trxCode
+  size: 300, // pixels (1–1000, default 300)
 })
 
 // Render in HTML:
 // <img src={`data:image/png;base64,${qr.QRCode}`} />
+
+// Write to disk:
+// import { writeFileSync } from 'node:fs'
+// writeFileSync('qr.png', Buffer.from(qr.QRCode, 'base64'))
 ```
 
 **QR Transaction codes:**
 
-| Code | Use Case                    |
-| ---- | --------------------------- |
-| `BG` | Pay Merchant (Buy Goods)    |
-| `WA` | Withdraw Cash at Agent Till |
-| `PB` | Paybill / Business number   |
-| `SM` | Send Money (mobile number)  |
-| `SB` | Send to Business            |
+| Code | Use Case                    | CPI format      |
+| ---- | --------------------------- | --------------- |
+| `BG` | Pay Merchant (Buy Goods)    | Till number     |
+| `WA` | Withdraw Cash at Agent Till | Agent till      |
+| `PB` | Paybill / Business number   | Paybill number  |
+| `SM` | Send Money (mobile number)  | Customer MSISDN |
+| `SB` | Send to Business            | MSISDN-format   |
 
 ---
 
 ### Bill Manager
 
-Create and send invoices customers pay via M-PESA.
+Create and send invoices that customers pay directly via M-PESA.
 
 ```typescript
-// 1. Opt-in your shortcode (once)
+// 1. Opt-in your shortcode (one-time setup)
 await mpesa.billManagerOptIn({
-  shortcode:        "600984",
-  email:            "billing@company.com",
-  officialContact:  "0700000000",
-  sendReminders:    "1",
-  logo:             "https://cdn.company.com/logo.png",
-  callbackUrl:      "https://yourdomain.com/api/mpesa/bills/callback",
-});
+  shortcode: '600984',
+  email: 'billing@company.com',
+  officialContact: '0700000000',
+  sendReminders: '1', // "1" enable | "0" disable (7-, 3-day, due-date reminders)
+  logo: 'https://cdn.company.com/logo.jpg', // optional JPEG/JPG
+  callbackUrl: 'https://yourdomain.com/api/mpesa/bills/callback',
+})
 
-// 2. Send a single invoice
+// 2. Update opt-in details
+await mpesa.updateOptIn({
+  shortcode: '600984',
+  email: 'new@company.com',
+  officialContact: '0700000001',
+  sendReminders: '1',
+  callbackUrl: 'https://yourdomain.com/api/mpesa/bills/callback',
+})
+
+// 3. Send a single invoice
 await mpesa.sendInvoice({
-  externalReference: "INV-001",
-  billingPeriod:     "2024-01",
-  invoiceName:       "January Subscription",
-  dueDate:           "2024-01-31 23:59:00",
-  accountReference:  "ACC-12345",
-  amount:            2500,
-  partyA:            "254712345678",
+  externalReference: 'INV-001', // your unique invoice ID
+  billedFullName: 'John Doe', // shown in customer SMS
+  billedPhoneNumber: '254712345678', // Safaricom number to receive SMS
+  billedPeriod: 'January 2024', // e.g. "August 2021"
+  invoiceName: 'Monthly Subscription',
+  dueDate: '2024-01-31', // YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+  accountReference: 'ACC-12345',
+  amount: 2500,
   invoiceItems: [
-    { itemName: "Base subscription", amount: 2000 },
-    { itemName: "SMS bundle",        amount: 500 },
+    { itemName: 'Base subscription', amount: 2000 },
+    { itemName: 'SMS bundle', amount: 500 },
   ],
-});
+})
 
-// 3. Bulk invoices (up to 1 000 per call)
+// 4. Bulk invoices (up to 1 000 per call)
 await mpesa.sendBulkInvoices({
   invoices: [
-    { externalReference: "INV-002", billingPeriod: "2024-01", ... },
-    { externalReference: "INV-003", billingPeriod: "2024-01", ... },
+    {
+      externalReference: 'INV-002',
+      billedFullName: 'Jane Smith',
+      billedPhoneNumber: '254700000000',
+      billedPeriod: 'January 2024',
+      invoiceName: 'Monthly Subscription',
+      dueDate: '2024-01-31',
+      accountReference: 'ACC-67890',
+      amount: 2500,
+    },
   ],
-});
+})
 
-// 4. Cancel an invoice
-await mpesa.cancelInvoice({ externalReference: "INV-001" });
+// 5. Cancel a single invoice (cannot cancel partially/fully paid invoices)
+await mpesa.cancelInvoice({ externalReference: 'INV-001' })
+
+// 6. Cancel multiple invoices
+await mpesa.cancelBulkInvoices({ externalReferences: ['INV-002', 'INV-003'] })
+
+// 7. Reconcile after processing a payment notification
+await mpesa.reconcilePayment({
+  transactionId: 'RJB53MYR1N',
+  externalReference: 'INV-001',
+  accountReference: 'ACC-12345',
+  paidAmount: '2500',
+  paymentDate: '2024-01-15',
+  phoneNumber: '0712345678',
+  fullName: 'John Doe',
+  invoiceName: 'Monthly Subscription',
+})
+```
+
+**Payment notification callback (POSTed to your `callbackUrl`):**
+
+```typescript
+import { type BillManagerPaymentNotification } from 'pesafy'
+
+app.post('/api/mpesa/bills/callback', (req, res) => {
+  const notification = req.body as BillManagerPaymentNotification
+  console.log({
+    txId: notification.transactionId,
+    amount: notification.paidAmount,
+    phone: notification.msisdn,
+    accountRef: notification.accountReference,
+    shortCode: notification.shortCode,
+    date: notification.dateCreated,
+  })
+  res.json({ rescode: '200', resmsg: 'Success' })
+})
 ```
 
 ---
 
 ### Webhooks
 
-**IP verification** (Safaricom always calls from whitelisted IPs):
+**IP verification** — Safaricom always calls from a fixed whitelist:
 
 ```typescript
 import { verifyWebhookIP, SAFARICOM_IPS } from 'pesafy'
 
 app.post('/api/mpesa/callback', (req, res) => {
-  const ip = req.ip ?? req.headers['x-forwarded-for']
+  const ip = (req.headers['x-forwarded-for'] as string) ?? req.ip ?? ''
   if (!verifyWebhookIP(ip)) {
     console.warn('Callback from unknown IP:', ip)
-    // Still return 200 — Safaricom will retry if you reject
+    // Still respond 200 — Safaricom retries on non-200
   }
-  // ... process
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
 })
 ```
 
-**Generic webhook handler:**
+**Generic STK Push webhook handler:**
 
 ```typescript
 import {
@@ -651,6 +1007,7 @@ import {
   isSuccessfulCallback,
   extractTransactionId,
   extractAmount,
+  extractPhoneNumber,
 } from 'pesafy'
 
 app.post('/api/mpesa/callback', (req, res) => {
@@ -662,13 +1019,14 @@ app.post('/api/mpesa/callback', (req, res) => {
   if (result.success && isSuccessfulCallback(result.data)) {
     const receipt = extractTransactionId(result.data)
     const amount = extractAmount(result.data)
+    const phone = extractPhoneNumber(result.data)
   }
 
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' })
 })
 ```
 
-**Retry with backoff** (for your own internal processing):
+**Retry with backoff** (for your own async processing):
 
 ```typescript
 import { retryWithBackoff } from 'pesafy'
@@ -677,10 +1035,14 @@ const outcome = await retryWithBackoff(() => saveToDatabase(webhookData), {
   maxRetries: 5,
   initialDelay: 500,
   maxDelay: 30_000,
+  backoffMultiplier: 2,
 })
 
 if (!outcome.success) {
-  console.error('Failed after', outcome.attempts, 'attempts')
+  console.error(
+    `Failed after ${outcome.attempts} attempts:`,
+    outcome.error?.message,
+  )
 }
 ```
 
@@ -692,32 +1054,30 @@ if (!outcome.success) {
 
 ```typescript
 import express from 'express'
-import {
-  createMpesaExpressRouter,
-  acceptC2BValidation,
-  isB2CSuccess,
-  getB2CTransactionId,
-} from 'pesafy/express'
+import { createMpesaExpressRouter } from 'pesafy/adapters/express'
+import { acceptC2BValidation } from 'pesafy'
 
 const app = express()
+const router = express.Router()
 app.use(express.json())
 
-const router = express.Router()
-
 createMpesaExpressRouter(router, {
+  // Core
   consumerKey: process.env.MPESA_CONSUMER_KEY!,
   consumerSecret: process.env.MPESA_CONSUMER_SECRET!,
   environment: 'sandbox',
+
+  // STK Push
   lipaNaMpesaShortCode: '174379',
   lipaNaMpesaPassKey: process.env.MPESA_PASSKEY!,
   callbackUrl: 'https://yourdomain.com/api/mpesa/express/callback',
 
-  // Initiator (for B2C, Reversal, Balance)
+  // Initiator (B2C, Tax, Reversal, Balance)
   initiatorName: 'testapi',
   initiatorPassword: 'Safaricom123!',
   certificatePath: './SandboxCertificate.cer',
 
-  // Result endpoints
+  // Transaction Status
   resultUrl: 'https://yourdomain.com/api/mpesa/transaction-status/result',
   queueTimeOutUrl: 'https://yourdomain.com/api/mpesa/timeout',
 
@@ -725,9 +1085,10 @@ createMpesaExpressRouter(router, {
   c2bShortCode: '600984',
   c2bConfirmationUrl: 'https://yourdomain.com/api/mpesa/c2b/confirmation',
   c2bValidationUrl: 'https://yourdomain.com/api/mpesa/c2b/validation',
+  c2bResponseType: 'Completed',
+  c2bApiVersion: 'v2',
   onC2BValidation: async (payload) => {
-    const amount = Number(payload.TransAmount)
-    if (amount > 100_000)
+    if (Number(payload.TransAmount) > 100_000)
       return { ResultCode: 'C2B00013', ResultDesc: 'Rejected' }
     return acceptC2BValidation()
   },
@@ -738,16 +1099,27 @@ createMpesaExpressRouter(router, {
     })
   },
 
-  // B2C
+  // Tax Remittance
+  taxPartyA: '888880',
+  taxResultUrl: 'https://yourdomain.com/api/mpesa/tax/result',
+  taxQueueTimeOutUrl: 'https://yourdomain.com/api/mpesa/tax/timeout',
+  onTaxRemittanceResult: async (result) => {
+    console.log('Tax result:', result.Result.ResultCode)
+  },
+
+  // B2B Express Checkout
+  b2bReceiverShortCode: '000002',
+  b2bCallbackUrl: 'https://yourdomain.com/api/mpesa/b2b/callback',
+  onB2BCheckoutCallback: async (callback) => {
+    console.log('B2B callback:', callback.resultCode)
+  },
+
+  // B2C Account Top Up
   b2cPartyA: '600979',
   b2cResultUrl: 'https://yourdomain.com/api/mpesa/b2c/result',
   b2cQueueTimeOutUrl: 'https://yourdomain.com/api/mpesa/b2c/timeout',
   onB2CResult: async (result) => {
-    if (isB2CSuccess(result)) {
-      await db.disbursements.markCompleted({
-        txId: getB2CTransactionId(result)!,
-      })
-    }
+    console.log('B2C result:', result.Result.ResultCode)
   },
 
   skipIPCheck: true, // local dev only
@@ -764,24 +1136,24 @@ app.listen(3000)
 | POST   | `/mpesa/express/stk-push`          | Initiate STK Push                |
 | POST   | `/mpesa/express/stk-query`         | Query STK Push status            |
 | POST   | `/mpesa/express/callback`          | STK Push callback from Safaricom |
-| POST   | `/mpesa/transaction-status/query`  | Query transaction                |
-| POST   | `/mpesa/transaction-status/result` | Transaction result callback      |
+| POST   | `/mpesa/transaction-status/query`  | Query transaction status         |
+| POST   | `/mpesa/transaction-status/result` | Transaction status result        |
 | POST   | `/mpesa/c2b/register-url`          | Register C2B URLs                |
-| POST   | `/mpesa/c2b/simulate`              | Simulate C2B (sandbox)           |
+| POST   | `/mpesa/c2b/simulate`              | Simulate C2B (sandbox only)      |
 | POST   | `/mpesa/c2b/validation`            | C2B validation callback          |
 | POST   | `/mpesa/c2b/confirmation`          | C2B confirmation callback        |
 | POST   | `/mpesa/tax/remit`                 | Initiate tax remittance          |
 | POST   | `/mpesa/tax/result`                | Tax remittance result            |
 | POST   | `/mpesa/b2b/checkout`              | B2B Express Checkout             |
-| POST   | `/mpesa/b2b/callback`              | B2B callback                     |
-| POST   | `/mpesa/b2c/payment`               | B2C payment                      |
+| POST   | `/mpesa/b2b/callback`              | B2B Express Checkout callback    |
+| POST   | `/mpesa/b2c/payment`               | B2C Account Top Up               |
 | POST   | `/mpesa/b2c/result`                | B2C result callback              |
 
 ---
 
 ### Hono Adapter
 
-Works on Bun, Cloudflare Workers, Deno, and Node.js via Hono.
+Works on Bun, Cloudflare Workers, Deno, and Node.js.
 
 ```typescript
 import { Hono } from 'hono'
@@ -805,7 +1177,15 @@ createMpesaHonoRouter(app, {
   onStkFailure: ({ resultCode, resultDesc }) => {
     console.warn('STK failed:', resultCode, resultDesc)
   },
-  skipIPCheck: true,
+
+  onAccountBalanceResult: async (body) => {
+    console.log('Balance result:', body)
+  },
+  onReversalResult: async (body) => {
+    console.log('Reversal result:', body)
+  },
+
+  skipIPCheck: true, // local dev only
 })
 
 // Bun
@@ -814,6 +1194,18 @@ export default app
 // Cloudflare Workers
 export default { fetch: app.fetch }
 ```
+
+**Routes mounted by `createMpesaHonoRouter`:**
+
+| Method | Path                       | Description                      |
+| ------ | -------------------------- | -------------------------------- |
+| POST   | `/mpesa/express/stk-push`  | Initiate STK Push                |
+| POST   | `/mpesa/express/stk-query` | Query STK Push status            |
+| POST   | `/mpesa/express/callback`  | STK Push callback from Safaricom |
+| POST   | `/mpesa/balance/query`     | Account balance query            |
+| POST   | `/mpesa/balance/result`    | Account balance result           |
+| POST   | `/mpesa/reversal/request`  | Reversal request                 |
+| POST   | `/mpesa/reversal/result`   | Reversal result callback         |
 
 ---
 
@@ -852,6 +1244,7 @@ export const POST = createStkCallbackHandler({
   onFailure: ({ resultCode, resultDesc }) => {
     console.warn('Payment failed:', resultCode, resultDesc)
   },
+  skipIPCheck: true,
 })
 ```
 
@@ -867,6 +1260,26 @@ export const POST = createStkQueryHandler({
   lipaNaMpesaPassKey: process.env.MPESA_PASSKEY!,
   callbackUrl: process.env.MPESA_CALLBACK_URL!,
 })
+```
+
+**Catch-all bundle** (single route file for all handlers):
+
+```typescript
+// app/api/mpesa/[[...route]]/route.ts
+import { createMpesaNextHandlers } from 'pesafy/adapters/nextjs'
+
+export const { POST } = createMpesaNextHandlers({
+  consumerKey: process.env.MPESA_CONSUMER_KEY!,
+  consumerSecret: process.env.MPESA_CONSUMER_SECRET!,
+  environment: 'sandbox',
+  lipaNaMpesaShortCode: process.env.MPESA_SHORTCODE!,
+  lipaNaMpesaPassKey: process.env.MPESA_PASSKEY!,
+  callbackUrl: process.env.MPESA_CALLBACK_URL!,
+  resultUrl: process.env.MPESA_RESULT_URL,
+  queueTimeOutUrl: process.env.MPESA_QUEUE_TIMEOUT_URL,
+})
+// Dispatches: /api/mpesa/stk-push, /api/mpesa/stk-query,
+//             /api/mpesa/callback, /api/mpesa/balance
 ```
 
 ---
@@ -897,40 +1310,53 @@ await registerMpesaRoutes(app, {
 await app.listen({ port: 3000 })
 ```
 
+**Routes mounted by `registerMpesaRoutes`:**
+
+| Method | Path                     | Description                      |
+| ------ | ------------------------ | -------------------------------- |
+| POST   | `/mpesa/stk-push`        | Initiate STK Push                |
+| POST   | `/mpesa/stk-query`       | Query STK Push status            |
+| POST   | `/mpesa/callback`        | STK Push callback from Safaricom |
+| POST   | `/mpesa/balance`         | Account balance query            |
+| POST   | `/mpesa/balance/result`  | Account balance result           |
+| POST   | `/mpesa/reversal`        | Reversal request                 |
+| POST   | `/mpesa/reversal/result` | Reversal result callback         |
+
 ---
 
 ## Branded Types
 
-pesafy ships opt-in branded primitives that catch type bugs at compile time —
-not at runtime.
+pesafy ships opt-in branded primitives that catch type bugs at compile time.
 
 ```typescript
 import {
   toKesAmount,
   toMsisdn,
   toPaybill,
+  toTill,
+  toShortCode,
+  toNonEmpty,
   type KesAmount,
   type MsisdnKE,
   type PaybillCode,
+  type TillCode,
 } from 'pesafy'
 
 const amount: KesAmount = toKesAmount(100) // throws if < 1 or fractional
 const phone: MsisdnKE = toMsisdn('0712345678') // throws if unparseable
 const code: PaybillCode = toPaybill('174379')
-
-// ✅ Safe — editor shows exact types
-// ❌ Compile error — can't pass plain number where KesAmount is expected
+const till: TillCode = toTill('5555')
 ```
 
 **Result type** — prefer this over try/catch in application code:
 
 ```typescript
-import { ok, err, type Result } from "pesafy";
+import { ok, err, type Result } from 'pesafy'
 
-const result: Result<string> = await mpesa.stkPushSafe({ ... });
+const result = await mpesa.stkPushSafe({ ... })
 
 if (result.ok) {
-  console.log(result.data.CheckoutRequestID);
+  console.log(result.data.CheckoutRequestID)
 } else {
   // result.error is PesafyError with .code, .statusCode, .retryable
   if (result.error.retryable) {
@@ -943,42 +1369,43 @@ if (result.ok) {
 
 ## Error Handling
 
-All errors are `PesafyError` instances:
+All errors are `PesafyError` instances with structured codes:
 
 ```typescript
-import { PesafyError, isPesafyError } from "pesafy";
+import { PesafyError, isPesafyError } from 'pesafy'
 
 try {
-  await mpesa.stkPush({ ... });
+  await mpesa.stkPush({ ... })
 } catch (error) {
   if (isPesafyError(error)) {
-    console.log(error.code);        // "AUTH_FAILED" | "VALIDATION_ERROR" | "API_ERROR" | ...
-    console.log(error.message);
-    console.log(error.statusCode);  // HTTP status (if applicable)
-    console.log(error.retryable);   // boolean — safe to retry?
-    console.log(error.requestId);   // Daraja requestId (if returned)
+    console.log(error.code)        // structured error code (see table below)
+    console.log(error.message)
+    console.log(error.statusCode)  // HTTP status from Daraja (if applicable)
+    console.log(error.retryable)   // boolean — safe to retry?
+    console.log(error.requestId)   // Daraja requestId (if returned)
+    console.log(error.response)    // raw Daraja response body
 
     // Convenience properties
-    error.isValidation; // true if VALIDATION_ERROR
-    error.isAuth;       // true if AUTH_FAILED / INVALID_CREDENTIALS
+    error.isValidation // true if VALIDATION_ERROR
+    error.isAuth       // true if AUTH_FAILED / INVALID_CREDENTIALS
   }
 }
 ```
 
 **Error codes:**
 
-| Code                  | Meaning                                     |
-| --------------------- | ------------------------------------------- |
-| `AUTH_FAILED`         | OAuth token fetch failed                    |
-| `INVALID_CREDENTIALS` | Missing or wrong consumerKey/Secret         |
-| `INVALID_PHONE`       | Phone number cannot be normalised           |
-| `ENCRYPTION_FAILED`   | RSA encryption of initiator password failed |
-| `VALIDATION_ERROR`    | Invalid request parameters (do not retry)   |
-| `API_ERROR`           | Daraja returned a 4xx error                 |
-| `REQUEST_FAILED`      | Daraja returned 5xx (retryable)             |
-| `NETWORK_ERROR`       | DNS / connection failure (retryable)        |
-| `TIMEOUT`             | Request exceeded timeout (retryable)        |
-| `RATE_LIMITED`        | 429 Too Many Requests                       |
+| Code                  | Retryable | Meaning                                     |
+| --------------------- | --------- | ------------------------------------------- |
+| `AUTH_FAILED`         | ❌        | OAuth token fetch failed                    |
+| `INVALID_CREDENTIALS` | ❌        | Missing or wrong consumerKey / Secret       |
+| `INVALID_PHONE`       | ❌        | Phone number cannot be normalised           |
+| `ENCRYPTION_FAILED`   | ❌        | RSA encryption of initiator password failed |
+| `VALIDATION_ERROR`    | ❌        | Invalid request parameters                  |
+| `API_ERROR`           | ❌        | Daraja returned a 4xx error                 |
+| `REQUEST_FAILED`      | ✅        | Daraja returned 5xx                         |
+| `NETWORK_ERROR`       | ✅        | DNS / connection failure                    |
+| `TIMEOUT`             | ✅        | Request exceeded timeout                    |
+| `RATE_LIMITED`        | ✅        | 429 Too Many Requests                       |
 
 ---
 
@@ -997,34 +1424,50 @@ formatSafaricomPhone('254712345678') // → "254712345678"
 
 ### Security credential encryption
 
+Encrypt once at startup and pass as `securityCredential` to skip per-call RSA:
+
 ```typescript
 import { encryptSecurityCredential } from 'pesafy'
-import { readFileSync } from 'fs'
+import { readFileSync } from 'node:fs'
 
-const pem = readFileSync('./SandboxCertificate.cer', 'utf-8')
+const pem        = readFileSync('./SandboxCertificate.cer', 'utf-8')
 const credential = encryptSecurityCredential('Safaricom123!', pem)
-// Pass as config.securityCredential to skip per-call encryption
+
+const mpesa = new Mpesa({
+  ...
+  securityCredential: credential, // skips RSA encryption on every API call
+})
+```
+
+### Token management
+
+```typescript
+// Force token refresh on the next call (e.g. after an unexpected 401)
+mpesa.clearTokenCache()
+
+// Read the environment
+console.log(mpesa.environment) // "sandbox" | "production"
 ```
 
 ---
 
 ## Configuration Reference
 
-| Option                 | Type                        | Required                 | Default | Description                          |
-| ---------------------- | --------------------------- | ------------------------ | ------- | ------------------------------------ |
-| `consumerKey`          | `string`                    | ✅                       | —       | Daraja consumer key                  |
-| `consumerSecret`       | `string`                    | ✅                       | —       | Daraja consumer secret               |
-| `environment`          | `"sandbox" \| "production"` | ✅                       | —       | Target environment                   |
-| `lipaNaMpesaShortCode` | `string`                    | STK Push                 | —       | Paybill / HO shortcode               |
-| `lipaNaMpesaPassKey`   | `string`                    | STK Push                 | —       | LNM passkey                          |
-| `initiatorName`        | `string`                    | B2C / Reversal / Balance | —       | API operator username                |
-| `initiatorPassword`    | `string`                    | B2C / Reversal / Balance | —       | API operator password                |
-| `certificatePath`      | `string`                    | B2C / Reversal / Balance | —       | Path to `.cer` file                  |
-| `certificatePem`       | `string`                    | —                        | —       | PEM string (alternative to path)     |
-| `securityCredential`   | `string`                    | —                        | —       | Pre-encrypted credential (skips RSA) |
-| `retries`              | `number`                    | —                        | `4`     | Retry count on transient errors      |
-| `retryDelay`           | `number`                    | —                        | `2000`  | Base retry delay (ms)                |
-| `timeout`              | `number`                    | —                        | `30000` | Per-attempt timeout (ms)             |
+| Option                 | Type                        | Required for                   | Default | Description                          |
+| ---------------------- | --------------------------- | ------------------------------ | ------- | ------------------------------------ |
+| `consumerKey`          | `string`                    | All APIs ✅                    | —       | Daraja consumer key                  |
+| `consumerSecret`       | `string`                    | All APIs ✅                    | —       | Daraja consumer secret               |
+| `environment`          | `"sandbox" \| "production"` | All APIs ✅                    | —       | Target environment                   |
+| `lipaNaMpesaShortCode` | `string`                    | STK Push                       | —       | Paybill / HO shortcode               |
+| `lipaNaMpesaPassKey`   | `string`                    | STK Push                       | —       | LNM passkey                          |
+| `initiatorName`        | `string`                    | B2C / B2B / Reversal / Balance | —       | API operator username                |
+| `initiatorPassword`    | `string`                    | B2C / B2B / Reversal / Balance | —       | API operator password                |
+| `certificatePath`      | `string`                    | B2C / B2B / Reversal / Balance | —       | Path to `.cer` file on disk          |
+| `certificatePem`       | `string`                    | —                              | —       | PEM string (alternative to path)     |
+| `securityCredential`   | `string`                    | —                              | —       | Pre-encrypted credential (skips RSA) |
+| `retries`              | `number`                    | —                              | `4`     | Retry count on transient errors      |
+| `retryDelay`           | `number`                    | —                              | `2000`  | Base retry delay in ms               |
+| `timeout`              | `number`                    | —                              | `30000` | Per-attempt timeout in ms            |
 
 ---
 
@@ -1033,9 +1476,8 @@ const credential = encryptSecurityCredential('Safaricom123!', pem)
 ### Planned (Safaricom APIs)
 
 - [ ] **Standing Orders** — create recurring M-PESA payment instructions
-- [ ] **M-PESA Global (Send Money)** — international transfers
-- [ ] **Ratiba (M-PESA Ratiba)** — recurring bill payments
-- [ ] **M-PESA for Business** — bulk payments improvements
+- [ ] **M-PESA Global** — international money transfers
+- [ ] **Ratiba** — recurring bill payments
 - [ ] **Merchant QR** — static QR code generation
 
 ### Planned (Library)
@@ -1055,8 +1497,8 @@ const credential = encryptSecurityCredential('Safaricom123!', pem)
 ## Contributing
 
 1. Fork the repository
-2. Create your feature branch: `git checkout -b feat/my-feature`
-3. Commit: `git commit -m '✨ Add my feature'`
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Commit your changes: `git commit -m '✨ Add my feature'`
 4. Push: `git push origin feat/my-feature`
 5. Open a Pull Request
 
