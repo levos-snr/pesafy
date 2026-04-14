@@ -1,6 +1,7 @@
 # B2B Express Checkout
 
-Initiates a USSD Push to a merchant's till, prompting the merchant to pay from their till to your Paybill.
+Initiates a USSD Push to a merchant's till, prompting the merchant to pay from
+their till to your Paybill.
 
 **Daraja API:** `POST /v1/ussdpush/get-msisdn`
 
@@ -69,6 +70,6 @@ app.post('/api/mpesa/b2b/callback', (req, res) => {
 | `4201` | USSD Network Error — retry                                |
 | `4203` | USSD Exception Error — retry                              |
 
-::: tip Nominated Number
-Error 4104 means the merchant's till doesn't have a Nominated Number set up. They need to configure it in the M-PESA Web Portal → Organization Details.
-:::
+::: tip Nominated Number Error 4104 means the merchant's till doesn't have a
+Nominated Number set up. They need to configure it in the M-PESA Web Portal →
+Organization Details. :::

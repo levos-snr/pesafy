@@ -1,5 +1,5 @@
 packages:
-  - 'pesafy'
+  - "pesafy"
 catalog:
   vitepress: next
   vue: ^3.5.31

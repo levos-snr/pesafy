@@ -98,7 +98,7 @@
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint src",
     "lint:fix": "oxlint src --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format": "prettier --write .",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "prepublishOnly": "pnpm typecheck && pnpm build",
     "changeset": "changeset",
@@ -110,7 +110,9 @@
     "docs:preview": "vitepress preview docs",
     "size-limit": "size-limit",
     "size": "pnpm build && size-limit",
-    "size:why": "pnpm build && size-limit --why"
+    "size:why": "pnpm build && size-limit --why",
+    "format:all": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "check:all": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\""
   },
   "size-limit": [
     {
@@ -148,7 +150,7 @@
     "pre-commit": "pnpm lint-staged"
   },
   "lint-staged": {
-    "*.{ts,tsx}": [
+    "*.{ts,tsx,json,md,yml,yaml}": [
       "oxlint",
       "prettier --write"
     ],

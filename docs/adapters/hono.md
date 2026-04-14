@@ -1,6 +1,8 @@
 # Hono
 
-The Hono adapter works on **Node.js, Bun, Deno, Cloudflare Workers**, and any other Hono-compatible runtime.
+The Hono adapter works on **Node.js, Bun, Deno, Cloudflare Workers**, and any
+other Hono-compatible runtime. It covers STK Push, Account Balance, and
+Transaction Reversal out of the box.
 
 ## Installation
 
@@ -33,11 +35,8 @@ export default app
 
 ```ts
 interface MpesaHonoConfig extends MpesaConfig {
-  callbackUrl: string
-
-  resultUrl?: string
-  queueTimeOutUrl?: string
-  skipIPCheck?: boolean
+  // ── STK Push ───────────────────────────────────────────────────────────────
+  callbackUrl: string // STK Push callback URL (required)
 
   onStkSuccess?: (data: {
     receiptNumber: string | null
@@ -50,8 +49,15 @@ interface MpesaHonoConfig extends MpesaConfig {
     resultDesc: string
   }) => void | Promise<void>
 
+  // ── Async APIs (Balance, Reversal) ─────────────────────────────────────────
+  resultUrl?: string
+  queueTimeOutUrl?: string
+
   onAccountBalanceResult?: (body: unknown) => void | Promise<void>
   onReversalResult?: (body: unknown) => void | Promise<void>
+
+  // ── Dev ───────────────────────────────────────────────────────────────────
+  skipIPCheck?: boolean // NEVER true in production
 }
 ```
 
@@ -69,6 +75,8 @@ interface MpesaHonoConfig extends MpesaConfig {
 
 ## STK Push
 
+Trigger a payment prompt on the customer's phone:
+
 ```bash
 POST /mpesa/express/stk-push
 Content-Type: application/json
@@ -81,9 +89,21 @@ Content-Type: application/json
 }
 ```
 
+Query the status of an outstanding STK Push:
+
+```bash
+POST /mpesa/express/stk-query
+Content-Type: application/json
+
+{
+  "checkoutRequestId": "ws_CO_XXXXXXXXXXXXXXXXX"
+}
+```
+
 ## STK Callbacks
 
-Handle success and failure events with hooks:
+Handle success and failure events with hooks. The `200` response to Safaricom is
+sent immediately; your hook runs in the background:
 
 ```ts
 createMpesaHonoRouter(app, {
@@ -104,6 +124,20 @@ createMpesaHonoRouter(app, {
 
 ## Account Balance
 
+Query the balance of a registered shortcode. `resultUrl` and `queueTimeOutUrl`
+must be set in config for this route to work:
+
+```ts
+createMpesaHonoRouter(app, {
+  // ...
+  resultUrl: 'https://yourdomain.com/mpesa/balance/result',
+  queueTimeOutUrl: 'https://yourdomain.com/mpesa/balance/timeout',
+  onAccountBalanceResult: async (body) => {
+    console.log('Balance result:', body)
+  },
+})
+```
+
 ```bash
 POST /mpesa/balance/query
 Content-Type: application/json
@@ -115,13 +149,45 @@ Content-Type: application/json
 }
 ```
 
-::: info
-`resultUrl` and `queueTimeOutUrl` must be set in config for this route to work.
-:::
+::: info `resultUrl` and `queueTimeOutUrl` must be set in config for the
+`/mpesa/balance/query` route to work. :::
+
+## Transaction Reversal
+
+Reverse a completed M-PESA transaction. `resultUrl` and `queueTimeOutUrl` must
+be set in config:
+
+```ts
+createMpesaHonoRouter(app, {
+  // ...
+  resultUrl: 'https://yourdomain.com/mpesa/reversal/result',
+  queueTimeOutUrl: 'https://yourdomain.com/mpesa/reversal/timeout',
+  onReversalResult: async (body) => {
+    await db.refunds.markProcessed(body)
+  },
+})
+```
+
+```bash
+POST /mpesa/reversal/request
+Content-Type: application/json
+
+{
+  "transactionId":          "OEI2AK4XXXX",
+  "receiverParty":          "174379",
+  "receiverIdentifierType": "4",
+  "amount":                 100,
+  "remarks":                "Customer refund"
+}
+```
+
+::: info `resultUrl` and `queueTimeOutUrl` must be set in config for this route
+to work. :::
 
 ## Cloudflare Workers
 
-The Hono adapter is fully compatible with Cloudflare Workers. Export your app normally:
+The Hono adapter is fully compatible with Cloudflare Workers. Export your app as
+the default:
 
 ```ts
 // src/index.ts
@@ -130,7 +196,6 @@ import { createMpesaHonoRouter } from 'pesafy/adapters/hono'
 
 const app = new Hono<{ Bindings: Env }>()
 
-// Mount routes
 createMpesaHonoRouter(app, {
   consumerKey: 'YOUR_KEY',
   consumerSecret: 'YOUR_SECRET',
@@ -150,6 +215,7 @@ import { Hono } from 'hono'
 import { createMpesaHonoRouter } from 'pesafy/adapters/hono'
 
 const app = new Hono()
+
 createMpesaHonoRouter(app, {
   /* config */
 })
@@ -157,9 +223,40 @@ createMpesaHonoRouter(app, {
 Bun.serve({ fetch: app.fetch, port: 3000 })
 ```
 
+## Deno
+
+```ts
+import { Hono } from 'npm:hono'
+import { createMpesaHonoRouter } from 'npm:pesafy/adapters/hono'
+
+const app = new Hono()
+
+createMpesaHonoRouter(app, {
+  /* config */
+})
+
+Deno.serve(app.fetch)
+```
+
+## Using a Route Prefix
+
+Mount the M-PESA routes under a sub-path using Hono's `basePath` or by nesting a
+sub-app:
+
+```ts
+const api = new Hono().basePath('/api')
+createMpesaHonoRouter(api, {
+  /* config */
+})
+
+// Routes are now at /api/mpesa/express/stk-push, etc.
+app.route('/', api)
+```
+
 ## IP Verification
 
-In production, Safaricom callback IPs are verified automatically. Use `skipIPCheck: true` only during local development:
+Safaricom callback IPs are verified automatically in production. Use
+`skipIPCheck: true` only during local development:
 
 ```ts
 createMpesaHonoRouter(app, {
@@ -167,6 +264,8 @@ createMpesaHonoRouter(app, {
   skipIPCheck: process.env.NODE_ENV !== 'production',
 })
 ```
+
+::: warning Never set `skipIPCheck: true` in a production deployment. :::
 
 ## Environment Variables
 

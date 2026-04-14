@@ -1,6 +1,7 @@
 # Contributing to pesafy
 
-Thank you for your interest in contributing! This guide will get you up and running.
+Thank you for your interest in contributing! This guide will get you up and
+running.
 
 ---
 
@@ -18,7 +19,8 @@ Thank you for your interest in contributing! This guide will get you up and runn
 
 ## Code of Conduct
 
-Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We expect all contributors to abide by it.
+Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We expect all
+contributors to abide by it.
 
 ---
 
@@ -28,7 +30,8 @@ Please read and follow our [Code of Conduct](CODE_OF_CONDUCT.md). We expect all 
 
 - **Node.js** ≥ 18
 - **pnpm** ≥ 10 — install via `npm i -g pnpm`
-- A [Safaricom Daraja](https://developer.safaricom.co.ke) sandbox account for integration testing
+- A [Safaricom Daraja](https://developer.safaricom.co.ke) sandbox account for
+  integration testing
 
 ### Setup
 
@@ -129,7 +132,8 @@ Commit the generated `.changeset/*.md` file alongside your code changes.
 
 ### Release process (maintainers only)
 
-Releases are automated via the GitHub Actions `publish.yml` workflow. On every push to `main`, the workflow either:
+Releases are automated via the GitHub Actions `publish.yml` workflow. On every
+push to `main`, the workflow either:
 
 - Opens a **Version Packages** PR (if there are pending changesets), or
 - Publishes to npm automatically (when the Version Packages PR is merged)
@@ -176,6 +180,9 @@ pesafy/
 
 ## Reporting Issues
 
-- **Bug reports** — use the [Bug Report](.github/ISSUE_TEMPLATE/bug_report.yml) template
-- **Feature requests** — use the [Feature Request](.github/ISSUE_TEMPLATE/feature_request.yml) template
-- **Security vulnerabilities** — see [SECURITY.md](SECURITY.md) — **do not open a public issue**
+- **Bug reports** — use the [Bug Report](.github/ISSUE_TEMPLATE/bug_report.yml)
+  template
+- **Feature requests** — use the
+  [Feature Request](.github/ISSUE_TEMPLATE/feature_request.yml) template
+- **Security vulnerabilities** — see [SECURITY.md](SECURITY.md) — **do not open
+  a public issue**

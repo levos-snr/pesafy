@@ -27,3 +27,5 @@ LICENSE.md
 CHANGELOG.md
 *.log
 .cache/
+.changeset/
+.github/

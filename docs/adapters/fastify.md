@@ -1,6 +1,7 @@
 # Fastify
 
-The Fastify adapter registers all M-PESA routes onto an existing Fastify instance.
+The Fastify adapter registers all M-PESA routes onto an existing Fastify
+instance. It covers STK Push, Account Balance, and Transaction Reversal.
 
 ## Installation
 
@@ -33,17 +34,29 @@ await app.listen({ port: 3000 })
 
 ```ts
 interface MpesaFastifyConfig extends MpesaConfig {
-  callbackUrl: string
-
-  resultUrl?: string
-  queueTimeOutUrl?: string
-  skipIPCheck?: boolean
+  // ── STK Push ───────────────────────────────────────────────────────────────
+  callbackUrl: string // STK Push callback URL (required)
 
   onStkSuccess?: (data: {
     receiptNumber: string | null
     amount: number | null
     phone: string | null
   }) => void | Promise<void>
+
+  onStkFailure?: (data: {
+    resultCode: number
+    resultDesc: string
+  }) => void | Promise<void>
+
+  // ── Async APIs (Balance, Reversal) ─────────────────────────────────────────
+  resultUrl?: string
+  queueTimeOutUrl?: string
+
+  onAccountBalanceResult?: (body: unknown) => void | Promise<void>
+  onReversalResult?: (body: unknown) => void | Promise<void>
+
+  // ── Dev ───────────────────────────────────────────────────────────────────
+  skipIPCheck?: boolean // NEVER true in production
 }
 ```
 
@@ -61,6 +74,8 @@ interface MpesaFastifyConfig extends MpesaConfig {
 
 ## STK Push
 
+Trigger a payment prompt on the customer's phone:
+
 ```bash
 POST /mpesa/stk-push
 Content-Type: application/json
@@ -73,9 +88,22 @@ Content-Type: application/json
 }
 ```
 
+Query the status of an outstanding STK Push:
+
+```bash
+POST /mpesa/stk-query
+Content-Type: application/json
+
+{
+  "checkoutRequestId": "ws_CO_XXXXXXXXXXXXXXXXX"
+}
+```
+
 ## Handling the STK Callback
 
-Use the `onStkSuccess` hook for fire-and-forget processing. The `200` response to Safaricom is sent immediately; your hook runs in the background:
+Use `onStkSuccess` and `onStkFailure` hooks for fire-and-forget processing. The
+`200` response to Safaricom is sent immediately; your hook runs in the
+background:
 
 ```ts
 await registerMpesaRoutes(app, {
@@ -83,10 +111,28 @@ await registerMpesaRoutes(app, {
   onStkSuccess: async ({ receiptNumber, amount, phone }) => {
     await db.orders.markPaid({ receiptNumber, amount, phone })
   },
+
+  onStkFailure: async ({ resultCode, resultDesc }) => {
+    console.warn(`Payment failed [${resultCode}]: ${resultDesc}`)
+  },
 })
 ```
 
 ## Account Balance
+
+Query the balance of a registered shortcode. `resultUrl` and `queueTimeOutUrl`
+must be set in config:
+
+```ts
+await registerMpesaRoutes(app, {
+  // ...
+  resultUrl: 'https://yourdomain.com/mpesa/balance/result',
+  queueTimeOutUrl: 'https://yourdomain.com/mpesa/balance/timeout',
+  onAccountBalanceResult: async (body) => {
+    console.log('Balance result:', body)
+  },
+})
+```
 
 ```bash
 POST /mpesa/balance
@@ -99,11 +145,23 @@ Content-Type: application/json
 }
 ```
 
-::: info
-`resultUrl` and `queueTimeOutUrl` must be set in config for the `/mpesa/balance` route to work.
-:::
+::: info `resultUrl` and `queueTimeOutUrl` must be set in config for the
+`/mpesa/balance` route to work. :::
 
 ## Transaction Reversal
+
+Reverse a completed M-PESA transaction:
+
+```ts
+await registerMpesaRoutes(app, {
+  // ...
+  resultUrl: 'https://yourdomain.com/mpesa/reversal/result',
+  queueTimeOutUrl: 'https://yourdomain.com/mpesa/reversal/timeout',
+  onReversalResult: async (body) => {
+    await db.refunds.markProcessed(body)
+  },
+})
+```
 
 ```bash
 POST /mpesa/reversal
@@ -117,6 +175,9 @@ Content-Type: application/json
   "remarks":                "Customer refund"
 }
 ```
+
+::: info `resultUrl` and `queueTimeOutUrl` must be set in config for this route
+to work. :::
 
 ## Using a Route Prefix
 
@@ -138,15 +199,19 @@ app.register(
 )
 
 // Routes are now at /api/mpesa/stk-push, etc.
+await app.listen({ port: 3000 })
 ```
 
 ## IP Verification
 
-Safaricom callback IPs are verified automatically. Set `skipIPCheck: true` only for local development:
+Safaricom callback IPs are verified automatically in production. Set
+`skipIPCheck: true` only for local development:
 
 ```ts
 skipIPCheck: process.env.NODE_ENV !== 'production'
 ```
+
+::: warning Never set `skipIPCheck: true` in a production deployment. :::
 
 ## Environment Variables
 

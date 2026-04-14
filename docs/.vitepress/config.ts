@@ -11,14 +11,7 @@ export default defineConfig({
 
   // Prevent dead-link errors from blocking the build.
   // Remove entries once all pages exist.
-  ignoreDeadLinks: [
-    '/api',
-    '/api/',
-    '/guide',
-    '/guide/',
-    '/adapters',
-    '/adapters/',
-  ],
+  ignoreDeadLinks: ['/api', '/api/', '/guide', '/guide/', '/adapters', '/adapters/'],
 
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
@@ -52,7 +45,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/', activeMatch: '/guide/' },
-      { text: 'API Reference', link: '/api/', activeMatch: '/api/' },
+      { text: 'Docs ', link: '/api/', activeMatch: '/api/' },
       { text: 'Adapters', link: '/adapters/', activeMatch: '/adapters/' },
       {
         text: '0.5.1',
@@ -93,17 +86,43 @@ export default defineConfig({
 
       '/api/': [
         {
-          text: 'API Reference',
+          text: 'Docs ',
+          items: [{ text: 'Overview', link: '/api/' }],
+        },
+        {
+          text: 'STK Push & Payments',
           items: [
-            { text: 'Overview', link: '/api/' },
             { text: 'STK Push (M-PESA Express)', link: '/api/stk-push' },
             { text: 'C2B — Customer to Business', link: '/api/c2b' },
-            { text: 'B2C — Business to Customer', link: '/api/b2c' },
-            { text: 'B2B Express Checkout', link: '/api/b2b' },
+          ],
+        },
+        {
+          text: 'Business to Customer (B2C)',
+          items: [
+            { text: 'B2C Account Top-Up', link: '/api/b2c' },
+            { text: 'B2C Disbursement', link: '/api/b2c-disbursement' },
+          ],
+        },
+        {
+          text: 'Business to Business (B2B)',
+          items: [
+            { text: 'B2B Express Checkout', link: '/api/b2b-express-checkout' },
+            { text: 'B2B Buy Goods', link: '/api/b2b-buy-goods' },
+            { text: 'B2B Pay Bill', link: '/api/b2b-pay-bill' },
+          ],
+        },
+        {
+          text: 'Account & Transactions',
+          items: [
             { text: 'Account Balance', link: '/api/account-balance' },
             { text: 'Transaction Status', link: '/api/transaction-status' },
             { text: 'Transaction Reversal', link: '/api/reversal' },
             { text: 'Tax Remittance (KRA)', link: '/api/tax-remittance' },
+          ],
+        },
+        {
+          text: 'Utilities',
+          items: [
             { text: 'Dynamic QR Code', link: '/api/dynamic-qr' },
             { text: 'Bill Manager', link: '/api/bill-manager' },
           ],
